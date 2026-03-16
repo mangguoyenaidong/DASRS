@@ -49,7 +49,7 @@ func main() {
 	// 初始化执行器
 	log.Println("Initializing executors...")
 	blocker := executor.NewIPBlocker()
-	patcher := executor.NewNginxPatcher()
+	patcher := executor.NewConfigPatcher()
 
 	// 初始化采集器
 	log.Println("Initializing Suricata collector...")

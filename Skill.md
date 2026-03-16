@@ -46,7 +46,7 @@ security-response-system/
 │   │   └── service/        # 业务逻辑层
 │   └── agent/
 │       ├── collector/      # Suricata 日志采集器
-│       ├── executor/       # 执行器 (Nginx Patcher & Iptables)
+│       ├── executor/       # 执行器 (Config Patcher & Iptables)
 │       └── client/         # gRPC Client & Stream 处理
 ├── pkg/                    # 可复用包
 ├── proto/                  # .proto 定义文件
@@ -74,7 +74,7 @@ security-response-system/
 
 1. **采集器 (Collector):** 使用 `hpcloud/tail` 监控 `/var/log/suricata/eve.json`。仅过滤 `event_type: alert` 的日志，转换为 Protobuf 结构体。
 2. **阻断器 (Blocker):** 封装 `iptables` 命令，实现 `BlockIP(ip)` 和 `UnblockIP(ip)`。
-3. **配置热修复器 (Config Patcher - 重点):** 在 `internal/agent/executor` 中实现 `PatchNginxConfig`。
+3. **配置热修复器 (Config Patcher - 重点):** 在 `internal/agent/executor` 中实现通用的 `ConfigPatcher`，通过实现 `MiddlewareManager` 接口支持 Nginx、Apache 等多种中间件。
    - **逻辑:** 必须严格遵循 *第5节：关键算法逻辑* 中的安全流程。
 
 ### 阶段三：Master 端决策引擎 (The Master - 大脑)
@@ -104,15 +104,16 @@ security-response-system/
 
 ## 5. 关键算法逻辑 (Critical Algorithms)
 
-### Nginx 配置文件安全热修复
+### 中间件配置文件安全热修复 (Config Patcher)
 
-**约束:** 严禁破坏生产环境的 Web 服务。所有文件修改必须遵循 **原子性 备份-验证-重载** 循环。
+**约束:** 严禁破坏生产环境的 Web 服务。所有文件修改必须遵循 **原子性 备份-验证-重载** 循环。通过 `MiddlewareManager` 接口实现对 Nginx、Apache 等不同中间件的支持。
 
 Go
 
 ```
 // internal/agent/executor 参考逻辑
 func SafePatch(filePath, matchRegex, replaceContent string) error {
+    manager, _ := p.getManager(filePath) // 根据路径特征推断中间件 (Nginx/Apache)
     backupPath := fmt.Sprintf("%s.bak.%d", filePath, time.Now().Unix())
 
     // 1. 创建备份 (Create Backup)
@@ -124,16 +125,18 @@ func SafePatch(filePath, matchRegex, replaceContent string) error {
     // ... 具体实现略 ...
 
     // 3. 语法验证 (Verify Syntax - 关键步骤)
-    // 使用 nginx -t -c 指定配置文件进行检查
-    cmd := exec.Command("nginx", "-t", "-c", filePath)
-    if err := cmd.Run(); err != nil {
+    // 根据具体中间件调用语法检查 (如: nginx -t 或 apache2ctl configtest)
+    if err := manager.VerifyConfig(filePath); err != nil {
         // 4. 失败回滚 (ROLLBACK on Failure)
         copyFile(backupPath, filePath) // 恢复原文件
         return fmt.Errorf("syntax check failed, rolled back: %v", err)
     }
 
     // 5. 应用变更 (Apply Changes)
-    if err := exec.Command("systemctl", "reload", "nginx").Run(); err != nil {
+    // 根据具体中间件调用重载命令 (如: systemctl reload nginx)
+    if err := manager.ReloadService(); err != nil {
+         copyFile(backupPath, filePath)
+         manager.ReloadService() // 尝试恢复原服务状态
          return fmt.Errorf("reload failed: %v", err)
     }
     
@@ -145,6 +148,6 @@ func SafePatch(filePath, matchRegex, replaceContent string) error {
 
 - [ ] Protobuf 定义是否兼容 gRPC v3 标准？
 - [ ] Agent 是否具备断线重连 (Reconnect) 机制？
-- [ ] Nginx Patcher 是否在 Reload 之前强制执行了 `nginx -t`？
+- [ ] Config Patcher 是否在 Reload 之前强制调用了中间件特有的语法检查（如 `nginx -t` / `apache2ctl configtest`）？
 - [ ] Master 是否正确实现了基于资产类型 (Asset Context) 的误报过滤？
 - [ ] Redis 中的计数器 Key 是否设置了正确的过期时间？

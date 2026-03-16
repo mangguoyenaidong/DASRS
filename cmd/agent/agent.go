@@ -15,7 +15,7 @@ type Agent struct {
 	grpcClient *client.Client
 	collector  *collector.SuricataCollector
 	blocker    *executor.IPBlocker
-	patcher    *executor.NginxPatcher
+	patcher    *executor.ConfigPatcher
 }
 
 func NewAgent(
@@ -23,7 +23,7 @@ func NewAgent(
 	grpcClient *client.Client,
 	collector *collector.SuricataCollector,
 	blocker *executor.IPBlocker,
-	patcher *executor.NginxPatcher,
+	patcher *executor.ConfigPatcher,
 ) *Agent {
 	return &Agent{
 		cfg:        cfg,
