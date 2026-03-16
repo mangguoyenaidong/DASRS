@@ -1,0 +1,58 @@
+# DASRS (分布式情报驱动应急响应系统) 配置文件
+
+# Master 服务配置
+master:
+  host: "0.0.0.0"
+  grpc_port: 50051
+  http_port: 8080
+  # 数据库配置
+  database:
+    host: "mysql"
+    port: 3306
+    username: "root"
+    password: "rootpassword"
+    name: "security"
+    max_open_conns: 25
+    max_idle_conns: 5
+  # Redis 配置
+  redis:
+    host: "redis"
+    port: 6379
+    password: ""
+    db: 0
+    pool_size: 10
+  # 情报引擎配置
+  intelligence:
+    # 评分阈值，超过此值执行修复操作
+    repair_threshold: 80
+    # 封禁阈值，超过此值执行封禁操作
+    block_threshold: 50
+    # 时序分析时间窗口（秒）
+    time_window: 60
+    # 时间窗口内最大告警次数
+    max_alerts_per_window: 10
+  # Agent 管理配置
+  agent_management:
+    # 允许注册的 Agent 列表（留空则允许所有）
+    allowed_agents: []
+    # 是否自动注册新 Agent
+    auto_register: true
+
+# Agent 服务配置 (用于远程 Agent 的配置文件)
+agent:
+  # Master 服务地址 (IP:端口，支持域名)
+  # 示例: "192.168.1.100:50051" 或 "master.example.com:50051"
+  master_address: "master:50051"
+  # Suricata 日志路径
+  suricata_log_path: "/var/log/suricata/eve.json"
+  # 本地 Agent 标识
+  agent_name: ""
+  # 重连间隔（秒）
+  reconnect_interval: 5
+  # 心跳间隔（秒）
+  heartbeat_interval: 30
+
+# 日志配置
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json" # json, text

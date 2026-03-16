@@ -1,0 +1,38 @@
+# 构建阶段
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /app
+
+# 安装 protoc 和插件
+RUN apk add --no-cache git make protobuf-dev protobuf && \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.4 && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+
+# 复制依赖文件
+COPY go.mod go.sum ./
+RUN go mod download
+
+# 复制源代码
+COPY . .
+
+# 生成 proto 代码 (在复制源代码后执行，覆盖旧的pb文件)
+RUN protoc --go_out=. --go_opt=paths=source_relative \
+    --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+    -I=./proto ./proto/*.proto
+
+# 编译
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o master ./cmd/master
+
+# 运行阶段
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates tzdata
+
+WORKDIR /app
+
+COPY --from=builder /app/master .
+COPY --from=builder /app/configs ./configs
+
+EXPOSE 50051 8080
+
+CMD ["./master"]

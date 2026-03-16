@@ -1,0 +1,7 @@
+{
+	"auths": {},
+	"credsStore": "wincred",
+	"registryMirrors": [
+		"https://docker.mirrors.ustc.edu.cn"
+	]
+}

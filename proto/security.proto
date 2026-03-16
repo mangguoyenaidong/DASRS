@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package security;
+
+option go_package = "security-response-system/internal/proto";
+
+// Heartbeat Request and Response
+message HeartbeatRequest {
+    string hostname = 1;
+    string ip = 2;
+    double cpu_load = 3;
+    double mem_load = 4;
+}
+
+message HeartbeatResponse {
+    bool success = 1;
+    string message = 2;
+}
+
+// Alert Report Request and Response
+message AlertReportRequest {
+    string sid = 1;
+    string payload = 2;
+    string source_ip = 3;
+    string asset_info = 4;
+    int64 timestamp = 5;
+    string severity = 6;
+    string signature_name = 7;
+}
+
+message AlertReportResponse {
+    bool success = 1;
+    string message = 2;
+    string alert_id = 3;
+}
+
+// Command definitions for Bidirectional Streaming
+enum CommandType {
+    UNKNOWN = 0;
+    BLOCK_IP = 1;
+    UNBLOCK_IP = 2;
+    PATCH_CONFIG = 3;
+}
+
+// Command sent from Master to Agent
+message CommandMessage {
+    string command_id = 1;
+    CommandType type = 2;
+
+    // For BLOCK_IP / UNBLOCK_IP
+    string target_ip = 3;
+
+    // For PATCH_CONFIG
+    string config_path = 4;
+    string match_regex = 5;
+    string replace_content = 6;
+}
+
+// Command execution result sent from Agent to Master
+message CommandResult {
+    string agent_id = 1; // 标识哪个 Agent 返回的结果
+    string command_id = 2;
+    bool success = 3;
+    string message = 4;
+}
+
+// Security Service Definition
+service SecurityService {
+    // Unary RPC: Agent -> Master. Report system status.
+    rpc SendHeartbeat(HeartbeatRequest) returns (HeartbeatResponse) {}
+
+    // Unary RPC: Agent -> Master. Report Suricata threat logs.
+    rpc ReportAlert(AlertReportRequest) returns (AlertReportResponse) {}
+
+    // Bidirectional Stream:
+    // Agent connects to Master, sends stream of CommandResult,
+    // Master pushes stream of CommandMessage.
+    rpc CommandStream(stream CommandResult) returns (stream CommandMessage) {}
+}
