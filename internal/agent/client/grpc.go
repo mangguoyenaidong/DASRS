@@ -69,6 +69,20 @@ func (c *Client) connect(handler func(*proto.CommandMessage)) {
 			continue
 		}
 
+		// Send registration message
+		regMsg := &proto.CommandResult{
+			AgentId:   c.agentID,
+			CommandId: "register",
+			Success:   true,
+			Message:   c.hostname,
+		}
+		if err := c.stream.Send(regMsg); err != nil {
+			log.Printf("Failed to send registration message: %v", err)
+			cancel()
+			time.Sleep(time.Duration(c.reconnectInterval) * time.Second)
+			continue
+		}
+
 		go c.sendHeartbeats(ctx)
 
 		for {
