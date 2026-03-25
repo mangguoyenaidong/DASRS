@@ -151,3 +151,19 @@ func SafePatch(filePath, matchRegex, replaceContent string) error {
 - [ ] Config Patcher 是否在 Reload 之前强制调用了中间件特有的语法检查（如 `nginx -t` / `apache2ctl configtest`）？
 - [ ] Master 是否正确实现了基于资产类型 (Asset Context) 的误报过滤？
 - [ ] Redis 中的计数器 Key 是否设置了正确的过期时间？
+
+## 7. 当前进展
+
+- [x] Master 决策引擎核心模块完成：`internal/master/core/engine.go`
+- [x] gRPC 告警接口完成：`ReportAlert` -> `Analyze` -> `AlertLog` 记录 -> 命令下发
+- [x] Agent 端功能完成：`ReportAlert` 上报、`CommandStream` 命令执行
+- [x] Web 管理控制台已部署：`internal/master/api/server.go` + `templates/index.html`（`GET /`, `GET /admin`）
+- [x] 平台兼容补丁：在 macOS 上补 `internal/agent/executor/iptables_stub.go`，解决 Linux-only build tag 导致的 `IPBlocker` undefined
+
+## 8. 运行指引
+
+1. 启动依赖：`docker compose -f deploy/docker-compose.yaml up -d`
+2. 启动 Master：`go run ./cmd/master`
+3. 启动 Agent：`go run ./cmd/agent`
+4. 访问 Web：`http://localhost:8080/`
+5. API 测试：`GET /api/alerts`, `GET /api/agents`, `POST /api/block` 等

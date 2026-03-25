@@ -258,6 +258,20 @@ curl -X POST http://localhost:8080/api/block \
 获取操作日志
 
 **参数:**
+
+## 平台兼容与本地编译说明
+
+- 由于 IPTables 实现为 Linux 平台（`internal/agent/executor/iptables_linux.go`），在 macOS 上为了本地开发和测试已增加了 `internal/agent/executor/iptables_stub.go`。
+- 如果在 Linux 生产环境运行，请确保 `iptables` 可用并且 Agent 可以执行 `iptables` 命令（必要权限）。
+- 本地测试时命令会返回 `"ip blocking is not supported on this platform"`，不会实际修改防火墙。
+
+## 状态确认
+
+- `go test ./...`：通过
+- Master 服务可访问 Web 页面：`GET /` (Dashboard)
+- gRPC 服务可接收 Agent 上报：`ReportAlert`
+- 自动封禁：`block` 命令会广播给所有在线 Agent
+- 策略修复：`PATCH_CONFIG` 支持 piping 逻辑与回滚
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | page | int | 页码 (默认 1) |
