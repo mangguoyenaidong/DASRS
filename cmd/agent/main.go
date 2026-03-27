@@ -18,6 +18,7 @@ import (
 func main() {
 	// 命令行参数
 	configPath := flag.String("config", "configs/config.yaml", "path to config file")
+	testMasterConn := flag.Bool("test-master-conn", false, "测试与 Master 的连通性并退出")
 	verbose := flag.Bool("v", false, "enable verbose logging")
 	flag.Parse()
 
@@ -44,6 +45,18 @@ func main() {
 	if _, err := os.Stat(cfg.SuricataLogPath); os.IsNotExist(err) {
 		log.Printf("Warning: Suricata log path does not exist: %s", cfg.SuricataLogPath)
 		log.Println("The agent will continue to run but no alerts will be collected until the log file is available.")
+	}
+
+	// 如果是连接测试模式，则执行测试并退出
+	if *testMasterConn {
+		log.Printf("正在测试与 Master (%s) 的连通性...", cfg.MasterAddress)
+		success, msg := client.TestMasterConnectivity(cfg.MasterAddress)
+		if success {
+			log.Printf("Master 连通性测试成功: %s", msg)
+		} else {
+			log.Fatalf("Master 连通性测试失败: %s", msg)
+		}
+		return // 测试完成后退出
 	}
 
 	// 初始化执行器

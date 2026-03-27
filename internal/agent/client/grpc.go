@@ -183,3 +183,35 @@ func (c *Client) Stop() {
 func (c *Client) GetAgentID() string {
 	return c.agentID
 }
+
+// TestMasterConnectivity 尝试连接到 Master 并发送一个心跳请求以测试连通性。
+// 它返回一个布尔值表示测试是否成功，以及一个描述性的消息。
+func TestMasterConnectivity(masterAddr string) (bool, string) {
+	// 建立一个临时的 gRPC 连接用于测试
+	conn, err := grpc.Dial(masterAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return false, fmt.Sprintf("无法连接到 Master (%s): %v", masterAddr, err)
+	}
+	defer conn.Close()
+
+	c := proto.NewSecurityServiceClient(conn)
+	// 设置一个短的上下文超时，以避免长时间等待连接或响应
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 发送一个模拟的心跳请求
+	resp, err := c.SendHeartbeat(ctx, &proto.HeartbeatRequest{
+		Hostname: "test-agent", // 用于测试的虚拟主机名
+		Ip:       "127.0.0.1",  // 用于测试的虚拟 IP
+		CpuLoad:  0.0,
+		MemLoad:  0.0,
+	})
+	if err != nil {
+		return false, fmt.Sprintf("发送心跳请求失败: %v", err)
+	}
+
+	if resp.Success {
+		return true, fmt.Sprintf("Master 连通性测试成功: %s", resp.Message)
+	}
+	return false, fmt.Sprintf("Master 响应失败: %s", resp.Message)
+}
