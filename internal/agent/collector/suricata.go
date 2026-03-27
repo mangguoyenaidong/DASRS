@@ -48,7 +48,6 @@ func (c *SuricataCollector) Start(reportFunc func(*pb.AlertReportRequest)) error
 		ReOpen:    true,
 		MustExist: false,
 		Poll:      true,
-		Location:  &tail.SeekInfo{Offset: 0, Whence: os.SEEK_END}, // 从文件末尾开始读取
 		Location:  &tail.SeekInfo{Offset: 0, Whence: os.SEEK_SET}, // 从文件开头读取，以便获取历史告警记录
 	})
 
