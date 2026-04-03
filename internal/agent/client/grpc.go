@@ -47,7 +47,7 @@ func (c *Client) connect(handler func(*proto.CommandMessage)) {
 		}
 
 		var err error
-		c.conn, err = grpc.Dial(c.address,
+		c.conn, err = grpc.NewClient(c.address,
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		)
 		if err != nil {

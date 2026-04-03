@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DASRS - 分布式情报驱动应急响应系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -263,6 +264,17 @@
     <div class="header">
         <h1>🛡️ DASRS 管理控制台</h1>
         <div class="status">
+            <div style="display: flex; align-items: center; gap: 10px; margin-right: 20px; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px;">
+                <label style="font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                    <input type="checkbox" id="autoRefreshCheck" checked onchange="toggleAutoRefresh()"> 自动刷新
+                </label>
+                <select id="refreshInterval" onchange="updateRefreshInterval()" style="background: transparent; color: white; border: none; font-size: 12px; cursor: pointer; outline: none;">
+                    <option value="5000" style="color: black;">5秒</option>
+                    <option value="10000" style="color: black;">10秒</option>
+                    <option value="30000" selected style="color: black;">30秒</option>
+                    <option value="60000" style="color: black;">1分钟</option>
+                </select>
+            </div>
             <span id="systemStatus">系统正常</span>
             <span>MySQL 已连接</span>
             <span>Redis 已连接</span>
@@ -306,8 +318,8 @@
                     <div class="card-header">
                         <div class="card-title">📈 告警趋势</div>
                     </div>
-                    <div class="chart-placeholder">
-                        图表加载中...
+                    <div style="height: 300px; position: relative;">
+                        <canvas id="trendsChart"></canvas>
                     </div>
                 </div>
 
@@ -493,12 +505,90 @@
 
     <script>
         const API_BASE = '';
+        let currentPage = 'dashboard';
+        let refreshTimer = null;
 
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
-            event.target.classList.add('active');
+            
+            const pageEl = document.getElementById(pageId);
+            if (pageEl) {
+                pageEl.classList.add('active');
+                currentPage = pageId;
+                
+                // 查找并激活侧边栏对应的项目
+                const navItems = document.querySelectorAll('.nav-item');
+                navItems.forEach(item => {
+                    if (item.innerText.includes(getPageName(pageId))) {
+                        item.classList.add('active');
+                    }
+                });
+
+                // 切换页面时立即刷新数据
+                refreshCurrentPage();
+                
+                // 重置定时器
+                resetTimer();
+            }
+        }
+
+        function getPageName(id) {
+            const map = {
+                'dashboard': '仪表盘',
+                'agents': '资产管理',
+                'strategies': '策略管理',
+                'alerts': '告警中心',
+                'block': 'IP 封禁',
+                'logs': '操作日志'
+            };
+            return map[id] || '';
+        }
+
+        async function refreshCurrentPage() {
+            console.log(`Refreshing page: ${currentPage}`);
+            switch(currentPage) {
+                case 'dashboard':
+                    await loadDashboard();
+                    break;
+                case 'agents':
+                    await refreshAgents();
+                    break;
+                case 'strategies':
+                    await refreshStrategies();
+                    break;
+                case 'alerts':
+                    await refreshAlerts();
+                    break;
+                case 'block':
+                    await refreshBlockedIps();
+                    break;
+                case 'logs':
+                    await refreshLogs();
+                    break;
+            }
+        }
+
+        function toggleAutoRefresh() {
+            if (document.getElementById('autoRefreshCheck').checked) {
+                resetTimer();
+            } else {
+                if (refreshTimer) clearInterval(refreshTimer);
+            }
+        }
+
+        function updateRefreshInterval() {
+            if (document.getElementById('autoRefreshCheck').checked) {
+                resetTimer();
+            }
+        }
+
+        function resetTimer() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            if (!document.getElementById('autoRefreshCheck').checked) return;
+
+            const interval = parseInt(document.getElementById('refreshInterval').value);
+            refreshTimer = setInterval(refreshCurrentPage, interval);
         }
 
         async function fetchAPI(url) {
@@ -526,15 +616,21 @@
         }
 
         async function loadDashboard() {
-            const stats = await fetchAPI('/api/stats');
-            if (stats) {
-                document.getElementById('totalAssets').textContent = stats.data?.online_assets || 0;
-                document.getElementById('totalAlerts').textContent = stats.data?.total_alerts || 0;
-                document.getElementById('pendingAlerts').textContent = stats.data?.pending_alerts || 0;
-                document.getElementById('blockedIps').textContent = stats.data?.blocked_ips || 0;
-            }
+            await Promise.all([loadStats(), loadRecentAlerts(), loadTrends()]);
+        }
 
-            const alerts = await fetchAPI('/api/alerts?page=1&size=5');
+        async function loadStats() {
+            const stats = await fetchAPI('/api/stats');
+            if (stats && stats.data) {
+                document.getElementById('totalAssets').textContent = stats.data.online_assets || 0;
+                document.getElementById('totalAlerts').textContent = stats.data.total_alerts || 0;
+                document.getElementById('pendingAlerts').textContent = stats.data.pending_alerts || 0;
+                document.getElementById('blockedIps').textContent = stats.data.blocked_ips || 0;
+            }
+        }
+
+        async function loadRecentAlerts() {
+            const alerts = await fetchAPI('/api/alerts?page=1&page_size=5');
             if (alerts && alerts.data) {
                 const tbody = document.getElementById('recentAlertsTable');
                 if (alerts.data.length === 0) {
@@ -553,6 +649,48 @@
             }
         }
 
+        let trendsChart = null;
+        async function loadTrends() {
+            const res = await fetchAPI('/api/dashboard/trends?days=7');
+            if (!res || !res.data) return;
+
+            const canvas = document.getElementById('trendsChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            const ctx = canvas.getContext('2d');
+            const data = res.data;
+            const sortedDates = Object.keys(data).sort();
+            const counts = sortedDates.map(date => data[date]);
+
+            if (trendsChart) {
+                trendsChart.destroy();
+            }
+
+            trendsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: [{
+                        label: '每日告警数',
+                        data: counts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: trendsChart ? 0 : 1000 },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
         async function refreshAgents() {
             const res = await fetchAPI('/api/agents');
             const tbody = document.getElementById('agentsTable');
@@ -567,8 +705,6 @@
                         <td>${new Date(a.created_at).toLocaleString()}</td>
                     </tr>
                 `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">加载失败</td></tr>';
             }
         }
 
@@ -579,14 +715,12 @@
                 tbody.innerHTML = res.data.map(s => `
                     <tr>
                         <td><span class="badge ${s.enabled ? 'success' : 'warning'}">${s.enabled ? '启用' : '禁用'}</span></td>
-                        <td>${s.s_id || '-'}</td>
+                        <td>${s.sid || '-'}</td>
                         <td>${s.target_file}</td>
                         <td>${s.description || '-'}</td>
                         <td>${new Date(s.created_at).toLocaleString()}</td>
                     </tr>
                 `).join('');
-            } else {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">加载失败</td></tr>';
             }
         }
 
@@ -597,15 +731,12 @@
                 match_regex: document.getElementById('strategyMatch').value,
                 replace_content: document.getElementById('strategyReplace').value,
                 description: document.getElementById('strategyDesc').value,
-                enabled: true
+                enabled: 1
             };
             const res = await postAPI('/api/strategies', data);
             if (res) {
-                alert(res.message || '策略添加成功');
                 document.getElementById('addStrategyForm').reset();
                 refreshStrategies();
-            } else {
-                alert('添加失败');
             }
         }
 
@@ -626,26 +757,25 @@
                         </td>
                     </tr>
                 `).join('') : '<tr><td colspan="7" style="text-align: center; color: #999;">暂无告警</td></tr>';
-            } else {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">加载失败</td></tr>';
             }
+        }
+
+        async function refreshBlockedIps() {
+            // 目前 API /api/stats 已经返回了 blocked_ips 数量
+            // 如果需要展示列表，需要后端增加对应的 API
+            // 这里暂时刷新 Dashboard 以同步计数
+            await loadStats();
         }
 
         async function blockIP() {
             const ip = document.getElementById('blockIp').value.trim();
             const reason = document.getElementById('blockReason').value;
-            if (!ip) {
-                alert('请输入 IP 地址');
-                return;
-            }
+            if (!ip) return;
             const res = await postAPI('/api/block', {ip, reason});
-            if (res && res.code === 0) {
-                alert('封禁成功');
+            if (res && res.success) {
                 document.getElementById('blockIp').value = '';
                 document.getElementById('blockReason').value = '';
-                loadDashboard();
-            } else {
-                alert(res?.message || '封禁失败');
+                await loadStats();
             }
         }
 
@@ -661,11 +791,9 @@
                 container.innerHTML = res.data.map(l => `
                     <div class="log-item">
                         <div class="time">${new Date(l.created_at).toLocaleString()}</div>
-                        <div class="content">${l.command_type}: ${l.command_id} - ${l.result === 0 ? '成功' : '失败'}</div>
+                        <div class="content"><strong>${l.command_type}</strong>: ${l.command_id} - <span class="badge ${l.result === 1 ? 'success' : 'danger'}">${l.result === 1 ? '成功' : '失败'}</span></div>
                     </div>
                 `).join('');
-            } else {
-                container.innerHTML = '<div class="log-item" style="text-align: center; color: #999;">暂无日志</div>';
             }
         }
 
@@ -683,8 +811,7 @@
         }
 
         // Initialize
-        loadDashboard();
-        setInterval(loadDashboard, 30000);
+        showPage('dashboard');
     </script>
 </body>
 </html>

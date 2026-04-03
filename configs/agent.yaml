@@ -5,10 +5,10 @@
 agent:
   # Master 服务地址 (IP:端口，必须填写实际 Master 地址)
   # 示例: "192.168.1.100:50051" 或 "master.example.com:50051"
-  master_address: "CHANGE_TO_MASTER_IP:50051"
+  master_address: "127.0.0.1:50051"
 
   # Suricata 日志路径 (根据实际路径修改)
-  suricata_log_path: "/var/log/suricata/eve.json"
+  suricata_log_path: "./suricata_logs/eve.json"
 
   # Agent 名称 (可选，用于标识此节点)
   agent_name: "agent-01"

@@ -15,10 +15,15 @@ type Config struct {
 	HeartbeatInterval int    `yaml:"heartbeat_interval"`
 }
 
+// yamlConfig 用于解析嵌套的 YAML 结构
+type yamlConfig struct {
+	Agent Config `yaml:"agent"`
+}
+
 func LoadConfig(path string) (*Config, error) {
 	cfg := &Config{
-		MasterAddress:     "master:50051",
-		SuricataLogPath:   "/var/log/suricata/eve.json",
+		MasterAddress:     "127.0.0.1:50051", // 默认指向本地
+		SuricataLogPath:   "./suricata_logs/eve.json",
 		ReconnectInterval: 5,
 		HeartbeatInterval: 30,
 	}
@@ -26,8 +31,22 @@ func LoadConfig(path string) (*Config, error) {
 	// 尝试读取配置文件（如果存在）
 	data, err := os.ReadFile(path)
 	if err == nil {
-		if err := yaml.Unmarshal(data, &cfg); err != nil {
+		var yCfg yamlConfig
+		if err := yaml.Unmarshal(data, &yCfg); err != nil {
 			return nil, fmt.Errorf("failed to parse config file: %w", err)
+		}
+		// 如果配置文件中有值，则覆盖默认值
+		if yCfg.Agent.MasterAddress != "" {
+			cfg.MasterAddress = yCfg.Agent.MasterAddress
+		}
+		if yCfg.Agent.SuricataLogPath != "" {
+			cfg.SuricataLogPath = yCfg.Agent.SuricataLogPath
+		}
+		if yCfg.Agent.ReconnectInterval > 0 {
+			cfg.ReconnectInterval = yCfg.Agent.ReconnectInterval
+		}
+		if yCfg.Agent.HeartbeatInterval > 0 {
+			cfg.HeartbeatInterval = yCfg.Agent.HeartbeatInterval
 		}
 	}
 

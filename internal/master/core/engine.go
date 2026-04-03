@@ -310,27 +310,41 @@ func (e *IntelligenceEngine) detectAttackPattern(currentAlert *model.AlertLog, r
 
 // GetAttackTrends 获取攻击趋势统计
 func (e *IntelligenceEngine) GetAttackTrends(days int) (map[string]int, error) {
-	var stats map[string]int
+	stats := make(map[string]int)
 
-	// 使用 GORM 查询替代原生 SQL 避免语法问题
+	// 初始化最近几天的日期，确保即使某天没告警也会显示 0
+	for i := 0; i < days; i++ {
+		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		stats[date] = 0
+	}
+
 	var results []struct {
-		Day   time.Time
-		Count int
+		Day   string `gorm:"column:day"`
+		Count int    `gorm:"column:count"`
 	}
 
 	startDate := time.Now().AddDate(0, 0, -days)
-	e.db.Model(&model.AlertLog{}).
-		Select("DATE(created_at) as day, COUNT(*) as count").
+	
+	// 使用更通用的格式化查询 (MySQL 兼容)
+	err := e.db.Model(&model.AlertLog{}).
+		Select("DATE_FORMAT(created_at, '%Y-%m-%d') as day, COUNT(*) as count").
 		Where("created_at >= ?", startDate).
-		Group("DATE(created_at)").
+		Group("day").
 		Order("day ASC").
-		Find(&results)
+		Find(&results).Error
 
-	stats = make(map[string]int)
-	for _, r := range results {
-		stats[r.Day.Format("2006-01-02")] = r.Count
+	if err != nil {
+		e.logger.Error("Failed to query attack trends: %v", err)
+		return stats, err
 	}
 
+	for _, r := range results {
+		if r.Day != "" {
+			stats[r.Day] = r.Count
+		}
+	}
+
+	e.logger.Info("Attack trends query success: found %d active days in last %d days", len(results), days)
 	return stats, nil
 }
 

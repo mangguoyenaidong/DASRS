@@ -7,24 +7,25 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"google.golang.org/grpc"
-	"gorm.io/gorm"
 	"security-response-system/internal/common"
 	"security-response-system/internal/master/core"
 	"security-response-system/internal/master/model"
+
+	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"gorm.io/gorm"
 )
 
 // Server HTTP API 服务器
 type Server struct {
-	router   *gin.Engine
-	server   *http.Server
-	cfg      *Config
-	db       *gorm.DB
-	redis    interface{}
-	engine   *core.IntelligenceEngine
-	logger   *common.Logger
-	grpcServer *grpc.Server  // 添加 gRPC server 引用
+	router     *gin.Engine
+	server     *http.Server
+	cfg        *Config
+	db         *gorm.DB
+	redis      interface{}
+	engine     *core.IntelligenceEngine
+	logger     *common.Logger
+	grpcServer *grpc.Server // 添加 gRPC server 引用
 }
 
 // Config API 配置
@@ -39,7 +40,7 @@ func NewServer(cfg *model.Config, db *gorm.DB, redis interface{}, engine *core.I
 	router := gin.New()
 
 	server := &Server{
-		router:     router,
+		router: router,
 		cfg: &Config{
 			Host: cfg.Master.Host,
 			Port: cfg.Master.HTTPPort,
@@ -146,7 +147,7 @@ func (s *Server) Close() {
 // healthCheck 健康检查
 func (s *Server) healthCheck(c *gin.Context) {
 	s.db.Raw("SELECT 1").Scan(&struct{}{})
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"status":    "ok",
 		"timestamp": time.Now().UnixMilli(),
 	})
@@ -154,6 +155,7 @@ func (s *Server) healthCheck(c *gin.Context) {
 
 // adminPage 管理页面
 func (s *Server) adminPage(c *gin.Context) {
+	c.Header("Content-Type", "text/html; charset=utf-8")
 	c.HTML(http.StatusOK, "index.html", gin.H{
 		"title": "DASRS 管理控制台",
 	})
@@ -171,11 +173,11 @@ func (s *Server) getLogs(c *gin.Context) {
 	s.db.Model(&model.OperationLog{}).Count(&total)
 
 	if err := s.db.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&logs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"data":  logs,
 		"total": total,
 		"page":  page,
@@ -208,11 +210,11 @@ func (s *Server) listAgents(c *gin.Context) {
 	query.Count(&total)
 
 	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&agents).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"data":  agents,
 		"total": total,
 		"page":  page,
@@ -224,21 +226,21 @@ func (s *Server) listAgents(c *gin.Context) {
 func (s *Server) getAgent(c *gin.Context) {
 	agentID := c.Param("id")
 	if agentID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "agent id required"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "agent id required"})
 		return
 	}
 
 	var agent model.AgentNode
 	if err := s.db.Where("agent_id = ?", agentID).First(&agent).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
+			c.PureJSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": agent})
+	c.PureJSON(http.StatusOK, gin.H{"data": agent})
 }
 
 // listAlerts 获取告警列表
@@ -287,11 +289,11 @@ func (s *Server) listAlerts(c *gin.Context) {
 
 	// 获取分页数据
 	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&alertLogs).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"data":  alertLogs,
 		"total": total,
 		"page":  page,
@@ -303,21 +305,21 @@ func (s *Server) listAlerts(c *gin.Context) {
 func (s *Server) getAlert(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
 	var alertLog model.AlertLog
 	if err := s.db.First(&alertLog, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
+			c.PureJSON(http.StatusNotFound, gin.H{"error": "alert not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": alertLog})
+	c.PureJSON(http.StatusOK, gin.H{"data": alertLog})
 }
 
 // listStrategies 获取策略列表
@@ -341,11 +343,11 @@ func (s *Server) listStrategies(c *gin.Context) {
 
 	// 获取分页数据
 	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&strategies).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"data":  strategies,
 		"total": total,
 		"page":  page,
@@ -357,37 +359,37 @@ func (s *Server) listStrategies(c *gin.Context) {
 func (s *Server) getStrategy(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
 	var strategy model.Strategy
 	if err := s.db.First(&strategy, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "strategy not found"})
+			c.PureJSON(http.StatusNotFound, gin.H{"error": "strategy not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": strategy})
+	c.PureJSON(http.StatusOK, gin.H{"data": strategy})
 }
 
 // createStrategy 创建策略
 func (s *Server) createStrategy(c *gin.Context) {
 	var strategy model.Strategy
 	if err := c.ShouldBindJSON(&strategy); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := s.db.Create(&strategy).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	c.PureJSON(http.StatusCreated, gin.H{
 		"message": "strategy created",
 		"data":    strategy,
 	})
@@ -397,23 +399,23 @@ func (s *Server) createStrategy(c *gin.Context) {
 func (s *Server) updateStrategy(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
 	var strategy model.Strategy
 	if err := s.db.First(&strategy, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "strategy not found"})
+		c.PureJSON(http.StatusNotFound, gin.H{"error": "strategy not found"})
 		return
 	}
 
 	if err := c.ShouldBindJSON(&strategy); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	s.db.Save(&strategy)
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"message": "strategy updated",
 		"data":    strategy,
 	})
@@ -423,27 +425,27 @@ func (s *Server) updateStrategy(c *gin.Context) {
 func (s *Server) deleteStrategy(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
 	if err := s.db.Delete(&model.Strategy{}, id).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "strategy deleted"})
+	c.PureJSON(http.StatusOK, gin.H{"message": "strategy deleted"})
 }
 
 // getStats 获取统计数据
 func (s *Server) getStats(c *gin.Context) {
 	var stats struct {
-		TotalAssets      int64 `json:"total_assets"`
-		OnlineAssets     int64 `json:"online_assets"`
-		TotalAlerts      int64 `json:"total_alerts"`
-		PendingAlerts    int64 `json:"pending_alerts"`
-		BlockedIPs       int64 `json:"blocked_ips"`
-		TotalStrategies  int64 `json:"total_strategies"`
+		TotalAssets       int64 `json:"total_assets"`
+		OnlineAssets      int64 `json:"online_assets"`
+		TotalAlerts       int64 `json:"total_alerts"`
+		PendingAlerts     int64 `json:"pending_alerts"`
+		BlockedIPs        int64 `json:"blocked_ips"`
+		TotalStrategies   int64 `json:"total_strategies"`
 		EnabledStrategies int64 `json:"enabled_strategies"`
 	}
 
@@ -454,7 +456,7 @@ func (s *Server) getStats(c *gin.Context) {
 	s.db.Model(&model.Strategy{}).Count(&stats.TotalStrategies)
 	s.db.Model(&model.Strategy{}).Where("enabled = ?", 1).Count(&stats.EnabledStrategies)
 
-	c.JSON(http.StatusOK, gin.H{"data": stats})
+	c.PureJSON(http.StatusOK, gin.H{"data": stats})
 }
 
 // blockIP 手动封禁 IP
@@ -466,14 +468,14 @@ func (s *Server) blockIP(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// TODO: 推送到 gRPC Server 通过指令流发送到 Agent
 	s.logger.Info("Manual block request for IP: %s, reason: %s", req.IP, req.Reason)
 
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("Block command sent for IP %s", req.IP),
 	})
@@ -482,13 +484,13 @@ func (s *Server) blockIP(c *gin.Context) {
 // getDashboardOverview 获取仪表盘概览
 func (s *Server) getDashboardOverview(c *gin.Context) {
 	var overview struct {
-		TotalAlerts      int64 `json:"total_alerts"`
-		TodayAlerts      int64 `json:"today_alerts"`
-		CriticalAlerts   int64 `json:"critical_alerts"`
-		HighAlerts       int64 `json:"high_alerts"`
-		BlockedIPs       int64 `json:"blocked_ips"`
-		PatchedConfigs   int64 `json:"patched_configs"`
-		ActiveAgents     int   `json:"active_agents"`
+		TotalAlerts      int64   `json:"total_alerts"`
+		TodayAlerts      int64   `json:"today_alerts"`
+		CriticalAlerts   int64   `json:"critical_alerts"`
+		HighAlerts       int64   `json:"high_alerts"`
+		BlockedIPs       int64   `json:"blocked_ips"`
+		PatchedConfigs   int64   `json:"patched_configs"`
+		ActiveAgents     int     `json:"active_agents"`
 		AverageRiskScore float64 `json:"average_risk_score"`
 	}
 
@@ -507,7 +509,7 @@ func (s *Server) getDashboardOverview(c *gin.Context) {
 	s.db.Model(&model.AlertLog{}).Select("AVG(risk_score)").Scan(&avgScore)
 	overview.AverageRiskScore = avgScore
 
-	c.JSON(http.StatusOK, gin.H{"data": overview})
+	c.PureJSON(http.StatusOK, gin.H{"data": overview})
 }
 
 // getAttackTrends 获取攻击趋势
@@ -515,10 +517,10 @@ func (s *Server) getAttackTrends(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "7"))
 	trends, err := s.engine.GetAttackTrends(days)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": trends})
+	c.PureJSON(http.StatusOK, gin.H{"data": trends})
 }
 
 // getTopAttackSources 获取 Top 攻击源
@@ -526,60 +528,60 @@ func (s *Server) getTopAttackSources(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	sources, err := s.engine.GetTopAttackSources(limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": sources})
+	c.PureJSON(http.StatusOK, gin.H{"data": sources})
 }
 
 // getSeverityDistribution 获取严重程度分布
 func (s *Server) getSeverityDistribution(c *gin.Context) {
 	distribution, err := s.engine.GetSeverityDistribution()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": distribution})
+	c.PureJSON(http.StatusOK, gin.H{"data": distribution})
 }
 
 // getActionStats 获取动作执行统计
 func (s *Server) getActionStats(c *gin.Context) {
 	stats, err := s.engine.GetActionStatistics()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"data": stats})
+	c.PureJSON(http.StatusOK, gin.H{"data": stats})
 }
 
 // getAlertCorrelation 获取告警关联分析
 func (s *Server) getAlertCorrelation(c *gin.Context) {
 	alertID := c.Param("id")
 	if alertID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "alert id required"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "alert id required"})
 		return
 	}
 
 	group, err := s.engine.GetAlertCorrelation(alertID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": group})
+	c.PureJSON(http.StatusOK, gin.H{"data": group})
 }
 
 // registerAgent Agent 注册接口 (供远程 Agent 调用)
 func (s *Server) registerAgent(c *gin.Context) {
 	var req struct {
-		AgentID   string `json:"agent_id" binding:"required"`
-		Hostname  string `json:"hostname"`
-		IP        string `json:"ip"`
-		Name      string `json:"name"`
+		AgentID  string `json:"agent_id" binding:"required"`
+		Hostname string `json:"hostname"`
+		IP       string `json:"ip"`
+		Name     string `json:"name"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -600,7 +602,7 @@ func (s *Server) registerAgent(c *gin.Context) {
 	if result.Error != nil {
 		// 新 Agent
 		if err := s.db.Create(agent).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	} else {
@@ -608,16 +610,16 @@ func (s *Server) registerAgent(c *gin.Context) {
 		s.db.Model(&model.AgentNode{}).
 			Where("agent_id = ?", req.AgentID).
 			Updates(map[string]interface{}{
-			"status":       1,
-			"last_seen_at": now,
-			"hostname":     req.Hostname,
-			"ip":           req.IP,
-			"name":         req.Name,
-			"updated_at":   now,
-		})
+				"status":       1,
+				"last_seen_at": now,
+				"hostname":     req.Hostname,
+				"ip":           req.IP,
+				"name":         req.Name,
+				"updated_at":   now,
+			})
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"success":   true,
 		"message":   "Agent registered successfully",
 		"agent_id":  req.AgentID,
@@ -629,31 +631,31 @@ func (s *Server) registerAgent(c *gin.Context) {
 func (s *Server) deleteAgent(c *gin.Context) {
 	agentID := c.Param("id")
 	if agentID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "agent id required"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "agent id required"})
 		return
 	}
 
 	// 从数据库删除
 	if err := s.db.Where("agent_id = ?", agentID).Delete(&model.AgentNode{}).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Agent deleted"})
+	c.PureJSON(http.StatusOK, gin.H{"message": "Agent deleted"})
 }
 
 // unblockAgentIP 解除 Agent 的 IP 封禁
 func (s *Server) unblockAgentIP(c *gin.Context) {
 	agentID := c.Param("id")
 	if agentID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "agent id required"})
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "agent id required"})
 		return
 	}
 
 	// 获取 Agent 信息
 	var agent model.AgentNode
 	if err := s.db.Where("agent_id = ?", agentID).First(&agent).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
+		c.PureJSON(http.StatusNotFound, gin.H{"error": "Agent not found"})
 		return
 	}
 
@@ -662,7 +664,7 @@ func (s *Server) unblockAgentIP(c *gin.Context) {
 		s.logger.Info("Would send unblock command to agent %s", agentID)
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": fmt.Sprintf("Unblock command sent to agent %s", agentID),
 	})

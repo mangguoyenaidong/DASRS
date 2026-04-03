@@ -45,33 +45,28 @@ docker-compose logs -f
 | MySQL | 3307 | 数据库 (映射) |
 | Redis | 6379 | 缓存/消息队列 |
 
-## 管理界面
-
 ### 仪表盘
-系统概览，包括：
-- 在线资产数量
-- 总告警数 / 待处理告警
-- 已封禁 IP 数量
-- 防护策略统计
-- 最新告警列表
+系统概览，支持 **实时动态刷新**，功能包括：
+- **实时监控状态栏**：支持开关自动刷新，可选频率 (5秒, 10秒, 30秒, 1分钟)。
+- 在线资产数量 / 总告警数 / 待处理告警。
+- 已封禁 IP 数量 (基于 iptables)。
+- 告警趋势图 (Chart.js 实时渲染)。
 
 ### 资产管理
-查看所有注册的 Agent 资产信息：
-- IP 地址
-- 主机名
-- 操作系统类型
-- 服务类型 (Nginx/IIS)
-- 在线状态
+查看所有注册的 Agent 资产信息，支持页面自动同步：
+- IP 地址 / 主机名 / 操作系统类型。
+- 服务类型 (Nginx/IIS/Apache)。
+- 在线状态 (实时脉冲心跳指示器)。
 
 ### 策略管理
-防护策略列表，支持：
-- 查看现有策略
-- 添加新策略 (Nginx 配置补丁)
-- 启用/禁用策略
+防护策略列表，支持中文描述（已修复乱码问题）：
+...
+- 启用/禁用策略。
 
 **添加策略示例：**
 ```json
 {
+  "sid": "2000001",
   "target_file": "/etc/nginx/sites-available/default",
   "match_regex": "location /admin",
   "replace_content": "location /admin\n    allow 10.0.0.0/8;\n    deny all;",
@@ -80,11 +75,44 @@ docker-compose logs -f
 ```
 
 ### 告警中心
-- 查看所有安全告警
-- 按严重程度过滤 (critical/high/medium/low)
-- 一键封禁威胁 IP
+- 查看所有安全告警。
+- **动态联动**：在告警列表中可一键跳转至封禁页面，自动填入威胁 IP。
 
-### IP 封禁
+...
+
+## 攻击模拟与验证指南
+
+为了验证 DASRS 的响应逻辑，您可以在实验环境中模拟以下攻击：
+
+### 1. 模拟 SQL 注入 (Web 流量)
+```bash
+# 在另一台机器执行
+curl "http://<AGENT_IP>/?id=1' AND 1=1 UNION SELECT NULL,username,password FROM users--"
+```
+
+### 2. 模拟日志注入 (本地测试)
+向 Agent 的 `eve.json` 路径追加如下 JSON 以触发高风险告警：
+```bash
+echo '{"timestamp":"2026-04-03T15:00:00.000000+0800","event_type":"alert","src_ip":"1.2.3.4","alert":{"signature_id":2000001,"signature":"Simulated SQL Injection","severity":1}}' >> /var/log/suricata/eve.json
+```
+
+### 3. 漏洞扫描器测试
+使用 `nmap` 或 `AWVS` 对 Agent 进行全扫描。由于系统具备 **时序频率分析引擎**，短时间内的高频告警会触发加成评分，从而快速阻断扫描源。
+
+## 技术规范说明
+
+### 字符编码
+系统全面采用 **UTF-8 (utf8mb4)** 编码规范：
+- **数据库**：所有表默认字符集为 `utf8mb4`，Master 连接 DSN 包含 `charset=utf8mb4`，且连接会话显式执行 `SET NAMES utf8mb4`。
+- **API 响应**：使用 Gin 的 `PureJSON` 进行序列化，确保中文字符不被 Unicode 转义，保持原始输出。
+- **前端渲染**：设置 `<meta charset="UTF-8">`，确保浏览器正确显示多语言描述。
+
+### 实时性保障
+- 前端采用 **动态页面轮询机制**，在页面切换时立即刷新数据并重置定时器。
+- API 调用采用 `Promise.all` 并发请求，极大缩短了多表统计时的响应时间。
+
+## API 参考
+
 手动封禁指定 IP 地址：
 ```bash
 # API 方式

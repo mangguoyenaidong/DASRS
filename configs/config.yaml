@@ -7,8 +7,8 @@ master:
   http_port: 8080
   # 数据库配置
   database:
-    host: "mysql"
-    port: 3306
+    host: "127.0.0.1"
+    port: 3307
     username: "root"
     password: "rootpassword"
     name: "security"
@@ -16,7 +16,7 @@ master:
     max_idle_conns: 5
   # Redis 配置
   redis:
-    host: "redis"
+    host: "127.0.0.1"
     port: 6379
     password: ""
     db: 0
@@ -54,5 +54,5 @@ agent:
 
 # 日志配置
 logging:
-  level: "info"  # debug, info, warn, error
+  level: "info" # debug, info, warn, error
   format: "json" # json, text
