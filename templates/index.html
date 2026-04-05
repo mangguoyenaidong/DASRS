@@ -258,6 +258,71 @@
             margin-right: 8px;
             animation: pulse 2s infinite;
         }
+
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 70%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        .close-modal {
+            position: absolute;
+            right: 25px;
+            top: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #999;
+            cursor: pointer;
+        }
+        .close-modal:hover { color: #333; }
+        .detail-row {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        .detail-label {
+            width: 120px;
+            font-weight: 600;
+            color: #666;
+            flex-shrink: 0;
+        }
+        .detail-value {
+            flex: 1;
+            word-break: break-all;
+            color: #333;
+        }
+        .payload-box {
+            background: #2d3436;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre-wrap;
+            margin-top: 10px;
+            border: 1px solid #000;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
@@ -752,12 +817,145 @@
                         <td>${a.source_ip}</td>
                         <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity}</span></td>
                         <td>${a.signature_name || '-'}</td>
-                        <td>
+                        <td style="display: flex; gap: 5px;">
+                            <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;" onclick="showAlertDetails('${a.id}')">详情</button>
                             <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="blockIPFromAlert('${a.source_ip}')">封禁</button>
                         </td>
                     </tr>
                 `).join('') : '<tr><td colspan="7" style="text-align: center; color: #999;">暂无告警</td></tr>';
             }
+        }
+
+        async function showAlertDetails(id) {
+            const res = await fetchAPI(`/api/alerts/${id}`);
+            if (!res || !res.data) {
+                alert('获取详情失败');
+                return;
+            }
+            
+            const alertData = res.data;
+            const modal = document.getElementById('alertModal');
+            const body = document.getElementById('modalBody');
+            
+            // 处理原始报文数据
+            let rawText = '无报文数据';
+            let hexDump = '无十六进制数据';
+            
+            if (alertData.payload) {
+                try {
+                    const decoded = atob(alertData.payload);
+                    rawText = decoded;
+                    hexDump = toHexDump(decoded);
+                } catch (e) {
+                    rawText = alertData.payload;
+                    hexDump = '数据非 Base64 格式，无法解析。';
+                }
+            }
+            
+            body.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h4 style="margin-bottom: 10px; color: #666; font-size: 14px; border-left: 3px solid #667eea; padding-left: 10px;">基础信息</h4>
+                        <div class="detail-row"><div class="detail-label">告警 ID</div><div class="detail-value">${alertData.alert_id}</div></div>
+                        <div class="detail-row"><div class="detail-label">来源 IP</div><div class="detail-value"><strong>${alertData.source_ip}</strong></div></div>
+                        <div class="detail-row"><div class="detail-label">风险评分</div><div class="detail-value"><span style="color: #e74c3c; font-weight: bold; font-size: 18px;">${alertData.risk_score}</span> / 100</div></div>
+                        <div class="detail-row"><div class="detail-label">自动决策</div><div class="detail-value"><span class="badge info">${alertData.action}</span></div></div>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 10px; color: #666; font-size: 14px; border-left: 3px solid #667eea; padding-left: 10px;">特征识别</h4>
+                        <div class="detail-row"><div class="detail-label">签名 ID</div><div class="detail-value">${alertData.sid}</div></div>
+                        <div class="detail-row"><div class="detail-label">规则名称</div><div class="detail-value">${alertData.signature_name}</div></div>
+                        <div class="detail-row"><div class="detail-label">严重程度</div><div class="detail-value"><span class="badge ${getSeverityBadge(alertData.severity)}">${alertData.severity}</span></div></div>
+                        <div class="detail-row"><div class="detail-label">检测时间</div><div class="detail-value">${new Date(alertData.created_at).toLocaleString()}</div></div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="color: #333; font-size: 16px;">🔍 人工审计 - 原始报文内容:</h3>
+                        <div style="font-size: 12px; color: #888;">Suricata Raw Payload (Decoded)</div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 12px; color: #666;">文本视图 (Text View):</label>
+                            <div class="payload-box" style="height: 150px; overflow-y: auto;">${escapeHtml(rawText)}</div>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 12px; color: #666;">十六进制视图 (Hex View):</label>
+                            <div class="payload-box" style="height: 150px; overflow-y: auto; color: #aaa; background: #1e1e1e;">${escapeHtml(hexDump)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 25px; padding: 20px; background: #fff8e1; border-radius: 8px; border: 1px solid #ffe082;">
+                    <h4 style="color: #f57f17; margin-bottom: 10px; font-size: 15px;">⚖️ 人工判定操作</h4>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">如果您通过查阅上述原始报文判定此告警为误报，可点击“误报放行”；若判定为确切攻击，可点击“确认封禁”。</p>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-success" onclick="manualAction('${alertData.source_ip}', 'ignore', '${id}')">✅ 判定误报 (放行并忽略)</button>
+                        <button class="btn btn-danger" onclick="manualAction('${alertData.source_ip}', 'block', '${id}')">🚫 确认攻击 (立即封禁)</button>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+        }
+
+        // 十六进制转储工具函数
+        function toHexDump(str) {
+            let result = '';
+            for (let i = 0; i < str.length; i += 16) {
+                const chunk = str.slice(i, i + 16);
+                const hex = chunk.split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0').toUpperCase()).join(' ');
+                const offset = i.toString(16).padStart(8, '0').toUpperCase();
+                result += `${offset}:  ${hex.padEnd(47)}  |${chunk.replace(/[^\x20-\x7E]/g, '.')}|\n`;
+            }
+            return result;
+        }
+
+        async function manualAction(ip, action, alertId) {
+            if (action === 'block') {
+                const res = await postAPI('/api/block', {ip: ip, reason: '人工审计确认攻击'});
+                if (res) alert('已下发封禁指令！');
+            } else {
+                alert('已标记为误报，系统将忽略此告警。');
+                // 这里可以扩展 API 调用来更新告警状态为“已忽略”
+            }
+            closeModal();
+            refreshAlerts();
+        }
+
+        function closeModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+
+        // 点击背景关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('alertModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function decodePayload(payload) {
+            if (!payload) return '无原始报文数据';
+            try {
+                // 尝试 Base64 解码 (Suricata 默认输出 Base64)
+                const decoded = atob(payload);
+                return decoded.trim();
+            } catch (e) {
+                // 如果不是 Base64，则返回原样
+                return payload.trim();
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
         }
 
         async function refreshBlockedIps() {
@@ -813,5 +1011,21 @@
         // Initialize
         showPage('dashboard');
     </script>
+
+    <!-- 告警详情模态框 -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle" style="margin-bottom: 25px; color: #333; padding-bottom: 15px; border-bottom: 2px solid #667eea;">🚨 告警详情</h2>
+            
+            <div id="modalBody">
+                <!-- 详情内容将通过 JS 动态注入 -->
+            </div>
+            
+            <div style="margin-top: 30px; display: flex; justify-content: flex-end; gap: 15px;">
+                <button class="btn btn-primary" onclick="closeModal()">关闭窗口</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

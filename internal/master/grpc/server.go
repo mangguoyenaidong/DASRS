@@ -312,6 +312,32 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		}
 	}
 
+	// 如果分析结果是需要修复漏洞 (Patch)
+	if decision.Action == "repair" {
+		s.logger.Info("Auto repairing for alert %s (SID: %s)", decision.AlertID, alert.SID)
+		
+		var strategy model.Strategy
+		if err := db.Where("sid = ? AND enabled = 1", alert.SID).First(&strategy).Error; err == nil {
+			s.logger.Info("Found matching strategy for SID %s: %s", alert.SID, strategy.Description)
+			
+			cmd := &proto.CommandMessage{
+				CommandId:      fmt.Sprintf("cmd-patch-%d", time.Now().Unix()),
+				Type:           proto.CommandType_PATCH_CONFIG,
+				ConfigPath:     strategy.TargetFile,
+				MatchRegex:     strategy.MatchRegex,
+				ReplaceContent: strategy.ReplaceContent,
+			}
+			
+			// 下发给所有在线 Agent (实际生产中应根据 AssetInfo 过滤)
+			agents := s.GetConnectedAgents()
+			for _, agent := range agents {
+				s.QueueCommand(agent.AgentID, cmd)
+			}
+		} else {
+			s.logger.Warn("No enabled strategy found for SID %s", alert.SID)
+		}
+	}
+
 	return &proto.AlertReportResponse{
 		Success: true,
 		Message: decision.Reason,
