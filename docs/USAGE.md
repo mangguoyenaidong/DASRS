@@ -60,7 +60,8 @@ docker-compose logs -f
 
 ### 策略管理
 防护策略列表，支持中文描述（已修复乱码问题）：
-...
+- **自动化漏洞修复**：当告警风险评分达到修复阈值（默认 80）时，Master 将自动检索匹配的 SID 策略并下发 `PATCH_CONFIG` 指令。
+- **配置热修复**：Agent 遵循“备份-修改-验证-重载”流程。
 - 启用/禁用策略。
 
 **添加策略示例：**
@@ -69,13 +70,15 @@ docker-compose logs -f
   "sid": "2000001",
   "target_file": "/etc/nginx/sites-available/default",
   "match_regex": "location /admin",
-  "replace_content": "location /admin\n    allow 10.0.0.0/8;\n    deny all;",
-  "description": "限制 admin 访问"
+  "replace_content": "location /admin\n    allow 127.0.0.1;\n    deny all;",
+  "description": "限制敏感路径访问"
 }
 ```
 
 ### 告警中心
 - 查看所有安全告警。
+- **原始报文审计**：点击告警行的“详情”按钮，可查看 Base64 解码后的攻击报文，支持 **文本视图 (Text View)** 和 **十六进制视图 (Hex View)**，便于人工分析。
+- **人工判定与响应**：在详情窗口提供“判定误报”和“确认攻击”按钮。点击“确认攻击”可手动触发对威胁源 IP 的即时封禁。
 - **动态联动**：在告警列表中可一键跳转至封禁页面，自动填入威胁 IP。
 
 ...

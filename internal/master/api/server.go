@@ -119,6 +119,14 @@ func (s *Server) setupRoutes() {
 	// 手动封禁
 	s.router.POST("/api/block", s.blockIP)
 
+	// 白名单管理
+	whitelist := s.router.Group("/api/whitelist")
+	{
+		whitelist.GET("", s.listWhitelist)
+		whitelist.POST("", s.addWhitelist)
+		whitelist.DELETE("/:id", s.deleteWhitelist)
+	}
+
 	// 操作日志
 	s.router.GET("/api/logs", s.getLogs)
 }
@@ -668,4 +676,54 @@ func (s *Server) unblockAgentIP(c *gin.Context) {
 		"success": true,
 		"message": fmt.Sprintf("Unblock command sent to agent %s", agentID),
 	})
+}
+
+// listWhitelist 获取白名单列表
+func (s *Server) listWhitelist(c *gin.Context) {
+	var whitelist []model.WhitelistIP
+	if err := s.db.Order("created_at DESC").Find(&whitelist).Error; err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.PureJSON(http.StatusOK, gin.H{"data": whitelist})
+}
+
+// addWhitelist 添加 IP 到白名单
+func (s *Server) addWhitelist(c *gin.Context) {
+	var req struct {
+		IP     string `json:"ip" binding:"required"`
+		Reason string `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	whitelist := model.WhitelistIP{
+		IP:     req.IP,
+		Reason: req.Reason,
+	}
+
+	if err := s.db.Create(&whitelist).Error; err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.PureJSON(http.StatusCreated, gin.H{"message": "IP added to whitelist", "data": whitelist})
+}
+
+// deleteWhitelist 从白名单中删除 IP
+func (s *Server) deleteWhitelist(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := s.db.Delete(&model.WhitelistIP{}, id).Error; err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{"message": "IP removed from whitelist"})
 }

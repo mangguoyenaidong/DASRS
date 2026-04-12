@@ -29,10 +29,11 @@ type Config struct {
 			PoolSize  int    `yaml:"pool_size"`
 		} `yaml:"redis"`
 		Intelligence struct {
-			RepairThreshold     int `yaml:"repair_threshold"`
-			BlockThreshold      int `yaml:"block_threshold"`
-			TimeWindow          int `yaml:"time_window"`
-			MaxAlertsPerWindow  int `yaml:"max_alerts_per_window"`
+			RepairThreshold     int      `yaml:"repair_threshold"`
+			BlockThreshold      int      `yaml:"block_threshold"`
+			TimeWindow          int      `yaml:"time_window"`
+			MaxAlertsPerWindow  int      `yaml:"max_alerts_per_window"`
+			Whitelist           []string `yaml:"whitelist"`
 		} `yaml:"intelligence"`
 	} `yaml:"master"`
 	Agent struct {

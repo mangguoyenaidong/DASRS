@@ -92,13 +92,27 @@ type OperationLog struct {
 	Target          string    `gorm:"type:varchar(500)" json:"target"`
 	Result          int       `gorm:"index" json:"result"`                 // 0: 失败, 1: 成功
 	Message         string    `gorm:"type:text" json:"message"`
-	ExecutionTimeMs int64     `gorm:"json:"execution_time_ms"`            // 执行耗时(毫秒)
+	ExecutionTimeMs int64     `json:"execution_time_ms"`            // 执行耗时(毫秒)
 	CreatedAt       time.Time `json:"created_at"`
 }
 
 // TableName 指定表名
 func (OperationLog) TableName() string {
 	return "operation_logs"
+}
+
+// WhitelistIP 白名单 IP 表
+type WhitelistIP struct {
+	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	IP        string    `gorm:"type:varchar(45);uniqueIndex;not null" json:"ip"`
+	Reason    string    `gorm:"type:varchar(255)" json:"reason"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// TableName 指定表名
+func (WhitelistIP) TableName() string {
+	return "whitelist_ips"
 }
 
 // AutoMigrate 自动迁移数据库表结构
@@ -109,5 +123,6 @@ func AutoMigrate(db *gorm.DB) error {
 		&Strategy{},
 		&AlertLog{},
 		&OperationLog{},
+		&WhitelistIP{},
 	)
 }

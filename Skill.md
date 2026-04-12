@@ -147,18 +147,21 @@ func SafePatch(filePath, matchRegex, replaceContent string) error {
 ## 6. 验收清单 (Verification Checklist)
 
 - [ ] Protobuf 定义是否兼容 gRPC v3 标准？
-- [ ] Agent 是否具备断线重连 (Reconnect) 机制？
-- [ ] Config Patcher 是否在 Reload 之前强制调用了中间件特有的语法检查（如 `nginx -t` / `apache2ctl configtest`）？
-- [ ] Master 是否正确实现了基于资产类型 (Asset Context) 的误报过滤？
-- [ ] Redis 中的计数器 Key 是否设置了正确的过期时间？
+- [x] Agent 是否具备断线重连 (Reconnect) 机制？
+- [x] Config Patcher 是否在 Reload 之前强制调用了中间件特有的语法检查（如 `nginx -t` / `apache2ctl configtest`）？
+- [x] Master 是否正确实现了基于资产类型 (Asset Context) 的误报过滤？
+- [x] Redis 中的计数器 Key 是否设置了正确的过期时间？
+- [x] Master 是否支持基于 SID 策略的自动化漏洞修复下发？
+- [x] Web 端是否支持 Base64 解码的原始报文审计（Text/Hex）？
 
 ## 7. 当前进展
 
 - [x] Master 决策引擎核心模块完成：`internal/master/core/engine.go`
-- [x] gRPC 告警接口完成：`ReportAlert` -> `Analyze` -> `AlertLog` 记录 -> 命令下发
-- [x] Agent 端功能完成：`ReportAlert` 上报、`CommandStream` 命令执行
-- [x] Web 管理控制台已部署：`internal/master/api/server.go` + `templates/index.html`（`GET /`, `GET /admin`）
-- [x] 平台兼容补丁：在 macOS 上补 `internal/agent/executor/iptables_stub.go`，解决 Linux-only build tag 导致的 `IPBlocker` undefined
+- [x] gRPC 告警接口完成：`ReportAlert` -> `Analyze` -> `AlertLog` 记录 -> 命令下发 (Block/Patch)
+- [x] Agent 端功能完成：`ReportAlert` 上报、`CommandStream` 命令执行、配置原子性热修复
+- [x] Web 管理控制台增强：支持原始报文 **Hex/Text 审计** 与 **人工判定响应**
+- [x] 自动化漏洞修复闭环：支持根据告警 SID 自动匹配策略并下发 `PATCH_CONFIG`
+- [x] 平台兼容补丁：提供 macOS 存根支持，解决编译依赖问题
 
 ## 8. 运行指引
 

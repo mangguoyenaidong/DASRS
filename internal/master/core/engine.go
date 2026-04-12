@@ -190,6 +190,21 @@ type Asset struct {
 	UpdatedAt   time.Time
 }
 
+// isWhitelisted 检查 IP 是否在白名单中
+func (e *IntelligenceEngine) isWhitelisted(ip string) bool {
+	// 1. 检查静态配置白名单
+	for _, wIP := range e.cfg.Master.Intelligence.Whitelist {
+		if ip == wIP {
+			return true
+		}
+	}
+
+	// 2. 检查数据库动态白名单
+	var count int64
+	e.db.Model(&model.WhitelistIP{}).Where("ip = ?", ip).Count(&count)
+	return count > 0
+}
+
 // containsString 检查字符串是否包含列表中的任意元素
 func containsString(s string, substrs []string) bool {
 	for _, sub := range substrs {
@@ -416,6 +431,11 @@ func (e *IntelligenceEngine) GetActionStatistics() (map[string]int, error) {
 
 	for _, s := range stats {
 		result[s.Action] = s.Count
+	}
+
+	return result, nil
+}
+ount
 	}
 
 	return result, nil
