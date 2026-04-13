@@ -585,7 +585,33 @@
 
                 <!-- Filter Bar -->
                 <div class="glass-panel" id="filterBar" style="display: none; margin-bottom: 20px;">
-                    <!-- ... existing filter bar content ... -->
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                        <input type="date" id="filterStartTime" placeholder="开始日期">
+                        <input type="date" id="filterEndTime" placeholder="结束日期">
+                        <input type="text" id="filterSourceIP" placeholder="源 IP 地址">
+                        <input type="text" id="filterDestIP" placeholder="目的 IP 地址">
+                        <input type="text" id="filterSigName" placeholder="告警名称">
+                        <select id="filterSeverity">
+                            <option value="">全部严重程度</option>
+                            <option value="critical">CRITICAL</option>
+                            <option value="high">HIGH</option>
+                            <option value="medium">MEDIUM</option>
+                            <option value="low">LOW</option>
+                        </select>
+                        <select id="filterAction">
+                            <option value="">全部响应动作</option>
+                            <option value="block">BLOCK</option>
+                            <option value="patch">PATCH</option>
+                            <option value="ignore">IGNORE</option>
+                        </select>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="filterWhitelistOnly" style="width: auto;"> <span style="font-size: 12px;">仅显示白名单 IP</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                        <button class="btn btn-outline" onclick="resetFilters()">重置</button>
+                        <button class="btn btn-primary" onclick="refreshAlerts()">应用筛选</button>
+                    </div>
                 </div>
 
                 <div class="glass-panel">
