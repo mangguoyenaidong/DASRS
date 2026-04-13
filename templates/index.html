@@ -1028,9 +1028,42 @@
         }
 
         async function refreshBlockedIps() {
-            // 这里可以增加专门获取已封禁 IP 列表的 API 调用
-            // 暂时使用统计数据更新
+            const res = await fetchAPI('/api/alerts?action=block&page_size=100');
+            const tbody = document.getElementById('blockedIpsTable').querySelector('tbody');
+            if (res && res.data) {
+                // 去重，同一个 IP 可能有多条告警记录被封禁，我们只看 IP 列表
+                const uniqueIps = {};
+                res.data.forEach(a => {
+                    if (!uniqueIps[a.source_ip]) {
+                        uniqueIps[a.source_ip] = a;
+                    }
+                });
+
+                const ips = Object.values(uniqueIps);
+                tbody.innerHTML = ips.length ? ips.map(a => `
+                    <tr>
+                        <td style="font-family: 'JetBrains Mono'; color: var(--danger);">${a.source_ip}</td>
+                        <td style="font-size: 12px; color: var(--text-dim);">${new Date(a.created_at).toLocaleString()}</td>
+                        <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${a.signature_name}</td>
+                        <td>
+                            <button class="btn btn-outline" style="padding: 4px 12px; color: var(--success); border-color: rgba(16, 185, 129, 0.3);" 
+                                onclick="unblockIP('${a.source_ip}')">立即解封</button>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4" style="text-align: center; color: var(--text-dim);">当前暂无活跃封禁记录</td></tr>';
+            }
             loadStats();
+        }
+
+        async function unblockIP(ip) {
+            if(!confirm(`确定要解除对 IP ${ip} 的封禁吗？`)) return;
+            const res = await postAPI('/api/unblock', {ip, reason: '人工手动解封'});
+            if (res && res.success) {
+                alert('解封指令已下发。');
+                refreshBlockedIps();
+            } else {
+                alert('解封失败: ' + (res ? res.message : '未知错误'));
+            }
         }
 
         async function refreshWhitelist() {
