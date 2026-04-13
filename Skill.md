@@ -1,172 +1,89 @@
 # Skill: 构建 DASRS (分布式情报驱动应急响应系统)
 
-> **角色设定:** 资深 Go 后端架构师 & 网络安全工程师 **任务目标:** 构建一个基于 Master-Agent 架构的自动化威胁响应系统。 **版本:** 1.0.0
+> **角色设定:** 资深 Go 后端架构师 & 网络安全工程师 **任务目标:** 构建一个基于 Master-Agent 架构的自动化威胁响应系统。 **版本:** 1.2.0
 
 ## 1. 项目概览 (Project Overview)
 
 **DASRS** 是一个分布式自动化防御系统：
 
 - **Agent (边缘端):** 部署在业务服务器。负责实时采集 Suricata 日志，执行 Nginx 配置文件的热修复，以及管理 iptables 防火墙。
-- **Master (中枢端):** 负责多维情报分析（信誉评分、资产上下文、时序分析），并基于 gRPC 双向流下发防御指令。
+- **Master (中枢端):** 负责多维情报分析（信誉评分、资产上下文、时序分析），并基于 gRPC 双向流下发防御指令，提供 Web 可视化管理后台。
 
 ## 2. 技术栈规范 (Technical Standards)
 
-- **语言:** Go (Golang) 1.21+
+- **语言:** Go (Golang) 1.25+
 - **通信协议:** gRPC + Protocol Buffers v3 (双向流 Bidirectional Streaming)
-- **API 框架:** Gin (仅用于 Master 管理接口)
-- **数据存储:** MySQL 8.0 (持久化), Redis 7.0 (消息队列/缓存)
+- **API 框架:** Gin (Master 管理接口与 Web 渲染)
+- **数据存储:** MySQL 8.0 (持久化策略、资产、审计日志), Redis 7.0 (时序分析计数器)
 - **运行环境:** Linux (Ubuntu 20.04+), Docker & Docker Compose
-- **核心依赖库:**
-  - `google.golang.org/grpc`: RPC 通信
-  - `gorm.io/gorm`: ORM 数据库操作
-  - `github.com/hpcloud/tail`: 日志文件监控
-  - `github.com/go-redis/redis/v8`: Redis 客户端
+- **辅助工具:** Python 3 (配置助手 `configure.py`)
 
 ## 3. 目录结构规范 (Directory Structure Schema)
 
-请严格遵守以下目录结构进行初始化：
-
 Plaintext
-
 ```
-security-response-system/
+DASRS/
 ├── cmd/
-│   ├── master/             # 入口：Master 服务
-│   └── agent/              # 入口：Agent 服务
-├── configs/                # YAML 配置文件
-├── deploy/                 # Docker-compose & Dockerfiles
+│   ├── master/             # 入口：Master 服务 (gRPC Server + HTTP API)
+│   └── agent/              # 入口：Agent 服务 (gRPC Client + Collector)
+├── configs/                # YAML 配置文件 (master/agent 分离)
+├── deploy/                 # Docker-compose 部署方案
 ├── internal/
-│   ├── common/             # 公共库 (Logger, Utils)
-│   ├── proto/              # 生成的 PB 代码 (勿手动修改)
+│   ├── common/             # 公共库 (Logger, UUID, Utils)
+│   ├── proto/              # 生成的 PB 代码
 │   ├── master/
-│   │   ├── api/            # Gin HTTP Handlers
-│   │   ├── core/           # 核心：情报与决策引擎
-│   │   ├── grpc/           # gRPC Server 实现
-│   │   ├── model/          # 数据库 GORM 模型
-│   │   └── service/        # 业务逻辑层
+│   │   ├── api/            # Gin Handlers (含白名单、策略管理)
+│   │   ├── core/           # 核心：情报引擎 (评分、误报过滤、时序分析)
+│   │   ├── grpc/           # gRPC Server 实现 (指令下发队列)
+│   │   ├── model/          # GORM 模型与数据库迁移
 │   └── agent/
-│       ├── collector/      # Suricata 日志采集器
-│       ├── executor/       # 执行器 (Config Patcher & Iptables)
-│       └── client/         # gRPC Client & Stream 处理
-├── pkg/                    # 可复用包
-├── proto/                  # .proto 定义文件
+│       ├── collector/      # Suricata 日志实时采集 (Tail 模式)
+│       ├── executor/       # 执行器 (iptables 阻断 & 配置文件原子热修复)
+├── templates/              # Web 后台 HTML 模板
+├── configure.py            # 交互式环境配置脚本
 ├── go.mod
-└── go.sum
+└── Skill.md
 ```
 
-## 4. 分阶段构建指令 (Implementation Phases)
+## 4. 核心功能描述
 
-### 阶段一：基础设施与协议定义 (Infrastructure)
+### 4.1 智能情报引擎 (Intelligence Engine)
+- **多维评分**: 结合 Suricata 告警等级（基础分）与告警频次（时序分）。
+- **误报过滤**: 自动比对资产指纹（如：攻击目标是 IIS 但实际运行 Nginx 则判定为误报）。
+- **白名单保护**: 强制保护 Master 节点、本地回环及数据库定义的动态白名单 IP，防止误封。
 
-**目标:** 建立通信契约与开发环境。
+### 4.2 原子性配置修复 (Config Patcher)
+- **安全保障**: 遵循 `备份 -> 修改 -> 语法检查 (nginx -t) -> 重载 (reload) -> 失败回滚` 流程。
+- **扩展性**: 通过接口支持 Nginx、Apache 等多种中间件的配置热修复。
 
-1. **初始化:** 执行 `go mod init security-response-system`。
-2. **Proto 定义 (`proto/security.proto`):**
-   - `SendHeartbeat`: Unary RPC (Agent -> Master)。上报 Hostname, IP, CPU/Mem 负载。
-   - `ReportAlert`: Unary RPC (Agent -> Master)。上报威胁日志 (`sid`, `payload`, `source_ip`, `asset_info`)。
-   - `CommandStream`: 双向流 (Bidirectional Stream)。Master 用于实时推送 `BlockIP` 或 `PatchConfig` 指令。
-3. **代码生成:** 生成 Go 代码至 `internal/proto` 目录。
-4. **环境准备:** 编写 `deploy/docker-compose.yaml`，包含 MySQL (DB: `security`) 和 Redis。
+### 4.3 实时可视化后台
+- **威胁地图**: 展示实时告警趋势与风险分布。
+- **报文审计**: 支持原始 Payload 的 Base64 解码、Text 展示与 Hex 十六进制审计，便于人工判定。
 
-### 阶段二：Agent 端核心功能 (The Agent - 眼与手)
+## 5. 关键算法逻辑
 
-**目标:** 实现日志采集与安全的系统命令执行。
-
-1. **采集器 (Collector):** 使用 `hpcloud/tail` 监控 `/var/log/suricata/eve.json`。仅过滤 `event_type: alert` 的日志，转换为 Protobuf 结构体。
-2. **阻断器 (Blocker):** 封装 `iptables` 命令，实现 `BlockIP(ip)` 和 `UnblockIP(ip)`。
-3. **配置热修复器 (Config Patcher - 重点):** 在 `internal/agent/executor` 中实现通用的 `ConfigPatcher`，通过实现 `MiddlewareManager` 接口支持 Nginx、Apache 等多种中间件。
-   - **逻辑:** 必须严格遵循 *第5节：关键算法逻辑* 中的安全流程。
-
-### 阶段三：Master 端决策引擎 (The Master - 大脑)
-
-**目标:** 实现情报分析引擎与指令分发。
-
-1. **数据模型 (MySQL/Gorm):**
-   - `Asset`: 资产表 (IP, 操作系统类型, 服务类型如 Nginx/IIS)。
-   - `Strategy`: 策略表 (Sid, 目标文件路径, 正则表达式, 替换内容)。
-   - `AlertLog` & `OperationLog`: 日志记录。
-2. **情报引擎 (Intelligence Engine):**
-   - **输入:** Suricata 告警等级。
-   - **上下文过滤 (Context):** 如果告警攻击类型是 "IIS" 但资产库显示该 IP 运行 "Nginx" -> 评分归 0 (忽略误报)。
-   - **时序分析 (Time-Series):** 查询 Redis 中该 SourceIP 过去 1 分钟的频次。如果 > 10 次 -> 评分 * 1.5。
-   - **决策:** 如果最终评分 > 阈值 (如 80) -> 查询 `Strategy` 表 -> 推送修复指令；否则 -> 推送封禁指令。
-3. **gRPC Server:** 处理连接流，维护 `AgentID` 到 `StreamServer` 的映射，以便精准推送。
-
-### 阶段四：Web API 与集成 (API & Integration)
-
-**目标:** 外部管控与自动化构建。
-
-1. **REST API (Gin):**
-   - `GET /api/agents`: 获取在线 Agent 列表。
-   - `GET /api/alerts`: 获取历史告警。
-   - `POST /api/block`: 手动下发封禁指令。
-2. **Makefile:** 包含 `proto-gen`, `build`, `run` 等脚本。
-
-## 5. 关键算法逻辑 (Critical Algorithms)
-
-### 中间件配置文件安全热修复 (Config Patcher)
-
-**约束:** 严禁破坏生产环境的 Web 服务。所有文件修改必须遵循 **原子性 备份-验证-重载** 循环。通过 `MiddlewareManager` 接口实现对 Nginx、Apache 等不同中间件的支持。
-
-Go
-
-```
-// internal/agent/executor 参考逻辑
-func SafePatch(filePath, matchRegex, replaceContent string) error {
-    manager, _ := p.getManager(filePath) // 根据路径特征推断中间件 (Nginx/Apache)
-    backupPath := fmt.Sprintf("%s.bak.%d", filePath, time.Now().Unix())
-
-    // 1. 创建备份 (Create Backup)
-    if err := copyFile(filePath, backupPath); err != nil {
-        return fmt.Errorf("backup failed: %w", err)
-    }
-
-    // 2. 修改文件 (Read -> Regex Replace -> Write)
-    // ... 具体实现略 ...
-
-    // 3. 语法验证 (Verify Syntax - 关键步骤)
-    // 根据具体中间件调用语法检查 (如: nginx -t 或 apache2ctl configtest)
-    if err := manager.VerifyConfig(filePath); err != nil {
-        // 4. 失败回滚 (ROLLBACK on Failure)
-        copyFile(backupPath, filePath) // 恢复原文件
-        return fmt.Errorf("syntax check failed, rolled back: %v", err)
-    }
-
-    // 5. 应用变更 (Apply Changes)
-    // 根据具体中间件调用重载命令 (如: systemctl reload nginx)
-    if err := manager.ReloadService(); err != nil {
-         copyFile(backupPath, filePath)
-         manager.ReloadService() // 尝试恢复原服务状态
-         return fmt.Errorf("reload failed: %v", err)
-    }
-    
-    return nil
-}
+### 风险评分加权公式
+```text
+FinalScore = BaseScore(Severity) + TimeSeriesBonus(Freq)
+- BaseScore: Critical(100), High(75), Medium(50), Low(25)
+- TimeSeriesBonus: 频率超过阈值则 +25/50 分
+- Whitelist: 如果 IP 在白名单，则 FinalScore = 0 (强制忽略)
 ```
 
-## 6. 验收清单 (Verification Checklist)
+## 6. 当前进展
 
-- [ ] Protobuf 定义是否兼容 gRPC v3 标准？
-- [x] Agent 是否具备断线重连 (Reconnect) 机制？
-- [x] Config Patcher 是否在 Reload 之前强制调用了中间件特有的语法检查（如 `nginx -t` / `apache2ctl configtest`）？
-- [x] Master 是否正确实现了基于资产类型 (Asset Context) 的误报过滤？
-- [x] Redis 中的计数器 Key 是否设置了正确的过期时间？
-- [x] Master 是否支持基于 SID 策略的自动化漏洞修复下发？
-- [x] Web 端是否支持 Base64 解码的原始报文审计（Text/Hex）？
+- [x] **v1.0.0**: 完成基础 Master-Agent gRPC 通信与告警上报。
+- [x] **v1.1.0**: 实现 Nginx 配置文件原子性热修复与 iptables 阻断执行器。
+- [x] **v1.2.0**: 
+    - [x] 引入 **动态 IP 白名单** 管理系统。
+    - [x] 开发 **交互式配置助手** (`configure.py`)。
+    - [x] 升级 Web 审计后台，支持 **Hex 原始报文审计** 与批量操作。
+    - [x] 完善情报引擎的 **告警关联分析 (Correlation)** 逻辑。
 
-## 7. 当前进展
+## 7. 运行指引
 
-- [x] Master 决策引擎核心模块完成：`internal/master/core/engine.go`
-- [x] gRPC 告警接口完成：`ReportAlert` -> `Analyze` -> `AlertLog` 记录 -> 命令下发 (Block/Patch)
-- [x] Agent 端功能完成：`ReportAlert` 上报、`CommandStream` 命令执行、配置原子性热修复
-- [x] Web 管理控制台增强：支持原始报文 **Hex/Text 审计** 与 **人工判定响应**
-- [x] 自动化漏洞修复闭环：支持根据告警 SID 自动匹配策略并下发 `PATCH_CONFIG`
-- [x] 平台兼容补丁：提供 macOS 存根支持，解决编译依赖问题
-
-## 8. 运行指引
-
-1. 启动依赖：`docker compose -f deploy/docker-compose.yaml up -d`
-2. 启动 Master：`go run ./cmd/master`
-3. 启动 Agent：`go run ./cmd/agent`
-4. 访问 Web：`http://localhost:8080/`
-5. API 测试：`GET /api/alerts`, `GET /api/agents`, `POST /api/block` 等
+1. **环境初始化**: 执行 `python3 configure.py` 按提示配置数据库与 Master IP。
+2. **启动依赖**: `cd deploy && docker-compose up -d`。
+3. **启动 Master**: `go run ./cmd/master` (默认监听 8080 与 50051)。
+4. **启动 Agent**: `go run ./cmd/agent --config configs/agent.yaml`。
+5. **访问后台**: 浏览器打开 `http://<Master_IP>:8080`。
