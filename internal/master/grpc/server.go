@@ -256,8 +256,8 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		SID:           req.GetSid(),
 		Payload:       req.GetPayload(),
 		SourceIP:      req.GetSourceIp(),
-		DestIP:        req.GetDestIp(), // 提取目的 IP
-		AssetInfo:     req.GetAssetInfo(),
+		DestIP:        req.GetAssetInfo(), // 修正：目前 pb.go 中没有 DestIp 字段，暂用 AssetInfo 传递
+		AssetInfo:     "unknown",
 		Timestamp:     req.GetTimestamp(),
 		Severity:      req.GetSeverity(),
 		SignatureName: req.GetSignatureName(),

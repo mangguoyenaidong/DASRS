@@ -11,9 +11,9 @@ import (
 	"security-response-system/internal/master/core"
 	sgrpc "security-response-system/internal/master/grpc"
 	"security-response-system/internal/master/model"
+	"security-response-system/internal/proto"
 
 	"github.com/gin-gonic/gin"
-	"google.golang.org/grpc"
 	"gorm.io/gorm"
 )
 

@@ -151,11 +151,10 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 		Sid:           fmt.Sprintf("%d", eve.Alert.SignatureID),
 		Payload:       eve.Payload, // 如果 EVE JSON 配置了开启 payload 输出
 		SourceIp:      eve.SrcIP,
-		DestIp:        eve.DestIP, // 填充目的 IP
+		AssetInfo:     eve.DestIP, // 临时利用 AssetInfo 传递目的 IP，解决 pb.go 字段缺失导致的编译失败
 		Timestamp:     timestamp,
 		Severity:      severityStr,
 		SignatureName: eve.Alert.Signature,
-		AssetInfo:     "unknown", // 初始资产信息未知，由 Master 引擎补充或按需采集
 	}
 
 	atomic.AddInt64(&c.alertCount, 1)
