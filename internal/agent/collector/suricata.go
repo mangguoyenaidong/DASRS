@@ -17,6 +17,7 @@ import (
 // SuricataCollector Suricata 日志采集器
 type SuricataCollector struct {
 	filePath   string
+	localIP    string // 新增：用于过滤无关流量
 	tail       *tail.Tail
 	ctx        context.Context
 	cancel     context.CancelFunc
@@ -24,10 +25,11 @@ type SuricataCollector struct {
 }
 
 // NewSuricataCollector 创建采集器
-func NewSuricataCollector(filePath string) *SuricataCollector {
+func NewSuricataCollector(filePath, localIP string) *SuricataCollector {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &SuricataCollector{
 		filePath: filePath,
+		localIP:  localIP,
 		ctx:      ctx,
 		cancel:   cancel,
 	}
@@ -110,6 +112,14 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 	// 只处理 alert 类型的日志
 	if eve.EventType != "alert" {
 		return
+	}
+
+	// 核心过滤：如果配置了 localIP，则只处理发往或来自本机的流量告警
+	// 这可以过滤掉在混杂模式下嗅探到的其他主机（如 Master）的无关流量
+	if c.localIP != "" && c.localIP != "0.0.0.0" {
+		if eve.SrcIP != c.localIP && eve.DestIP != c.localIP {
+			return
+		}
 	}
 
 	// 解析时间戳 (Suricata EVE JSON 时间格式类似于 2026-01-20T11:26:00.000000+0000)

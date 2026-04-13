@@ -64,13 +64,17 @@ func main() {
 	blocker := executor.NewIPBlocker()
 	patcher := executor.NewConfigPatcher()
 
-	// 初始化采集器
-	log.Println("Initializing Suricata collector...")
-	logCollector := collector.NewSuricataCollector(cfg.SuricataLogPath)
-
-	// 初始化 gRPC 客户端
+	// 初始化 gRPC 客户端 (这里会生成 agentID 和主机名)
 	log.Printf("Connecting to Master at %s...", cfg.MasterAddress)
 	grpcClient := client.NewClient(cfg.MasterAddress, cfg.ReconnectInterval)
+
+	// 获取本地 IP 以供过滤
+	localIP := grpcClient.GetLocalIP() // 利用 client 已经实现好的逻辑
+	log.Printf("Agent identified with IP: %s", localIP)
+
+	// 初始化采集器 (传入 localIP)
+	log.Println("Initializing Suricata collector...")
+	logCollector := collector.NewSuricataCollector(cfg.SuricataLogPath, localIP)
 
 	// 创建 Agent
 	agent := NewAgent(cfg, grpcClient, logCollector, blocker, patcher)
