@@ -180,8 +180,8 @@ type Alert struct {
 	SignatureName string
 }
 
-// isWhitelisted 检查 IP 是否在白名单中
-func (e *IntelligenceEngine) isWhitelisted(ip string) bool {
+// IsWhitelisted 检查 IP 是否在白名单中
+func (e *IntelligenceEngine) IsWhitelisted(ip string) bool {
 	// 1. 检查静态配置白名单
 	for _, wIP := range e.cfg.Master.Intelligence.Whitelist {
 		if ip == wIP {

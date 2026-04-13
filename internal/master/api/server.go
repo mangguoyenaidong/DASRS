@@ -496,6 +496,15 @@ func (s *Server) blockIP(c *gin.Context) {
 		return
 	}
 
+	// 强制白名单检查
+	if s.engine.IsWhitelisted(req.IP) {
+		c.PureJSON(http.StatusForbidden, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("IP %s 在白名单中，拒绝封禁操作", req.IP),
+		})
+		return
+	}
+
 	cmd := &proto.CommandMessage{
 		CommandId: fmt.Sprintf("man-block-%d", time.Now().Unix()),
 		Type:      proto.CommandType_BLOCK_IP,
@@ -561,7 +570,14 @@ func (s *Server) batchBlockIP(c *gin.Context) {
 
 	agents := s.grpcServer.GetConnectedAgents()
 	count := 0
+	realBlocked := 0
 	for _, ip := range req.IPs {
+		// 跳过白名单
+		if s.engine.IsWhitelisted(ip) {
+			s.logger.Warn("Skip batch block for whitelisted IP: %s", ip)
+			continue
+		}
+
 		cmd := &proto.CommandMessage{
 			CommandId: fmt.Sprintf("batch-block-%d-%d", time.Now().Unix(), count),
 			Type:      proto.CommandType_BLOCK_IP,
@@ -571,11 +587,12 @@ func (s *Server) batchBlockIP(c *gin.Context) {
 			s.grpcServer.QueueCommand(agent.AgentID, cmd)
 		}
 		count++
+		realBlocked++
 	}
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("Batch block command sent for %d IPs to %d agents", len(req.IPs), len(agents)),
+		"message": fmt.Sprintf("Batch block command sent for %d IPs (skipped whitelisted) to %d agents", realBlocked, len(agents)),
 	})
 }
 
