@@ -182,6 +182,11 @@ type Alert struct {
 
 // IsWhitelisted 检查 IP 是否在白名单中
 func (e *IntelligenceEngine) IsWhitelisted(ip string) bool {
+	// 0. 自动保护 Master 自身 IP
+	if ip == e.cfg.Master.Host || ip == "127.0.0.1" || ip == "0.0.0.0" {
+		return true
+	}
+
 	// 1. 检查静态配置白名单
 	for _, wIP := range e.cfg.Master.Intelligence.Whitelist {
 		if ip == wIP {

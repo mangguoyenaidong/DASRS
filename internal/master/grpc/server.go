@@ -373,6 +373,15 @@ func (s *Server) PushCommand(agentID string, cmd *proto.CommandMessage) error {
 
 // QueueCommand 将命令加入队列，推送给指定 Agent
 func (s *Server) QueueCommand(agentID string, cmd *proto.CommandMessage) {
+	// 防御性检查：绝对禁止下发封禁 Master IP 的指令
+	if cmd.Type == proto.CommandType_BLOCK_IP {
+		targetIP := cmd.GetTargetIp()
+		if targetIP == s.cfg.Master.Host || targetIP == "127.0.0.1" {
+			s.logger.Error("CRITICAL: Block command for Master IP %s intercepted and canceled!", targetIP)
+			return
+		}
+	}
+
 	s.commandQueue <- &CommandRequest{
 		AgentID:   agentID,
 		Command:   cmd,
