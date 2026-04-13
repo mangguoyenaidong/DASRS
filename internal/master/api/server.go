@@ -9,6 +9,7 @@ import (
 
 	"security-response-system/internal/common"
 	"security-response-system/internal/master/core"
+	sgrpc "security-response-system/internal/master/grpc"
 	"security-response-system/internal/master/model"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,7 @@ type Server struct {
 	redis      interface{}
 	engine     *core.IntelligenceEngine
 	logger     *common.Logger
-	grpcServer *grpc.Server // 添加 gRPC server 引用
+	grpcServer *sgrpc.Server // 更新为自定义 gRPC server
 }
 
 // Config API 配置
@@ -35,7 +36,7 @@ type Config struct {
 }
 
 // NewServer 创建服务器
-func NewServer(cfg *model.Config, db *gorm.DB, redis interface{}, engine *core.IntelligenceEngine, grpcServer *grpc.Server) *Server {
+func NewServer(cfg *model.Config, db *gorm.DB, redis interface{}, engine *core.IntelligenceEngine, grpcServer *sgrpc.Server) *Server {
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 
@@ -118,6 +119,9 @@ func (s *Server) setupRoutes() {
 
 	// 手动封禁
 	s.router.POST("/api/block", s.blockIP)
+	s.router.POST("/api/unblock", s.unblockIP)
+	s.router.POST("/api/batch-block", s.batchBlockIP)
+	s.router.POST("/api/batch-unblock", s.batchUnblockIP)
 
 	// 白名单管理
 	whitelist := s.router.Group("/api/whitelist")
@@ -485,7 +489,6 @@ func (s *Server) blockIP(c *gin.Context) {
 	var req struct {
 		IP      string `json:"ip" binding:"required"`
 		Reason  string `json:"reason"`
-		Expires int    `json:"expires"` // 过期时间（秒）
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -493,12 +496,118 @@ func (s *Server) blockIP(c *gin.Context) {
 		return
 	}
 
-	// TODO: 推送到 gRPC Server 通过指令流发送到 Agent
-	s.logger.Info("Manual block request for IP: %s, reason: %s", req.IP, req.Reason)
+	cmd := &proto.CommandMessage{
+		CommandId: fmt.Sprintf("man-block-%d", time.Now().Unix()),
+		Type:      proto.CommandType_BLOCK_IP,
+		TargetIp:  req.IP,
+	}
+
+	// 下发给所有在线 Agent
+	agents := s.grpcServer.GetConnectedAgents()
+	for _, agent := range agents {
+		s.grpcServer.QueueCommand(agent.AgentID, cmd)
+	}
+
+	s.logger.Info("Manual block command sent for IP: %s, reason: %s", req.IP, req.Reason)
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("Block command sent for IP %s", req.IP),
+		"message": fmt.Sprintf("Block command sent for IP %s to %d agents", req.IP, len(agents)),
+	})
+}
+
+// unblockIP 手动解封 IP
+func (s *Server) unblockIP(c *gin.Context) {
+	var req struct {
+		IP     string `json:"ip" binding:"required"`
+		Reason string `json:"reason"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	cmd := &proto.CommandMessage{
+		CommandId: fmt.Sprintf("man-unblock-%d", time.Now().Unix()),
+		Type:      proto.CommandType_UNBLOCK_IP,
+		TargetIp:  req.IP,
+	}
+
+	agents := s.grpcServer.GetConnectedAgents()
+	for _, agent := range agents {
+		s.grpcServer.QueueCommand(agent.AgentID, cmd)
+	}
+
+	s.logger.Info("Manual unblock command sent for IP: %s", req.IP)
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("Unblock command sent for IP %s to %d agents", req.IP, len(agents)),
+	})
+}
+
+// batchBlockIP 批量封禁 IP
+func (s *Server) batchBlockIP(c *gin.Context) {
+	var req struct {
+		IPs    []string `json:"ips" binding:"required"`
+		Reason string   `json:"reason"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	agents := s.grpcServer.GetConnectedAgents()
+	count := 0
+	for _, ip := range req.IPs {
+		cmd := &proto.CommandMessage{
+			CommandId: fmt.Sprintf("batch-block-%d-%d", time.Now().Unix(), count),
+			Type:      proto.CommandType_BLOCK_IP,
+			TargetIp:  ip,
+		}
+		for _, agent := range agents {
+			s.grpcServer.QueueCommand(agent.AgentID, cmd)
+		}
+		count++
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("Batch block command sent for %d IPs to %d agents", len(req.IPs), len(agents)),
+	})
+}
+
+// batchUnblockIP 批量解封 IP
+func (s *Server) batchUnblockIP(c *gin.Context) {
+	var req struct {
+		IPs    []string `json:"ips" binding:"required"`
+		Reason string   `json:"reason"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	agents := s.grpcServer.GetConnectedAgents()
+	count := 0
+	for _, ip := range req.IPs {
+		cmd := &proto.CommandMessage{
+			CommandId: fmt.Sprintf("batch-unblock-%d-%d", time.Now().Unix(), count),
+			Type:      proto.CommandType_UNBLOCK_IP,
+			TargetIp:  ip,
+		}
+		for _, agent := range agents {
+			s.grpcServer.QueueCommand(agent.AgentID, cmd)
+		}
+		count++
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("Batch unblock command sent for %d IPs to %d agents", len(req.IPs), len(agents)),
 	})
 }
 

@@ -552,12 +552,47 @@
             <div class="page" id="alerts">
                 <div class="panel-header">
                     <h2 class="panel-title" style="font-size: 24px;">🚨 威胁情报中心</h2>
-                    <button class="btn btn-primary" onclick="refreshAlerts()">刷新数据</button>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-outline" onclick="toggleFilter()">高级筛选</button>
+                        <button class="btn btn-primary" onclick="refreshAlerts()">刷新数据</button>
+                    </div>
                 </div>
+
+                <!-- Filter Bar -->
+                <div class="glass-panel" id="filterBar" style="display: none; margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px;">
+                        <input type="date" id="filterStartTime" placeholder="开始日期">
+                        <input type="date" id="filterEndTime" placeholder="结束日期">
+                        <input type="text" id="filterSourceIP" placeholder="源 IP 地址">
+                        <input type="text" id="filterDestIP" placeholder="目的 IP 地址">
+                        <input type="text" id="filterSigName" placeholder="告警名称">
+                        <select id="filterSeverity">
+                            <option value="">全部严重程度</option>
+                            <option value="critical">CRITICAL</option>
+                            <option value="high">HIGH</option>
+                            <option value="medium">MEDIUM</option>
+                            <option value="low">LOW</option>
+                        </select>
+                        <select id="filterAction">
+                            <option value="">全部响应动作</option>
+                            <option value="block">BLOCK</option>
+                            <option value="patch">PATCH</option>
+                            <option value="ignore">IGNORE</option>
+                        </select>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="filterWhitelistOnly" style="width: auto;"> <span style="font-size: 12px;">仅显示白名单 IP</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+                        <button class="btn btn-outline" onclick="resetFilters()">重置</button>
+                        <button class="btn btn-primary" onclick="refreshAlerts()">应用筛选</button>
+                    </div>
+                </div>
+
                 <div class="glass-panel">
                     <table style="border-spacing: 0;">
                         <thead>
-                            <tr><th>状态</th><th>SID</th><th>时间</th><th>来源</th><th>风险评分</th><th>特征签名</th><th>操作</th></tr>
+                            <tr><th>状态</th><th>SID</th><th>时间</th><th>来源 IP</th><th>目的 IP</th><th>风险</th><th>特征签名</th><th>操作</th></tr>
                         </thead>
                         <tbody id="alertsTable"></tbody>
                     </table>
@@ -897,7 +932,7 @@
                     <tr>
                         <td><span class="badge ${a.status === 0 ? 'warning' : 'success'}">${a.status === 0 ? '待处理' : '已解决'}</span></td>
                         <td>${a.sid}</td>
-                        <td style="font-size: 12px; color: var(--text-dim);">${new Date(a.timestamp).toLocaleString()}</td>
+                        <td style="font-size: 12px; color: var(--text-dim);">${new Date(a.created_at).toLocaleString()}</td>
                         <td style="font-family: 'JetBrains Mono';">${a.source_ip}</td>
                         <td style="font-family: 'JetBrains Mono'; color: var(--text-dim);">${a.dest_ip || '-'}</td>
                         <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity.toUpperCase()}</span></td>

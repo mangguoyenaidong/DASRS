@@ -256,6 +256,7 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		SID:           req.GetSid(),
 		Payload:       req.GetPayload(),
 		SourceIP:      req.GetSourceIp(),
+		DestIP:        req.GetDestIp(), // 提取目的 IP
 		AssetInfo:     req.GetAssetInfo(),
 		Timestamp:     req.GetTimestamp(),
 		Severity:      req.GetSeverity(),
@@ -275,6 +276,7 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 	alertLog := &model.AlertLog{
 		AlertID:       decision.AlertID,
 		SourceIP:      alert.SourceIP,
+		DestIP:        alert.DestIP, // 保存目的 IP
 		SID:           alert.SID,
 		SignatureName: alert.SignatureName,
 		Severity:      alert.Severity,
@@ -297,6 +299,18 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 
 	// 如果分析结果是需要阻断，直接加入阻断命令队列
 	if decision.Action == "block" && alert.SourceIP != "" {
+		// 1. 检查白名单
+		if s.engine.IsWhitelisted(alert.SourceIP) {
+			s.logger.Info("Skip auto blocking whitelisted IP %s", alert.SourceIP)
+			return &proto.AlertReportResponse{Success: true, Message: "Whitelisted", AlertId: decision.AlertID}, nil
+		}
+
+		// 2. 检查是否已封禁
+		if s.engine.IsIPBlocked(alert.SourceIP) {
+			s.logger.Info("Skip auto blocking already blocked IP %s", alert.SourceIP)
+			return &proto.AlertReportResponse{Success: true, Message: "Already blocked", AlertId: decision.AlertID}, nil
+		}
+
 		s.logger.Info("Auto blocking IP %s for alert %s", alert.SourceIP, decision.AlertID)
 
 		cmd := &proto.CommandMessage{

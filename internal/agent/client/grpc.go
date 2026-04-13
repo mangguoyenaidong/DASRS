@@ -39,6 +39,7 @@ func (c *Client) Start(handler func(*proto.CommandMessage)) {
 }
 
 func (c *Client) connect(handler func(*proto.CommandMessage)) {
+ReconnectLoop:
 	for {
 		select {
 		case <-c.stopChan:
@@ -53,7 +54,7 @@ func (c *Client) connect(handler func(*proto.CommandMessage)) {
 		if err != nil {
 			log.Printf("Failed to connect to master: %v, retrying...", err)
 			time.Sleep(time.Duration(c.reconnectInterval) * time.Second)
-			continue
+			continue ReconnectLoop
 		}
 
 		log.Println("Connected to master, starting bidirectional stream...")
@@ -65,8 +66,9 @@ func (c *Client) connect(handler func(*proto.CommandMessage)) {
 		if err != nil {
 			log.Printf("Failed to create stream: %v", err)
 			cancel()
+			c.conn.Close()
 			time.Sleep(time.Duration(c.reconnectInterval) * time.Second)
-			continue
+			continue ReconnectLoop
 		}
 
 		// Send registration message
@@ -79,8 +81,9 @@ func (c *Client) connect(handler func(*proto.CommandMessage)) {
 		if err := c.stream.Send(regMsg); err != nil {
 			log.Printf("Failed to send registration message: %v", err)
 			cancel()
+			c.conn.Close()
 			time.Sleep(time.Duration(c.reconnectInterval) * time.Second)
-			continue
+			continue ReconnectLoop
 		}
 
 		go c.sendHeartbeats(ctx)
@@ -89,10 +92,12 @@ func (c *Client) connect(handler func(*proto.CommandMessage)) {
 			select {
 			case <-c.stopChan:
 				cancel()
+				c.conn.Close()
 				return
 			case <-ctx.Done():
 				cancel()
-				break
+				c.conn.Close()
+				continue ReconnectLoop
 			default:
 			}
 
@@ -100,7 +105,9 @@ func (c *Client) connect(handler func(*proto.CommandMessage)) {
 			if err != nil {
 				log.Printf("Stream error: %v", err)
 				cancel()
-				break
+				c.conn.Close()
+				time.Sleep(time.Duration(c.reconnectInterval) * time.Second)
+				continue ReconnectLoop
 			}
 			handler(cmd)
 		}
@@ -188,7 +195,7 @@ func (c *Client) GetAgentID() string {
 // 它返回一个布尔值表示测试是否成功，以及一个描述性的消息。
 func TestMasterConnectivity(masterAddr string) (bool, string) {
 	// 建立一个临时的 gRPC 连接用于测试
-	conn, err := grpc.Dial(masterAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(masterAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return false, fmt.Sprintf("无法连接到 Master (%s): %v", masterAddr, err)
 	}

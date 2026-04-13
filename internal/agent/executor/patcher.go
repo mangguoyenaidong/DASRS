@@ -109,7 +109,9 @@ func (p *ConfigPatcher) SafePatch(filePath, matchRegex, replaceContent string) e
 
 // rollback 恢复备份
 func (p *ConfigPatcher) rollback(backupPath, targetPath string) {
-	copyFile(backupPath, targetPath)
+	if err := copyFile(backupPath, targetPath); err != nil {
+		fmt.Printf("CRITICAL: Rollback failed from %s to %s: %v\n", backupPath, targetPath, err)
+	}
 }
 
 // GetPatchCount 获取修复次数
@@ -131,8 +133,11 @@ func copyFile(src, dst string) error {
 	}
 	defer dstFile.Close()
 
-	_, err = io.Copy(dstFile, srcFile)
-	return err
+	if _, err = io.Copy(dstFile, srcFile); err != nil {
+		return err
+	}
+
+	return dstFile.Sync()
 }
 
 // --- Nginx Manager 实现 ---

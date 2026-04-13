@@ -93,6 +93,7 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 		Timestamp string `json:"timestamp"`
 		EventType string `json:"event_type"`
 		SrcIP     string `json:"src_ip"`
+		DestIP    string `json:"dest_ip"`
 		Alert     struct {
 			SignatureID int    `json:"signature_id"`
 			Signature   string `json:"signature"`
@@ -150,6 +151,7 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 		Sid:           fmt.Sprintf("%d", eve.Alert.SignatureID),
 		Payload:       eve.Payload, // 如果 EVE JSON 配置了开启 payload 输出
 		SourceIp:      eve.SrcIP,
+		DestIp:        eve.DestIP, // 填充目的 IP
 		Timestamp:     timestamp,
 		Severity:      severityStr,
 		SignatureName: eve.Alert.Signature,

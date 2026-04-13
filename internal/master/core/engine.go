@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -112,7 +113,7 @@ func (e *IntelligenceEngine) calculateBaseScore(severity string) int {
 func (e *IntelligenceEngine) isFalsePositive(alert *Alert, decision *Decision) bool {
 	// 示例：如果告警攻击类型是 "IIS" 但资产库显示该 IP 运行 "Nginx" -> 判定为误报
 	// 这里需要从数据库查询资产信息
-	var asset Asset
+	var asset model.Asset
 	result := e.db.Where("ip = ?", alert.SourceIP).First(&asset)
 	if result.Error != nil {
 		// 未找到资产，不做误报判定
@@ -172,22 +173,11 @@ type Alert struct {
 	SID           string
 	Payload       string
 	SourceIP      string
+	DestIP        string // 新增
 	AssetInfo     string
 	Timestamp     int64
 	Severity      string
 	SignatureName string
-}
-
-// Asset 资产
-type Asset struct {
-	ID          uint
-	IP          string
-	Hostname    string
-	OSType      string
-	ServiceType string
-	Status      int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
 }
 
 // isWhitelisted 检查 IP 是否在白名单中
@@ -205,15 +195,25 @@ func (e *IntelligenceEngine) isWhitelisted(ip string) bool {
 	return count > 0
 }
 
+// IsIPBlocked 检查 IP 是否已被封禁
+func (e *IntelligenceEngine) IsIPBlocked(ip string) bool {
+	var count int64
+	// 检查最近是否有针对该 IP 的封禁记录且未解封
+	// 这里简化处理：检查最近 24 小时内是否有成功的 BLOCK_IP 操作
+	// 实际生产中建议维护一个活跃封禁 IP 表
+	e.db.Model(&model.OperationLog{}).
+		Where("target = ? AND command_type = ? AND result = ? AND created_at >= ?", 
+			ip, "block_ip", 1, time.Now().Add(-24*time.Hour)).
+		Count(&count)
+	
+	return count > 0
+}
+
 // containsString 检查字符串是否包含列表中的任意元素
 func containsString(s string, substrs []string) bool {
 	for _, sub := range substrs {
-		if len(s) >= len(sub) {
-			for i := 0; i <= len(s)-len(sub); i++ {
-				if s[i:i+len(sub)] == sub {
-					return true
-				}
-			}
+		if strings.Contains(s, sub) {
+			return true
 		}
 	}
 	return false

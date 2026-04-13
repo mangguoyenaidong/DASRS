@@ -26,6 +26,7 @@ message AlertReportRequest {
     int64 timestamp = 5;
     string severity = 6;
     string signature_name = 7;
+    string dest_ip = 8;
 }
 
 message AlertReportResponse {
