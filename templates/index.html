@@ -851,18 +851,57 @@
             }
         }
 
+        function toggleFilter() {
+            const bar = document.getElementById('filterBar');
+            bar.style.display = bar.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function resetFilters() {
+            document.getElementById('filterStartTime').value = '';
+            document.getElementById('filterEndTime').value = '';
+            document.getElementById('filterSourceIP').value = '';
+            document.getElementById('filterDestIP').value = '';
+            document.getElementById('filterSigName').value = '';
+            document.getElementById('filterSeverity').value = '';
+            document.getElementById('filterAction').value = '';
+            document.getElementById('filterWhitelistOnly').checked = false;
+            refreshAlerts();
+        }
+
         async function refreshAlerts() {
-            const res = await fetchAPI('/api/alerts');
+            let url = '/api/alerts?page=1&page_size=50';
+            
+            // 构建查询参数
+            const startTime = document.getElementById('filterStartTime').value;
+            const endTime = document.getElementById('filterEndTime').value;
+            const sourceIP = document.getElementById('filterSourceIP').value;
+            const destIP = document.getElementById('filterDestIP').value;
+            const sigName = document.getElementById('filterSigName').value;
+            const severity = document.getElementById('filterSeverity').value;
+            const action = document.getElementById('filterAction').value;
+            const whitelistOnly = document.getElementById('filterWhitelistOnly').checked;
+
+            if (startTime) url += `&start_time=${startTime}`;
+            if (endTime) url += `&end_time=${endTime}`;
+            if (sourceIP) url += `&source_ip=${sourceIP}`;
+            if (destIP) url += `&dest_ip=${destIP}`;
+            if (sigName) url += `&signature_name=${sigName}`;
+            if (severity) url += `&severity=${severity}`;
+            if (action) url += `&action=${action}`;
+            if (whitelistOnly) url += `&whitelist_only=true`;
+
+            const res = await fetchAPI(url);
             const tbody = document.getElementById('alertsTable');
             if (res && res.data) {
-                tbody.innerHTML = res.data.map(a => `
+                tbody.innerHTML = res.data.length ? res.data.map(a => `
                     <tr>
                         <td><span class="badge ${a.status === 0 ? 'warning' : 'success'}">${a.status === 0 ? '待处理' : '已解决'}</span></td>
                         <td>${a.sid}</td>
                         <td style="font-size: 12px; color: var(--text-dim);">${new Date(a.timestamp).toLocaleString()}</td>
                         <td style="font-family: 'JetBrains Mono';">${a.source_ip}</td>
+                        <td style="font-family: 'JetBrains Mono'; color: var(--text-dim);">${a.dest_ip || '-'}</td>
                         <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity.toUpperCase()}</span></td>
-                        <td>${a.signature_name}</td>
+                        <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${a.signature_name}</td>
                         <td>
                             <div style="display: flex; gap: 8px;">
                                 <button class="btn btn-outline" style="padding: 4px 10px;" onclick="showAlertDetails('${a.id}')">审计</button>
@@ -870,7 +909,7 @@
                             </div>
                         </td>
                     </tr>
-                `).join('');
+                `).join('') : '<tr><td colspan="8" style="text-align: center;">当前暂无符合条件的告警事件</td></tr>';
             }
         }
 

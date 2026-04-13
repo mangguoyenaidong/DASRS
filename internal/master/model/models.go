@@ -66,6 +66,7 @@ type AlertLog struct {
 	AlertID       string    `gorm:"type:varchar(36);uniqueIndex;not null" json:"alert_id"` // UUID
 	AgentID       string    `gorm:"type:varchar(100)" json:"agent_id"`
 	SourceIP      string    `gorm:"type:varchar(45);index" json:"source_ip"`
+	DestIP        string    `gorm:"type:varchar(45);index" json:"dest_ip"`                 // 目的 IP
 	SID           string    `gorm:"type:varchar(100);index" json:"sid"`
 	SignatureName string    `gorm:"type:varchar(500)" json:"signature_name"`
 	Severity      string    `gorm:"type:varchar(20);index" json:"severity"` // low, medium, high, critical

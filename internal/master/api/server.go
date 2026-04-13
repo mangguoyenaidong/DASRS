@@ -278,7 +278,20 @@ func (s *Server) listAlerts(c *gin.Context) {
 
 	// IP 过滤
 	if sourceIP := c.Query("source_ip"); sourceIP != "" {
-		query = query.Where("source_ip = ?", sourceIP)
+		query = query.Where("source_ip LIKE ?", "%"+sourceIP+"%")
+	}
+	if destIP := c.Query("dest_ip"); destIP != "" {
+		query = query.Where("dest_ip LIKE ?", "%"+destIP+"%")
+	}
+
+	// 告警名称模糊过滤
+	if sigName := c.Query("signature_name"); sigName != "" {
+		query = query.Where("signature_name LIKE ?", "%"+sigName+"%")
+	}
+
+	// 白名单过滤
+	if whitelistOnly := c.Query("whitelist_only"); whitelistOnly == "true" {
+		query = query.Where("source_ip IN (SELECT ip FROM whitelist_ips)")
 	}
 
 	// 时间范围过滤
