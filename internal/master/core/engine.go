@@ -435,8 +435,3 @@ func (e *IntelligenceEngine) GetActionStatistics() (map[string]int, error) {
 
 	return result, nil
 }
-ount
-	}
-
-	return result, nil
-}
