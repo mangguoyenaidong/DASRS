@@ -731,7 +731,7 @@
             if (alerts && alerts.data) {
                 tbody.innerHTML = alerts.data.length ? alerts.data.map(a => `
                     <tr>
-                        <td>${new Date(a.timestamp).toLocaleTimeString()}</td>
+                        <td>${new Date(a.created_at).toLocaleTimeString()}</td>
                         <td style="font-family: 'JetBrains Mono'; font-weight: 500;">${a.source_ip}</td>
                         <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity.toUpperCase()}</span></td>
                         <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${a.signature_name}</td>
