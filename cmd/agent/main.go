@@ -17,7 +17,7 @@ import (
 
 func main() {
 	// 命令行参数
-	configPath := flag.String("config", "configs/config.yaml", "path to config file")
+	configPath := flag.String("config", "configs/agent.yaml", "path to config file")
 	testMasterConn := flag.Bool("test-master-conn", false, "测试与 Master 的连通性并退出")
 	verbose := flag.Bool("v", false, "enable verbose logging")
 	flag.Parse()
