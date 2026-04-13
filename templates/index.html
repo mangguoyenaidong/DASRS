@@ -1027,6 +1027,45 @@
             showPage('block');
         }
 
+        async function refreshWhitelist() {
+            const res = await fetchAPI('/api/whitelist');
+            const tbody = document.getElementById('whitelistTable');
+            if (res && res.data) {
+                tbody.innerHTML = res.data.length ? res.data.map(w => `
+                    <tr>
+                        <td>${w.ip}</td>
+                        <td>${w.reason || '-'}</td>
+                        <td>${new Date(w.created_at).toLocaleString()}</td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;" onclick="deleteWhitelist('${w.id}')">删除</button>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4" style="text-align: center; color: #999;">暂无白名单记录</td></tr>';
+            }
+        }
+
+        async function addWhitelistEntry() {
+            const ip = document.getElementById('whitelistIp').value.trim();
+            const reason = document.getElementById('whitelistReason').value;
+            if (!ip) return;
+            const res = await postAPI('/api/whitelist', {ip, reason});
+            if (res) {
+                document.getElementById('whitelistIp').value = '';
+                document.getElementById('whitelistReason').value = '';
+                refreshWhitelist();
+            }
+        }
+
+        async function deleteWhitelist(id) {
+            if (!confirm('确定要从白名单中删除此 IP 吗？')) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/whitelist/${id}`, { method: 'DELETE' });
+                if (res.ok) refreshWhitelist();
+            } catch (e) {
+                console.error('Delete Whitelist Error:', e);
+            }
+        }
+
         async function refreshLogs() {
             const res = await fetchAPI('/api/logs');
             const container = document.getElementById('logsList');
