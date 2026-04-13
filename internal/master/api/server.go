@@ -733,42 +733,46 @@ func (s *Server) registerAgent(c *gin.Context) {
 	}
 
 	now := time.Now()
-	agent := &model.AgentNode{
-		AgentID:      req.AgentID,
-		Name:         req.Name,
-		Hostname:     req.Hostname,
-		IP:           req.IP,
-		Status:       1,
-		LastSeenAt:   now,
-		RegisteredAt: now,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+	// 尝试通过 IP 或 AgentID 查找现有资产
+	var existingAgent model.AgentNode
+	result := s.db.Where("ip = ?", req.IP).First(&existingAgent)
+	if result.Error != nil {
+		result = s.db.Where("agent_id = ?", req.AgentID).First(&existingAgent)
 	}
 
-	result := s.db.Where("agent_id = ?", req.AgentID).First(&model.AgentNode{})
 	if result.Error != nil {
 		// 新 Agent
-		if err := s.db.Create(agent).Error; err != nil {
+		newAgent := &model.AgentNode{
+			AgentID:      req.AgentID,
+			Name:         req.Name,
+			Hostname:     req.Hostname,
+			IP:           req.IP,
+			Status:       1,
+			LastSeenAt:   now,
+			RegisteredAt: now,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+		if err := s.db.Create(newAgent).Error; err != nil {
 			c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	} else {
 		// 更新现有 Agent
-		s.db.Model(&model.AgentNode{}).
-			Where("agent_id = ?", req.AgentID).
-			Updates(map[string]interface{}{
-				"status":       1,
-				"last_seen_at": now,
-				"hostname":     req.Hostname,
-				"ip":           req.IP,
-				"name":         req.Name,
-				"updated_at":   now,
-			})
+		s.db.Model(&existingAgent).Updates(map[string]interface{}{
+			"agent_id":     req.AgentID,
+			"status":       1,
+			"last_seen_at": now,
+			"hostname":     req.Hostname,
+			"ip":           req.IP,
+			"name":         req.Name,
+			"updated_at":   now,
+		})
 	}
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success":   true,
-		"message":   "Agent registered successfully",
+		"message":   "Agent registered/updated successfully",
 		"agent_id":  req.AgentID,
 		"master_ip": fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port),
 	})

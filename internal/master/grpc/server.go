@@ -418,9 +418,15 @@ func (s *Server) RegisterAgentInDB(agentID, hostname, ip, name string) error {
 	now := time.Now()
 
 	var agent model.AgentNode
-	result := db.Where("agent_id = ?", agentID).First(&agent)
+	// 核心改进：优先通过 IP 查找已存在的资产记录，而不仅仅是 agent_id
+	result := db.Where("ip = ?", ip).First(&agent)
 	if result.Error != nil {
-		// 新 Agent，注册
+		// 如果 IP 不存在，再尝试通过 agent_id 查找（防止同一主机多 IP 情况）
+		result = db.Where("agent_id = ?", agentID).First(&agent)
+	}
+
+	if result.Error != nil {
+		// 确实是全新的 Agent，执行创建
 		agent = model.AgentNode{
 			AgentID:      agentID,
 			Name:         name,
@@ -435,16 +441,20 @@ func (s *Server) RegisterAgentInDB(agentID, hostname, ip, name string) error {
 		return db.Create(&agent).Error
 	}
 
-	// 更新现有 Agent
-	agent.LastSeenAt = now
-	agent.Status = 1
-	agent.Hostname = hostname
-	agent.IP = ip
-	if name != "" {
-		agent.Name = name
+	// 如果 IP 或 ID 已存在，执行更新
+	// 注意：我们要把记录的 agent_id 更新为当前最新的连接 ID，确保后续指令能正确送达
+	updates := map[string]interface{}{
+		"agent_id":     agentID, 
+		"status":       1,
+		"last_seen_at": now,
+		"updated_at":   now,
 	}
-	agent.UpdatedAt = now
-	return db.Save(&agent).Error
+	
+	// 如果传入了有效的主机名或名称，也一并更新
+	if hostname != "" { updates["hostname"] = hostname }
+	if name != "" { updates["name"] = name }
+
+	return db.Model(&agent).Updates(updates).Error
 }
 
 // UpdateAgentLastSeen 更新 Agent 最后活动时间
