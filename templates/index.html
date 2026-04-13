@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DASRS - Intelligence Driven Response</title>
+    <title>DASRS - 分布式情报驱动应急响应系统</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
     <style>
@@ -26,7 +26,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
         }
 
         body {
@@ -42,13 +42,11 @@
             overflow: hidden;
         }
 
-        /* 隐藏滚动条但保留功能 */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-deep); }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--accent-blue); }
 
-        /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
             background: rgba(2, 6, 23, 0.95);
@@ -120,7 +118,6 @@
 
         .nav-item span { font-size: 14px; font-weight: 500; }
 
-        /* Main Content */
         .content {
             flex: 1;
             display: flex;
@@ -186,7 +183,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Dashboard Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -237,7 +233,6 @@
         .stat-card.danger .stat-value { color: var(--danger); text-shadow: 0 0 15px var(--danger-glow); }
         .stat-card.warning .stat-value { color: var(--warning); }
 
-        /* Data Containers */
         .glass-panel {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -255,15 +250,15 @@
         }
 
         .panel-title {
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'Orbitron', 'PingFang SC', sans-serif;
             font-size: 18px;
             color: var(--accent-blue);
             display: flex;
             align-items: center;
             gap: 10px;
+            letter-spacing: 1px;
         }
 
-        /* Tables */
         table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
         th { padding: 15px 20px; text-align: left; color: var(--text-dim); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
         td { padding: 18px 20px; background: rgba(30, 41, 59, 0.4); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -283,7 +278,6 @@
         .badge.warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
         .badge.info { background: rgba(56, 189, 248, 0.15); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
 
-        /* Form Elements */
         .btn {
             padding: 10px 22px;
             border-radius: 10px;
@@ -314,7 +308,6 @@
         }
         input:focus { border-color: var(--accent-blue); box-shadow: 0 0 10px var(--accent-glow); }
 
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -371,7 +364,6 @@
 
         .payload-hex { color: #94a3b8; margin-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 15px; }
 
-        /* Custom Classes */
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
         .mb-30 { margin-bottom: 30px; }
@@ -391,52 +383,52 @@
         <nav class="nav-group">
             <div class="nav-item active" onclick="showPage('dashboard')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-                <span>DASHBOARD</span>
+                <span>仪表盘</span>
             </div>
             <div class="nav-item" onclick="showPage('agents')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                <span>ASSETS</span>
+                <span>资产管理</span>
             </div>
             <div class="nav-item" onclick="showPage('strategies')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-                <span>STRATEGIES</span>
+                <span>策略管理</span>
             </div>
             <div class="nav-item" onclick="showPage('alerts')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <span>ALERTS</span>
+                <span>告警中心</span>
             </div>
             <div class="nav-item" onclick="showPage('block')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                <span>BLOCKLIST</span>
+                <span>封禁名单</span>
             </div>
             <div class="nav-item" onclick="showPage('whitelist')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-                <span>WHITELIST</span>
+                <span>白名单管理</span>
             </div>
             <div class="nav-item" onclick="showPage('logs')">
                 <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span>SYSTEM LOGS</span>
+                <span>操作日志</span>
             </div>
         </nav>
 
         <div style="padding: 30px; font-size: 11px; color: #475569; border-top: 1px solid var(--border);">
             DASRS v1.2.0<br>
-            Powered by Intelligence Engine
+            情报驱动应急响应系统
         </div>
     </div>
 
     <div class="content">
         <header class="top-bar">
             <div class="system-status">
-                <div class="status-pill"><div class="dot"></div> ONLINE ASSETS: <span id="topOnlineCount" style="color: var(--accent-blue); margin-left: 5px;">0</span></div>
-                <div class="status-pill">MASTER NODE: <span style="color: var(--success); margin-left: 5px;">STABLE</span></div>
+                <div class="status-pill"><div class="dot"></div> 在线资产: <span id="topOnlineCount" style="color: var(--accent-blue); margin-left: 5px;">0</span></div>
+                <div class="status-pill">主控节点: <span style="color: var(--success); margin-left: 5px;">运行稳定</span></div>
                 <div class="status-pill">
                     <input type="checkbox" id="autoRefreshCheck" checked onchange="toggleAutoRefresh()" style="width: 14px; margin-right: 5px;"> 
-                    AUTO-SYNC: 
+                    自动刷新: 
                     <select id="refreshInterval" onchange="updateRefreshInterval()" style="width: auto; background: transparent; border: none; padding: 0 5px; color: var(--accent-blue);">
-                        <option value="5000">5s</option>
-                        <option value="30000" selected>30s</option>
-                        <option value="60000">1m</option>
+                        <option value="5000">5秒</option>
+                        <option value="30000" selected>30秒</option>
+                        <option value="60000">1分钟</option>
                     </select>
                 </div>
             </div>
@@ -448,19 +440,19 @@
             <div class="page active" id="dashboard">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-label">Total Assets</div>
+                        <div class="stat-label">资产总数</div>
                         <div class="stat-value" id="totalAssets">0</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-label">Total Alerts</div>
+                        <div class="stat-label">告警总数</div>
                         <div class="stat-value" id="totalAlerts">0</div>
                     </div>
                     <div class="stat-card warning">
-                        <div class="stat-label">Pending Threat</div>
+                        <div class="stat-label">待处理威胁</div>
                         <div class="stat-value" id="pendingAlerts">0</div>
                     </div>
                     <div class="stat-card danger">
-                        <div class="stat-label">Blocked IPs</div>
+                        <div class="stat-label">已封禁 IP</div>
                         <div class="stat-value" id="blockedIps">0</div>
                     </div>
                 </div>
@@ -468,13 +460,13 @@
                 <div class="grid-2 mb-30">
                     <div class="glass-panel" style="margin-bottom: 0;">
                         <div class="panel-header">
-                            <div class="panel-title">🛡️ THREAT TRENDS (7D)</div>
+                            <div class="panel-title">🛡️ 威胁趋势统计 (7D)</div>
                         </div>
                         <div style="height: 300px;"><canvas id="trendsChart"></canvas></div>
                     </div>
                     <div class="glass-panel" style="margin-bottom: 0;">
                         <div class="panel-header">
-                            <div class="panel-title">📊 SEVERITY DISTRIBUTION</div>
+                            <div class="panel-title">📊 威胁等级分布</div>
                         </div>
                         <div style="height: 300px;"><canvas id="severityChart"></canvas></div>
                     </div>
@@ -482,21 +474,21 @@
 
                 <div class="glass-panel">
                     <div class="panel-header">
-                        <div class="panel-title">🚨 RECENT CRITICAL EVENTS</div>
-                        <button class="btn btn-outline" onclick="showPage('alerts')">VIEW ALL</button>
+                        <div class="panel-title">🚨 实时高危事件</div>
+                        <button class="btn btn-outline" onclick="showPage('alerts')">查看全部</button>
                     </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>Timestamp</th>
-                                <th>Source IP</th>
-                                <th>Severity</th>
-                                <th>Signature</th>
-                                <th>Action</th>
+                                <th>发生时间</th>
+                                <th>源 IP</th>
+                                <th>严重程度</th>
+                                <th>告警签名</th>
+                                <th>响应动作</th>
                             </tr>
                         </thead>
                         <tbody id="recentAlertsTable">
-                            <tr><td colspan="5" style="text-align: center; color: var(--text-dim);">Scanning for threats...</td></tr>
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-dim);">正在扫描实时威胁...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -505,19 +497,19 @@
             <!-- ASSETS -->
             <div class="page" id="agents">
                 <div class="panel-header">
-                    <h2 class="panel-title" style="font-size: 24px;">🖥️ NETWORK ASSETS</h2>
-                    <button class="btn btn-primary" onclick="refreshAgents()">SCAN NETWORK</button>
+                    <h2 class="panel-title" style="font-size: 24px;">🖥️ 网络资产监控</h2>
+                    <button class="btn btn-primary" onclick="refreshAgents()">全网扫描</button>
                 </div>
                 <div class="glass-panel">
                     <table style="border-spacing: 0;">
                         <thead>
                             <tr>
-                                <th>Status</th>
-                                <th>Asset IP</th>
-                                <th>Hostname</th>
-                                <th>Platform</th>
-                                <th>Service</th>
-                                <th>Last Seen</th>
+                                <th>状态</th>
+                                <th>资产 IP</th>
+                                <th>主机名</th>
+                                <th>操作系统</th>
+                                <th>服务类型</th>
+                                <th>最后活跃</th>
                             </tr>
                         </thead>
                         <tbody id="agentsTable"></tbody>
@@ -529,27 +521,27 @@
             <div class="page" id="strategies">
                 <div class="grid-2">
                     <div class="glass-panel">
-                        <div class="panel-header"><div class="panel-title">📋 ACTIVE STRATEGIES</div></div>
+                        <div class="panel-header"><div class="panel-title">📋 活跃防护策略</div></div>
                         <table style="border-spacing: 0;">
                             <thead>
-                                <tr><th>State</th><th>SID</th><th>Target</th><th>Description</th></tr>
+                                <tr><th>状态</th><th>SID</th><th>目标文件</th><th>策略描述</th></tr>
                             </thead>
                             <tbody id="strategiesTable"></tbody>
                         </table>
                     </div>
                     <div class="glass-panel">
-                        <div class="panel-header"><div class="panel-title">➕ DEPLOY NEW STRATEGY</div></div>
+                        <div class="panel-header"><div class="panel-title">➕ 部署新策略</div></div>
                         <form id="addStrategyForm" onsubmit="addStrategy(event)">
                             <div style="display: grid; gap: 20px;">
-                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">TARGET CONFIG FILE</label>
+                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">目标配置文件</label>
                                 <input type="text" id="strategyFile" placeholder="/etc/nginx/sites-available/default" required></div>
-                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">MATCH REGEX</label>
+                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">匹配正则表达式</label>
                                 <input type="text" id="strategyMatch" placeholder="location /admin" required></div>
-                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">REPLACEMENT CONTENT</label>
+                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">替换内容</label>
                                 <textarea id="strategyReplace" rows="4" placeholder="deny all;" required></textarea></div>
-                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">STRATEGY DESCRIPTION</label>
-                                <input type="text" id="strategyDesc" placeholder="Restrict access to admin panel"></div>
-                                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">DEPLOY TO CLUSTER</button>
+                                <div><label style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px; display: block;">策略描述</label>
+                                <input type="text" id="strategyDesc" placeholder="限制敏感路径访问"></div>
+                                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">下发至全网集群</button>
                             </div>
                         </form>
                     </div>
@@ -559,13 +551,13 @@
             <!-- ALERTS -->
             <div class="page" id="alerts">
                 <div class="panel-header">
-                    <h2 class="panel-title" style="font-size: 24px;">🚨 THREAT INTELLIGENCE CENTER</h2>
-                    <button class="btn btn-primary" onclick="refreshAlerts()">REFRESH DATA</button>
+                    <h2 class="panel-title" style="font-size: 24px;">🚨 威胁情报中心</h2>
+                    <button class="btn btn-primary" onclick="refreshAlerts()">刷新数据</button>
                 </div>
                 <div class="glass-panel">
                     <table style="border-spacing: 0;">
                         <thead>
-                            <tr><th>Status</th><th>SID</th><th>Time</th><th>Source</th><th>Risk</th><th>Signature</th><th>Action</th></tr>
+                            <tr><th>状态</th><th>SID</th><th>时间</th><th>来源</th><th>风险评分</th><th>特征签名</th><th>操作</th></tr>
                         </thead>
                         <tbody id="alertsTable"></tbody>
                     </table>
@@ -575,18 +567,18 @@
             <!-- BLOCKLIST -->
             <div class="page" id="block">
                 <div class="glass-panel">
-                    <div class="panel-header"><div class="panel-title">🚫 MANUAL IP INTERDICTION</div></div>
+                    <div class="panel-header"><div class="panel-title">🚫 手动 IP 封禁阻断</div></div>
                     <div style="display: flex; gap: 20px;">
-                        <input type="text" id="blockIp" placeholder="Target IPv4/IPv6" style="flex: 1;">
-                        <input type="text" id="blockReason" placeholder="Reason for interdiction" style="flex: 1;">
-                        <button class="btn btn-danger" onclick="blockIP()" style="background: var(--danger);">BLOCK IP</button>
+                        <input type="text" id="blockIp" placeholder="目标 IPv4/IPv6 地址" style="flex: 1;">
+                        <input type="text" id="blockReason" placeholder="封禁原因备注" style="flex: 1;">
+                        <button class="btn btn-danger" onclick="blockIP()" style="background: var(--danger);">立即封禁</button>
                     </div>
                 </div>
                 <div class="glass-panel">
-                    <div class="panel-header"><div class="panel-title">CURRENTLY INTERDICTED IPS</div></div>
+                    <div class="panel-header"><div class="panel-title">当前生效封禁列表</div></div>
                     <table id="blockedIpsTable">
-                        <thead><tr><th>Address</th><th>Time</th><th>Reason</th><th>Action</th></tr></thead>
-                        <tbody><tr><td colspan="4" style="text-align: center; color: var(--text-dim);">No active blocks</td></tr></tbody>
+                        <thead><tr><th>地址</th><th>封禁时间</th><th>原因</th><th>操作</th></tr></thead>
+                        <tbody><tr><td colspan="4" style="text-align: center; color: var(--text-dim);">暂无活跃封禁记录</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -594,16 +586,16 @@
             <!-- WHITELIST -->
             <div class="page" id="whitelist">
                 <div class="glass-panel">
-                    <div class="panel-header"><div class="panel-title">⚪ TRUSTED NODES (WHITELIST)</div></div>
+                    <div class="panel-header"><div class="panel-title">⚪ 受信任节点 (白名单)</div></div>
                     <div style="display: flex; gap: 20px;">
-                        <input type="text" id="whitelistIp" placeholder="Trusted IP" style="flex: 1;">
-                        <input type="text" id="whitelistReason" placeholder="Identifier" style="flex: 1;">
-                        <button class="btn btn-primary" onclick="addWhitelistEntry()">ADD TO TRUSTED</button>
+                        <input type="text" id="whitelistIp" placeholder="信任 IP 地址" style="flex: 1;">
+                        <input type="text" id="whitelistReason" placeholder="备注标识" style="flex: 1;">
+                        <button class="btn btn-primary" onclick="addWhitelistEntry()">添加到信任列表</button>
                     </div>
                 </div>
                 <div class="glass-panel">
                     <table id="whitelistTable">
-                        <thead><tr><th>Address</th><th>Notes</th><th>Added</th><th>Action</th></tr></thead>
+                        <thead><tr><th>地址</th><th>备注</th><th>添加时间</th><th>操作</th></tr></thead>
                         <tbody></tbody>
                     </table>
                 </div>
@@ -612,7 +604,7 @@
             <!-- LOGS -->
             <div class="page" id="logs">
                 <div class="glass-panel">
-                    <div class="panel-header"><div class="panel-title">📜 SYSTEM AUDIT LOGS</div></div>
+                    <div class="panel-header"><div class="panel-title">📜 系统审计日志</div></div>
                     <div id="logsList" style="display: grid; gap: 10px;"></div>
                 </div>
             </div>
@@ -623,14 +615,14 @@
     <div id="alertModal" class="modal">
         <div class="modal-content">
             <header class="modal-header">
-                <h2 style="font-family: 'Orbitron', sans-serif; color: var(--accent-blue);">THREAT_DETECTION_REPORT</h2>
+                <h2 style="font-family: 'Orbitron', 'PingFang SC', sans-serif; color: var(--accent-blue);">THREAT_DETECTION_REPORT / 威胁检测报告</h2>
                 <button class="btn btn-outline" style="padding: 5px 12px;" onclick="closeModal()">✕</button>
             </header>
             <div class="modal-body" id="modalBody">
                 <!-- Injected via JS -->
             </div>
             <footer style="padding: 25px 40px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 15px; background: rgba(0,0,0,0.2);">
-                <button class="btn btn-outline" onclick="closeModal()">CLOSE REPORT</button>
+                <button class="btn btn-outline" onclick="closeModal()">关闭报告</button>
             </div>
         </div>
     </div>
@@ -642,7 +634,6 @@
         let trendsChart = null;
         let severityChart = null;
 
-        // Clock
         setInterval(() => {
             const now = new Date();
             document.getElementById('currentTime').innerText = now.toTimeString().split(' ')[0];
@@ -655,10 +646,16 @@
             document.getElementById(pageId).classList.add('active');
             currentPage = pageId;
             
-            // Highlight nav
             const navs = document.querySelectorAll('.nav-item');
             navs.forEach(nav => {
-                if (nav.innerText.toLowerCase().includes(pageId.replace('block', 'blocklist').replace('agents', 'assets'))) {
+                const text = nav.innerText;
+                if ((pageId === 'dashboard' && text.includes('仪表盘')) ||
+                    (pageId === 'agents' && text.includes('资产管理')) ||
+                    (pageId === 'strategies' && text.includes('策略管理')) ||
+                    (pageId === 'alerts' && text.includes('告警中心')) ||
+                    (pageId === 'block' && text.includes('封禁名单')) ||
+                    (pageId === 'whitelist' && text.includes('白名单')) ||
+                    (pageId === 'logs' && text.includes('操作日志'))) {
                     nav.classList.add('active');
                 }
             });
@@ -736,11 +733,11 @@
                     <tr>
                         <td>${new Date(a.timestamp).toLocaleTimeString()}</td>
                         <td style="font-family: 'JetBrains Mono'; font-weight: 500;">${a.source_ip}</td>
-                        <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity}</span></td>
+                        <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity.toUpperCase()}</span></td>
                         <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${a.signature_name}</td>
-                        <td><span class="badge info">${a.action}</span></td>
+                        <td><span class="badge info">${a.action.toUpperCase()}</span></td>
                     </tr>
-                `).join('') : '<tr><td colspan="5" style="text-align: center;">No critical events detected</td></tr>';
+                `).join('') : '<tr><td colspan="5" style="text-align: center;">当前暂无高危告警事件</td></tr>';
             }
         }
 
@@ -757,7 +754,7 @@
                 data: {
                     labels: dates,
                     datasets: [{
-                        label: 'Alerts',
+                        label: '告警数',
                         data: counts,
                         borderColor: '#38bdf8',
                         backgroundColor: 'rgba(56, 189, 248, 0.1)',
@@ -781,7 +778,7 @@
         }
 
         async function loadSeverityDist() {
-            const res = await fetchAPI('/api/severity-distribution'); // Need to ensure this endpoint exists or use stats
+            const res = await fetchAPI('/api/dashboard/severity-distribution');
             if (!res || !res.data) return;
             const ctx = document.getElementById('severityChart').getContext('2d');
             
@@ -813,7 +810,7 @@
             if (res && res.data) {
                 tbody.innerHTML = res.data.map(a => `
                     <tr>
-                        <td><div style="display: flex; align-items: center; gap: 8px;"><div class="dot" style="background: ${a.status === 1 ? 'var(--success)' : '#475569'};"></div> ${a.status === 1 ? 'Online' : 'Offline'}</div></td>
+                        <td><div style="display: flex; align-items: center; gap: 8px;"><div class="dot" style="background: ${a.status === 1 ? 'var(--success)' : '#475569'};"></div> ${a.status === 1 ? '在线' : '离线'}</div></td>
                         <td style="font-family: 'JetBrains Mono'; color: var(--accent-blue);">${a.ip}</td>
                         <td>${a.hostname}</td>
                         <td><span class="badge info">${a.os_type}</span></td>
@@ -830,8 +827,8 @@
             if (res && res.data) {
                 tbody.innerHTML = res.data.map(s => `
                     <tr>
-                        <td><span class="badge ${s.enabled ? 'success' : 'warning'}">${s.enabled ? 'ACTIVE' : 'DISABLED'}</span></td>
-                        <td>${s.sid || 'GENERIC'}</td>
+                        <td><span class="badge ${s.enabled ? 'success' : 'warning'}">${s.enabled ? '活跃' : '禁用'}</span></td>
+                        <td>${s.sid || '通用'}</td>
                         <td style="font-family: 'JetBrains Mono'; font-size: 12px;">${s.target_file}</td>
                         <td style="color: var(--text-dim);">${s.description}</td>
                     </tr>
@@ -860,16 +857,16 @@
             if (res && res.data) {
                 tbody.innerHTML = res.data.map(a => `
                     <tr>
-                        <td><span class="badge ${a.status === 0 ? 'warning' : 'success'}">${a.status === 0 ? 'NEW' : 'RESOLVED'}</span></td>
+                        <td><span class="badge ${a.status === 0 ? 'warning' : 'success'}">${a.status === 0 ? '待处理' : '已解决'}</span></td>
                         <td>${a.sid}</td>
                         <td style="font-size: 12px; color: var(--text-dim);">${new Date(a.timestamp).toLocaleString()}</td>
                         <td style="font-family: 'JetBrains Mono';">${a.source_ip}</td>
-                        <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity}</span></td>
+                        <td><span class="badge ${getSeverityBadge(a.severity)}">${a.severity.toUpperCase()}</span></td>
                         <td>${a.signature_name}</td>
                         <td>
                             <div style="display: flex; gap: 8px;">
-                                <button class="btn btn-outline" style="padding: 4px 10px;" onclick="showAlertDetails('${a.id}')">INTEL</button>
-                                <button class="btn btn-primary" style="padding: 4px 10px; background: var(--danger);" onclick="blockIPFromAlert('${a.source_ip}')">BLOCK</button>
+                                <button class="btn btn-outline" style="padding: 4px 10px;" onclick="showAlertDetails('${a.id}')">审计</button>
+                                <button class="btn btn-primary" style="padding: 4px 10px; background: var(--danger);" onclick="blockIPFromAlert('${a.source_ip}')">封禁</button>
                             </div>
                         </td>
                     </tr>
@@ -882,22 +879,22 @@
             if (!res || !res.data) return;
             const a = res.data;
             
-            let rawText = a.payload ? atob(a.payload) : 'EMPTY_PAYLOAD';
+            let rawText = a.payload ? atob(a.payload) : '无原始报文数据';
             let hexDump = toHexDump(rawText);
 
             document.getElementById('modalBody').innerHTML = `
                 <div class="grid-2 mb-30">
                     <div class="glass-panel" style="margin-bottom: 0; padding: 20px;">
-                        <h4 style="font-size: 12px; color: var(--accent-blue); margin-bottom: 15px;">TARGET_CONTEXT</h4>
-                        <p style="margin-bottom: 8px;"><strong>SOURCE:</strong> <span style="font-family: 'JetBrains Mono'; color: var(--danger);">${a.source_ip}</span></p>
-                        <p style="margin-bottom: 8px;"><strong>SID:</strong> ${a.sid}</p>
-                        <p style="margin-bottom: 8px;"><strong>SCORE:</strong> <span style="color: var(--danger); font-size: 20px; font-weight: bold;">${a.risk_score}</span></p>
+                        <h4 style="font-size: 12px; color: var(--accent-blue); margin-bottom: 15px;">TARGET_CONTEXT / 攻击上下文</h4>
+                        <p style="margin-bottom: 8px;"><strong>威胁来源:</strong> <span style="font-family: 'JetBrains Mono'; color: var(--danger);">${a.source_ip}</span></p>
+                        <p style="margin-bottom: 8px;"><strong>特征 ID:</strong> ${a.sid}</p>
+                        <p style="margin-bottom: 8px;"><strong>风险评分:</strong> <span style="color: var(--danger); font-size: 20px; font-weight: bold;">${a.risk_score}</span></p>
                     </div>
                     <div class="glass-panel" style="margin-bottom: 0; padding: 20px;">
-                        <h4 style="font-size: 12px; color: var(--accent-blue); margin-bottom: 15px;">THREAT_SIGNATURE</h4>
-                        <p style="margin-bottom: 8px;"><strong>NAME:</strong> ${a.signature_name}</p>
-                        <p style="margin-bottom: 8px;"><strong>SEVERITY:</strong> <span class="badge ${getSeverityBadge(a.severity)}">${a.severity}</span></p>
-                        <p style="margin-bottom: 8px;"><strong>AUTO_ACTION:</strong> <span class="badge info">${a.action}</span></p>
+                        <h4 style="font-size: 12px; color: var(--accent-blue); margin-bottom: 15px;">THREAT_SIGNATURE / 威胁签名</h4>
+                        <p style="margin-bottom: 8px;"><strong>签名名称:</strong> ${a.signature_name}</p>
+                        <p style="margin-bottom: 8px;"><strong>严重程度:</strong> <span class="badge ${getSeverityBadge(a.severity)}">${a.severity.toUpperCase()}</span></p>
+                        <p style="margin-bottom: 8px;"><strong>自动决策:</strong> <span class="badge info">${a.action.toUpperCase()}</span></p>
                     </div>
                 </div>
 
@@ -907,11 +904,11 @@
                 </div>
 
                 <div style="margin-top: 30px; padding: 25px; background: rgba(244, 63, 94, 0.05); border: 1px solid var(--danger); border-radius: 16px;">
-                    <h4 style="color: var(--danger); margin-bottom: 10px;">HUMAN_INTERVENTION_REQUIRED</h4>
-                    <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;">Review the raw intelligence above. If this is a verified threat, confirm interdiction. If it is a false positive, add to whitelist.</p>
+                    <h4 style="color: var(--danger); margin-bottom: 10px;">HUMAN_INTERVENTION_REQUIRED / 人工介入</h4>
+                    <p style="font-size: 13px; color: var(--text-dim); margin-bottom: 20px;">请通过上述原始情报进行人工审计。如果确认是真实攻击，请确认封禁阻断；如果是误报，可将其添加至白名单。</p>
                     <div style="display: flex; gap: 12px;">
-                        <button class="btn btn-primary" style="background: var(--danger);" onclick="manualAction('${a.source_ip}', 'block')">CONFIRM_INTERDICTION</button>
-                        <button class="btn btn-outline" onclick="manualAction('${a.source_ip}', 'whitelist')">WHITELIST_NODE</button>
+                        <button class="btn btn-primary" style="background: var(--danger);" onclick="manualAction('${a.source_ip}', 'block')">确认封禁阻断</button>
+                        <button class="btn btn-outline" onclick="manualAction('${a.source_ip}', 'whitelist')">加入白名单</button>
                     </div>
                 </div>
             `;
@@ -920,9 +917,9 @@
 
         async function manualAction(ip, action) {
             if(action === 'block') {
-                if(await postAPI('/api/block', {ip, reason: 'Manual forensic confirmation'})) alert('Interdiction command broadcasted.');
+                if(await postAPI('/api/block', {ip, reason: '人工审计确认攻击'})) alert('已下发全球封禁指令。');
             } else {
-                if(await postAPI('/api/whitelist', {ip, reason: 'Forensic override'})) alert('Node added to trusted network.');
+                if(await postAPI('/api/whitelist', {ip, reason: '人工审计误报排除'})) alert('节点已添加至受信任网络。');
             }
             closeModal();
             refreshAlerts();
@@ -952,21 +949,28 @@
                 document.getElementById('blockIp').value = '';
                 document.getElementById('blockReason').value = '';
                 loadStats();
+                refreshBlockedIps();
             }
+        }
+
+        async function refreshBlockedIps() {
+            // 这里可以增加专门获取已封禁 IP 列表的 API 调用
+            // 暂时使用统计数据更新
+            loadStats();
         }
 
         async function refreshWhitelist() {
             const res = await fetchAPI('/api/whitelist');
             const tbody = document.getElementById('whitelistTable').querySelector('tbody');
             if (res && res.data) {
-                tbody.innerHTML = res.data.map(w => `
+                tbody.innerHTML = res.data.length ? res.data.map(w => `
                     <tr>
                         <td style="font-family: 'JetBrains Mono';">${w.ip}</td>
                         <td>${w.reason}</td>
                         <td>${new Date(w.created_at).toLocaleDateString()}</td>
-                        <td><button class="btn btn-outline" style="padding: 4px 10px; color: var(--danger);" onclick="deleteWhitelist('${w.id}')">REMOVE</button></td>
+                        <td><button class="btn btn-outline" style="padding: 4px 10px; color: var(--danger);" onclick="deleteWhitelist('${w.id}')">移除</button></td>
                     </tr>
-                `).join('');
+                `).join('') : '<tr><td colspan="4" style="text-align: center; color: var(--text-dim);">白名单暂无记录</td></tr>';
             }
         }
 
@@ -981,8 +985,8 @@
         }
 
         async function deleteWhitelist(id) {
-            if(!confirm('Delete node from trust list?')) return;
-            const res = await fetch(`/api/whitelist/${id}`, { method: 'DELETE' });
+            if(!confirm('确定要将该节点从信任列表中移除吗？')) return;
+            const res = await fetch(`${API_BASE}/api/whitelist/${id}`, { method: 'DELETE' });
             if(res.ok) refreshWhitelist();
         }
 
@@ -993,11 +997,11 @@
                 container.innerHTML = res.data.map(l => `
                     <div style="background: rgba(15, 23, 42, 0.4); padding: 15px; border-radius: 10px; border-left: 3px solid ${l.result === 1 ? 'var(--success)' : 'var(--danger)'};">
                         <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 5px;">
-                            <span>ID: ${l.command_id}</span>
+                            <span>任务 ID: ${l.command_id}</span>
                             <span>${new Date(l.created_at).toLocaleString()}</span>
                         </div>
                         <div style="font-family: 'JetBrains Mono'; font-size: 13px;">
-                            <span style="color: var(--accent-blue);">${l.command_type}</span> - ${l.result === 1 ? 'COMPLETED' : 'FAILED'}
+                            <span style="color: var(--accent-blue);">${l.command_type}</span> - ${l.result === 1 ? '执行成功' : '执行失败'}
                         </div>
                     </div>
                 `).join('');
@@ -1011,7 +1015,6 @@
             return 'info';
         }
 
-        // Init
         window.onclick = (e) => { if(e.target.classList.contains('modal')) closeModal(); }
         showPage('dashboard');
 
