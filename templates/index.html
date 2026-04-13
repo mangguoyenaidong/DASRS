@@ -37,9 +37,32 @@
                 linear-gradient(90deg, rgba(15, 23, 42, 0.5) 1px, transparent 1px);
             background-size: 100% 100%, 30px 30px, 30px 30px;
             color: var(--text-main);
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             overflow: hidden;
+        }
+
+        /* 响应式媒体查询 */
+        @media (max-width: 1400px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 1024px) {
+            :root { --sidebar-width: 80px; }
+            .logo-area h1, .nav-item span { display: none; }
+            .logo-area { padding: 30px 0; justify-content: center; }
+            .nav-item { justify-content: center; padding: 15px 0; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .nav-group { padding: 0 10px; }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .top-bar { padding: 0 20px; height: auto; min-height: 80px; flex-wrap: wrap; gap: 10px; padding-top: 10px; padding-bottom: 10px; }
+            .main-scroll { padding: 20px; }
+            .system-status { flex-direction: column; gap: 10px; width: 100%; }
+            .status-pill { width: fit-content; }
         }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -55,6 +78,7 @@
             flex-direction: column;
             z-index: 100;
             backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
         }
 
         .logo-area {
