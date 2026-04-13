@@ -733,15 +733,12 @@ func (s *Server) registerAgent(c *gin.Context) {
 	}
 
 	now := time.Now()
-	// 尝试通过 IP 或 AgentID 查找现有资产
+	// 严格以 IP 为唯一标识进行维护
 	var existingAgent model.AgentNode
 	result := s.db.Where("ip = ?", req.IP).First(&existingAgent)
-	if result.Error != nil {
-		result = s.db.Where("agent_id = ?", req.AgentID).First(&existingAgent)
-	}
 
 	if result.Error != nil {
-		// 新 Agent
+		// 未找到资产，创建新资产记录
 		newAgent := &model.AgentNode{
 			AgentID:      req.AgentID,
 			Name:         req.Name,
@@ -758,13 +755,12 @@ func (s *Server) registerAgent(c *gin.Context) {
 			return
 		}
 	} else {
-		// 更新现有 Agent
+		// 找到资产，更新现有记录 (保持 IP 不变)
 		s.db.Model(&existingAgent).Updates(map[string]interface{}{
 			"agent_id":     req.AgentID,
 			"status":       1,
 			"last_seen_at": now,
 			"hostname":     req.Hostname,
-			"ip":           req.IP,
 			"name":         req.Name,
 			"updated_at":   now,
 		})
@@ -856,6 +852,21 @@ func (s *Server) addWhitelist(c *gin.Context) {
 }
 
 // deleteWhitelist 从白名单中删除 IP
+func (s *Server) deleteWhitelist(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	if err := s.db.Delete(&model.WhitelistIP{}, id).Error; err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{"message": "IP removed from whitelist"})
+}
+ 从白名单中删除 IP
 func (s *Server) deleteWhitelist(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {

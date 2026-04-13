@@ -34,9 +34,10 @@
 - **API**: 增加 `GET/POST/DELETE /api/whitelist` 接口。
 - **Web 端**: 在管理控制台左侧新增“白名单”菜单，支持动态增删 IP。
 
-### 3.2 自动化配置工具
-- **`setup.py`**: 支持通过命令行参数一键配置 Master/Agent。
-- **`configure.py`**: 交互式助手，通过问答方式引导用户完成 Master IP、数据库、Agent 名称等核心配置。
+### 3.3 系统稳定性修复 (Bug Fixes)
+- **审计功能修复**: 解决了由于 Base64 非标准字符解码导致 JS 崩溃的问题。增加了 `try-catch` 保护和即时加载反馈。
+- **资产去重逻辑**: 修正了 `registerAgent` 接口，强制以 IP 作为资产唯一键，彻底解决了同一 Agent 重复出现在列表中的问题。
+- **封禁状态同步**: 优化了解封逻辑，现在解封 IP 会同步更新告警日志状态，确保“生效名单”实时准确。
 
 ## 4. 关键文件清单 (Key Files)
 - `configs/config.yaml`: Master 全局配置（含静态白名单）。
