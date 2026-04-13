@@ -777,8 +777,15 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(data)
                 });
-                return await res.json();
-            } catch (e) { console.error('API Error:', e); return null; }
+                const result = await res.json();
+                if (!res.ok) {
+                    return { success: false, message: result.error || result.message || `HTTP ${res.status}` };
+                }
+                return result;
+            } catch (e) { 
+                console.error('API Error:', e); 
+                return { success: false, message: '网络连接异常或服务器崩溃' }; 
+            }
         }
 
         async function loadDashboard() {

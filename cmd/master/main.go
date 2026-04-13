@@ -55,7 +55,7 @@ func main() {
 	}()
 
 	// 启动 HTTP API 服务器
-	apiServer := api.NewServer(cfg, db, redisClient, engine, grpcServer.GetGRPCServer())
+	apiServer := api.NewServer(cfg, db, redisClient, engine, grpcServer)
 	go func() {
 		if err := apiServer.Start(); err != nil {
 			log.Fatalf("HTTP API server failed: %v", err)
