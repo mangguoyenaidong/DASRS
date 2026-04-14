@@ -35,12 +35,29 @@ def configure_suricata():
     default_iface = interfaces[0] if interfaces else "eth0"
     iface = get_input("  请输入要监控的网卡名称", default_iface)
     
+    # 新增：询问是否开启 Payload 捕获
+    enable_payload = get_input("  是否开启详细攻击报文捕获 (Payload)? (y/n)", "y").lower() == 'y'
+
     suricata_yaml = "/etc/suricata/suricata.yaml"
     if os.path.exists(suricata_yaml):
         print(f"  正在自动修改 {suricata_yaml} ...")
-        # 由于系统配置文件权限高，我们建议用户手动或使用 sed
-        cmd = f"sudo sed -i 's/interface: .*/interface: {iface}/g' {suricata_yaml}"
-        os.system(cmd)
+        
+        # 1. 修改网卡绑定
+        cmd_iface = f"sudo sed -i 's/interface: .*/interface: {iface}/g' {suricata_yaml}"
+        os.system(cmd_iface)
+        
+        # 2. 修改 Payload 配置 (在 alert 块中定位并修改)
+        if enable_payload:
+            # 定位到 alert 类型并开启 payload 输出
+            # 我们使用 sed 的范围匹配功能，在 - alert: 之后寻找最近的 payload 并修改
+            os.system(f"sudo sed -i '/- alert:/,/payload:/ s/payload: .*/payload: yes/' {suricata_yaml}")
+            # 顺便开启可打印字符模式，增强审计可读性
+            os.system(f"sudo sed -i '/- alert:/,/payload-printable:/ s/payload-printable: .*/payload-printable: yes/' {suricata_yaml}")
+            print("  ✅ 已开启详细报文捕获 (Payload: yes)")
+        else:
+            os.system(f"sudo sed -i '/- alert:/,/payload:/ s/payload: .*/payload: no/' {suricata_yaml}")
+            print("  ℹ️ 已关闭详细报文捕获。")
+
         print(f"  ✅ Suricata 网卡已绑定到: {iface}")
         print("  🔄 正在重启 Suricata 服务...")
         os.system("sudo systemctl restart suricata")
