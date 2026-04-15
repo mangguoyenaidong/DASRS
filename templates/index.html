@@ -1045,7 +1045,9 @@
                 const keywords = ['union select', 'select', 'insert into', 'drop table', 'script', 'alert(', '/etc/passwd', 'eval(', 'base64_decode', 'cmd.exe', '/bin/bash', '..%2f'];
                 let highlightedText = escapeHtml(rawText);
                 keywords.forEach(kw => {
-                    const regex = new RegExp(kw, 'gi');
+                    // 转义正则特殊字符，防止如 alert( 导致报错
+                    const escapedKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const regex = new RegExp(escapedKw, 'gi');
                     highlightedText = highlightedText.replace(regex, match => `<span class="highlight-red">${match}</span>`);
                 });
 
