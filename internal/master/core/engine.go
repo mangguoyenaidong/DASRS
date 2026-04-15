@@ -54,6 +54,14 @@ func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decisi
 		Timestamp: time.Now().UnixMilli(),
 	}
 
+	// 0. 白名单校验 - 强制忽略
+	if e.IsWhitelisted(alert.SourceIP) {
+		decision.Action = "ignore"
+		decision.Score = 0
+		decision.Reason = "IP is whitelisted (Static or Dynamic)"
+		return decision, nil
+	}
+
 	// 1. 基础评分
 	baseScore := e.calculateBaseScore(alert.Severity)
 	decision.BaseScore = baseScore

@@ -866,18 +866,3 @@ func (s *Server) deleteWhitelist(c *gin.Context) {
 
 	c.PureJSON(http.StatusOK, gin.H{"message": "IP removed from whitelist"})
 }
- 从白名单中删除 IP
-func (s *Server) deleteWhitelist(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
-		return
-	}
-
-	if err := s.db.Delete(&model.WhitelistIP{}, id).Error; err != nil {
-		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.PureJSON(http.StatusOK, gin.H{"message": "IP removed from whitelist"})
-}
