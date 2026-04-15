@@ -10,6 +10,9 @@ agent:
   # Suricata 日志路径 (根据实际路径修改)
   suricata_log_path: "./suricata_logs/eve.json"
 
+  # 新增：监控目标 IP (仅采集发往此 IP 的告警)
+  monitor_ip: "192.168.41.136"
+
   # Agent 名称 (可选，用于标识此节点)
   agent_name: "agent-01"
 

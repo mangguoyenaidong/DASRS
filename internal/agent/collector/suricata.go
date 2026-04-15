@@ -20,6 +20,7 @@ import (
 type SuricataCollector struct {
 	filePath   string
 	localIP    string
+	monitorIP  string // 新增：仅上报目的 IP 为此地址的告警
 	offsetFile string // 进度保存文件路径
 	tail       *tail.Tail
 	ctx        context.Context
@@ -28,7 +29,7 @@ type SuricataCollector struct {
 }
 
 // NewSuricataCollector 创建采集器
-func NewSuricataCollector(filePath, localIP string) *SuricataCollector {
+func NewSuricataCollector(filePath, localIP, monitorIP string) *SuricataCollector {
 	ctx, cancel := context.WithCancel(context.Background())
 	
 	// 根据日志路径生成唯一的进度文件名 (处理路径中的特殊字符)
@@ -38,6 +39,7 @@ func NewSuricataCollector(filePath, localIP string) *SuricataCollector {
 	return &SuricataCollector{
 		filePath:   filePath,
 		localIP:    localIP,
+		monitorIP:  monitorIP,
 		offsetFile: offsetFile,
 		ctx:        ctx,
 		cancel:     cancel,
@@ -185,6 +187,13 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 	// 过滤本机流量
 	if c.localIP != "" && c.localIP != "0.0.0.0" {
 		if eve.SrcIP != c.localIP && eve.DestIP != c.localIP {
+			return
+		}
+	}
+
+	// 过滤特定监控目标 IP (如果配置了)
+	if c.monitorIP != "" {
+		if eve.DestIP != c.monitorIP {
 			return
 		}
 	}

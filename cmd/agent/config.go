@@ -11,6 +11,7 @@ import (
 type Config struct {
 	MasterAddress     string `yaml:"master_address"`
 	SuricataLogPath   string `yaml:"suricata_log_path"`
+	MonitorIP         string `yaml:"monitor_ip"`        // 新增：仅监控发往此 IP 的流量
 	ReconnectInterval int    `yaml:"reconnect_interval"`
 	HeartbeatInterval int    `yaml:"heartbeat_interval"`
 }
@@ -42,6 +43,9 @@ func LoadConfig(path string) (*Config, error) {
 		if yCfg.Agent.SuricataLogPath != "" {
 			cfg.SuricataLogPath = yCfg.Agent.SuricataLogPath
 		}
+		if yCfg.Agent.MonitorIP != "" {
+			cfg.MonitorIP = yCfg.Agent.MonitorIP
+		}
 		if yCfg.Agent.ReconnectInterval > 0 {
 			cfg.ReconnectInterval = yCfg.Agent.ReconnectInterval
 		}
@@ -56,6 +60,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if v := os.Getenv("SURICATA_LOG_PATH"); v != "" {
 		cfg.SuricataLogPath = v
+	}
+	if v := os.Getenv("MONITOR_IP"); v != "" {
+		cfg.MonitorIP = v
 	}
 	if v := os.Getenv("RECONNECT_INTERVAL"); v != "" {
 		fmt.Sscanf(v, "%d", &cfg.ReconnectInterval)

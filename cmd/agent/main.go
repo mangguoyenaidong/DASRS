@@ -72,9 +72,9 @@ func main() {
 	localIP := grpcClient.GetLocalIP() // 利用 client 已经实现好的逻辑
 	log.Printf("Agent identified with IP: %s", localIP)
 
-	// 初始化采集器 (传入 localIP)
+	// 初始化采集器 (传入 localIP 和 monitorIP)
 	log.Println("Initializing Suricata collector...")
-	logCollector := collector.NewSuricataCollector(cfg.SuricataLogPath, localIP)
+	logCollector := collector.NewSuricataCollector(cfg.SuricataLogPath, localIP, cfg.MonitorIP)
 
 	// 创建 Agent
 	agent := NewAgent(cfg, grpcClient, logCollector, blocker, patcher)
