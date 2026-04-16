@@ -548,6 +548,14 @@ func (s *Server) unblockIP(c *gin.Context) {
 		s.grpcServer.QueueCommand(agent.AgentID, cmd)
 	}
 
+	// 同步更新数据库状态，确保 Web 后台不再显示该 IP 为封禁状态
+	if err := s.db.Model(&model.AlertLog{}).Where("source_ip = ? AND action = ?", req.IP, "block").Updates(map[string]interface{}{
+		"action": "unblock",
+		"status": 1, // 已处理
+	}).Error; err != nil {
+		s.logger.Error("Failed to update alert logs for unblock: %v", err)
+	}
+
 	s.logger.Info("Manual unblock command sent for IP: %s", req.IP)
 
 	c.PureJSON(http.StatusOK, gin.H{
@@ -620,6 +628,14 @@ func (s *Server) batchUnblockIP(c *gin.Context) {
 			s.grpcServer.QueueCommand(agent.AgentID, cmd)
 		}
 		count++
+	}
+
+	// 批量更新数据库状态
+	if err := s.db.Model(&model.AlertLog{}).Where("source_ip IN ? AND action = ?", req.IPs, "block").Updates(map[string]interface{}{
+		"action": "unblock",
+		"status": 1,
+	}).Error; err != nil {
+		s.logger.Error("Failed to update alert logs for batch unblock: %v", err)
 	}
 
 	c.PureJSON(http.StatusOK, gin.H{

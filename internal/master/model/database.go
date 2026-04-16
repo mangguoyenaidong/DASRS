@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -29,6 +30,18 @@ func InitDB(cfg *Config) (*gorm.DB, error) {
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
+	}
+
+	if _, err := sqlDB.Exec("SET NAMES utf8mb4"); err != nil {
+		return nil, fmt.Errorf("failed to set names utf8mb4: %w", err)
+	}
+
+	sqlDB.SetMaxOpenConns(cfg.Master.Database.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(cfg.Master.Database.MaxIdleConns)
+
+	return db, nil
+}
+r)
 	}
 
 	if _, err := sqlDB.Exec("SET NAMES utf8mb4"); err != nil {
