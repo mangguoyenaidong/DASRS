@@ -221,6 +221,7 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 		Payload:       eve.Payload,
 		SourceIp:      eve.SrcIP,
 		DestIp:        eve.DestIP,
+		AssetInfo:     fmt.Sprintf("Agent: %s", c.localIP), // 强制标记资产信息
 		Timestamp:     ts,
 		Severity:      severity,
 		SignatureName: eve.Alert.Signature,

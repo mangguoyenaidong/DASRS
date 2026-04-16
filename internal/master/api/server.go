@@ -318,6 +318,17 @@ func (s *Server) listAlerts(c *gin.Context) {
 		return
 	}
 
+	// 逻辑优化：如果 DestIP 看起来像网关或不准确，利用 AssetInfo 修正显示
+	for i := range alertLogs {
+		if (alertLogs[i].DestIP == "" || strings.HasSuffix(alertLogs[i].DestIP, ".254")) && alertLogs[i].AssetInfo != "" {
+			// 在不破坏原始数据的前提下，为了前端显示友好，可以将资产名称附加在 IP 后
+			// 或者在返回给前端的 JSON 中处理，这里直接简单替换 DestIP 用于显示
+			if strings.Contains(alertLogs[i].AssetInfo, "Agent: ") {
+				alertLogs[i].DestIP = strings.TrimPrefix(alertLogs[i].AssetInfo, "Agent: ")
+			}
+		}
+	}
+
 	c.PureJSON(http.StatusOK, gin.H{
 		"data":  alertLogs,
 		"total": total,
