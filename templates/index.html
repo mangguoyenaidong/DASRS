@@ -31,6 +31,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
         body {
+            height: 100vh;
             min-height: 100vh;
             font-family: 'Noto Sans SC', sans-serif;
             color: var(--ink);
@@ -47,6 +48,7 @@
         ::-webkit-scrollbar-thumb { background: rgba(16, 35, 63, 0.16); border-radius: 999px; }
 
         .app-shell {
+            height: 100vh;
             min-height: 100vh;
             display: grid;
             grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
@@ -60,6 +62,7 @@
             background: rgba(9, 23, 43, 0.92);
             color: #f3f7ff;
             border-right: 1px solid rgba(255, 255, 255, 0.08);
+            overflow-y: auto;
         }
 
         .brand-card, .ops-card, .sidebar-foot { position: relative; }
@@ -94,8 +97,19 @@
         }
         .nav-group { display: grid; gap: 8px; flex: 1; }
         .nav-item {
-            width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px;
-            border-radius: 16px; color: rgba(240,246,255,0.76); transition: 0.25s ease; cursor: pointer;
+            width: 100%;
+            min-height: 68px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            color: rgba(240,246,255,0.76);
+            transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+            cursor: pointer;
+            text-align: left;
+            appearance: none;
+            -webkit-appearance: none;
         }
         .nav-item:hover { background: rgba(255,255,255,0.08); transform: translateX(4px); }
         .nav-item.active {
@@ -106,11 +120,29 @@
             width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center;
             background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); flex-shrink: 0;
         }
-        .nav-copy strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-        .nav-copy span { display: block; font-size: 12px; color: rgba(240,246,255,0.58); }
+        .nav-copy { min-width: 0; flex: 1; }
+        .nav-copy strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .nav-copy span {
+            display: block;
+            font-size: 12px;
+            line-height: 1.25;
+            color: rgba(240,246,255,0.58);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
         .sidebar-foot { display: grid; gap: 8px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 12px; }
 
-        .content { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+        .content { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
         .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px 18px; }
         .hero-card {
             flex: 1; min-width: 0; padding: 24px 26px; border-radius: 28px;
@@ -118,11 +150,7 @@
             border: 1px solid var(--line); box-shadow: var(--shadow);
             display: flex; align-items: center; justify-content: space-between; gap: 18px;
         }
-        .eyebrow {
-            display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px;
-            background: var(--primary-soft); color: var(--primary); font-size: 12px; font-weight: 700;
-            letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px;
-        }
+        .eyebrow { display: none; }
         .hero-copy h2 { font-size: clamp(24px, 3vw, 34px); line-height: 1.15; font-weight: 800; margin-bottom: 10px; max-width: 18ch; }
         .hero-copy p { color: var(--ink-soft); font-size: 14px; line-height: 1.8; max-width: 62ch; }
         .hero-pulse {
@@ -161,7 +189,7 @@
         .refresh-group select { width: auto; min-width: 98px; }
         .clock { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600; color: var(--ink-faint); }
 
-        .main-scroll { flex: 1; overflow-y: auto; padding: 0 32px 32px; }
+        .main-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 0 32px 32px; }
         .page { display: none; animation: pageFade 0.35s ease; }
         .page.active { display: block; }
         @keyframes pageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -270,7 +298,7 @@
             font-size: 13px; line-height: 1.75; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
         .terminal-box::before {
-            content: "Payload Inspection"; position: absolute; top: 16px; right: 18px; color: rgba(173,205,255,0.64);
+            content: "原始载荷"; position: absolute; top: 16px; right: 18px; color: rgba(173,205,255,0.64);
             font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
         }
         .payload-hex { margin-top: 18px; padding-top: 18px; border-top: 1px dashed rgba(173,205,255,0.22); color: #9db1d1; white-space: pre-wrap; }
@@ -287,7 +315,7 @@
             .app-shell { grid-template-columns: 96px minmax(0, 1fr); }
             .sidebar { padding: 20px 14px; }
             .brand-card, .ops-card, .sidebar-foot, .nav-copy { display: none; }
-            .nav-item { justify-content: center; padding: 12px; }
+            .nav-item { min-height: 56px; justify-content: center; padding: 12px; }
             .hero-card { flex-direction: column; align-items: flex-start; }
             .status-stack { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -295,11 +323,11 @@
         }
 
         @media (max-width: 860px) {
-            body { overflow: auto; }
+            body { height: auto; overflow: auto; }
             .app-shell { display: block; }
             .sidebar { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; padding: 14px; overflow-x: auto; }
             .nav-group { display: contents; }
-            .nav-item { min-width: 74px; padding: 10px; border-radius: 18px; }
+            .nav-item { min-width: 74px; min-height: auto; padding: 10px; border-radius: 18px; }
             .nav-icon { width: 34px; height: 34px; border-radius: 12px; }
             .content { overflow: visible; }
             .top-bar { padding: 18px 18px 14px; flex-direction: column; align-items: stretch; }
@@ -331,7 +359,7 @@
             </div>
 
             <div class="ops-card">
-                <h2>Mission Brief</h2>
+                <h2>值守说明</h2>
                 <p>把实时告警、处置动作和节点状态放在同一个视图里，让值守人员能更快完成判断、封禁和回溯。</p>
             </div>
 
@@ -355,15 +383,14 @@
             <header class="top-bar">
                 <div class="hero-card">
                     <div class="hero-copy">
-                        <div class="eyebrow"><span>Threat Operations</span></div>
                         <h2>让告警判断、批量处置与节点联动更清晰</h2>
-                        <p>这个界面围绕值守场景重新整理过信息层级。常用指标前置，操作入口更集中，详情弹窗也更适合快速审计和人工决策。</p>
+                        <p>这里保留最常用的指标、告警和处置入口，方便值守时快速查看、判断和操作。</p>
                     </div>
                     <div class="hero-pulse">
-                        <div class="hero-pulse-label">Live Response Matrix</div>
+                        <div class="hero-pulse-label">在线资产</div>
                         <div class="hero-pulse-value" id="topOnlineCount">0</div>
                         <div class="pulse-track"></div>
-                        <div class="hero-pulse-label">当前在线资产</div>
+                        <div class="hero-pulse-label">当前可联动节点数</div>
                     </div>
                 </div>
 
@@ -401,22 +428,22 @@
 
                     <div class="stats-grid">
                         <article class="stat-card">
-                            <div class="stat-top"><span class="stat-label">资产总数</span><span class="badge info">Assets</span></div>
+                            <div class="stat-top"><span class="stat-label">资产总数</span><span class="badge info">资产</span></div>
                             <div class="stat-value" id="totalAssets">0</div>
                             <p class="stat-note">已纳入管理视图的受保护资产数量。</p>
                         </article>
                         <article class="stat-card">
-                            <div class="stat-top"><span class="stat-label">告警总数</span><span class="badge info">Alerts</span></div>
+                            <div class="stat-top"><span class="stat-label">告警总数</span><span class="badge info">告警</span></div>
                             <div class="stat-value" id="totalAlerts">0</div>
                             <p class="stat-note">累计接收并入库的事件总量。</p>
                         </article>
                         <article class="stat-card warning">
-                            <div class="stat-top"><span class="stat-label">待处理告警</span><span class="badge warning">Pending</span></div>
+                            <div class="stat-top"><span class="stat-label">待处理告警</span><span class="badge warning">待办</span></div>
                             <div class="stat-value" id="pendingAlerts">0</div>
                             <p class="stat-note">尚未完成人工确认或处置的告警事件。</p>
                         </article>
                         <article class="stat-card danger">
-                            <div class="stat-top"><span class="stat-label">已封禁 IP</span><span class="badge danger">Block</span></div>
+                            <div class="stat-top"><span class="stat-label">已封禁 IP</span><span class="badge danger">封禁</span></div>
                             <div class="stat-value" id="blockedIps">0</div>
                             <p class="stat-note">系统当前视角下处于封禁状态的来源地址数量。</p>
                         </article>
@@ -455,7 +482,7 @@
                     <section class="glass-panel">
                         <div class="table-shell">
                             <table>
-                                <thead><tr><th>状态</th><th>资产 IP</th><th>主机名</th><th>Agent ID</th><th>节点名称</th><th>最后心跳</th></tr></thead>
+                                <thead><tr><th>状态</th><th>资产 IP</th><th>主机名</th><th>节点 ID</th><th>节点名称</th><th>最后心跳</th></tr></thead>
                                 <tbody id="agentsTable"></tbody>
                             </table>
                         </div>
@@ -471,21 +498,29 @@
                             <div class="panel-header"><div><div class="panel-title">已配置策略</div><div class="panel-subtitle">当前数据库中的修复与替换规则</div></div></div>
                             <div class="table-shell">
                                 <table>
-                                    <thead><tr><th>状态</th><th>SID</th><th>目标文件</th><th>说明</th></tr></thead>
+                                    <thead><tr><th>状态</th><th>SID</th><th>目标文件</th><th>说明</th><th>操作</th></tr></thead>
                                     <tbody id="strategiesTable"></tbody>
                                 </table>
                             </div>
                         </section>
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">新增策略</div><div class="panel-subtitle">快速录入一条补丁/修复规则</div></div></div>
+                            <div class="panel-header">
+                                <div>
+                                    <div class="panel-title" id="strategyFormTitle">新增策略</div>
+                                    <div class="panel-subtitle" id="strategyFormSubtitle">快速录入一条补丁或修复规则</div>
+                                </div>
+                                <button class="btn btn-outline" type="button" id="strategyCancelBtn" onclick="resetStrategyForm()" style="display:none;">取消编辑</button>
+                            </div>
                             <form id="addStrategyForm" onsubmit="addStrategy(event)">
                                 <div class="form-grid">
+                                    <input type="hidden" id="strategyId">
+                                    <div><label for="strategySid">关联 SID</label><input type="text" id="strategySid" placeholder="例如 100001，不填则为通用策略"></div>
                                     <div><label for="strategyFile">目标配置文件</label><input type="text" id="strategyFile" placeholder="/etc/nginx/sites-available/default" required></div>
                                     <div><label for="strategyMatch">匹配正则</label><input type="text" id="strategyMatch" placeholder="location /admin" required></div>
                                     <div><label for="strategyReplace">替换内容</label><textarea id="strategyReplace" placeholder="deny all;" required></textarea></div>
                                     <div><label for="strategyDesc">策略描述</label><input type="text" id="strategyDesc" placeholder="限制敏感路径访问"></div>
                                     <div class="hint-block">建议将描述写成便于审计的动作说明，例如“关闭 admin 路径外部访问”。这样在回看日志时更容易理解策略意图。</div>
-                                    <button type="submit" class="btn btn-primary">创建并下发策略</button>
+                                    <button type="submit" class="btn btn-primary" id="strategySubmitBtn">创建策略</button>
                                 </div>
                             </form>
                         </section>
@@ -510,7 +545,7 @@
                             <input type="text" id="filterDestIP" placeholder="目标 IP 地址">
                             <input type="text" id="filterSigName" placeholder="告警签名">
                             <select id="filterSeverity"><option value="">全部严重等级</option><option value="critical">CRITICAL</option><option value="high">HIGH</option><option value="medium">MEDIUM</option><option value="low">LOW</option></select>
-                            <select id="filterAction"><option value="">全部动作</option><option value="block">BLOCK</option><option value="patch">PATCH</option><option value="ignore">IGNORE</option><option value="unblock">UNBLOCK</option></select>
+                            <select id="filterAction"><option value="">全部动作</option><option value="block">封禁</option><option value="patch">修复</option><option value="ignore">忽略</option><option value="unblock">解封</option></select>
                             <label class="toggle" style="padding-left: 4px;"><input type="checkbox" id="filterWhitelistOnly"><span>仅显示白名单来源</span></label>
                         </div>
                         <div class="filter-actions">
@@ -581,7 +616,7 @@
     <div id="alertModal" class="modal">
         <div class="modal-content">
             <header class="modal-header">
-                <div><div class="modal-title">Threat Detection Report</div><div class="panel-subtitle">告警详情、原始载荷与人工决策建议</div></div>
+                <div><div class="modal-title">告警审计详情</div><div class="panel-subtitle">查看事件内容、原始载荷和处置建议</div></div>
                 <button class="btn btn-outline" onclick="closeModal()">关闭</button>
             </header>
             <div class="modal-body" id="modalBody"></div>
@@ -668,6 +703,29 @@
                 return { success: false, message: '网络连接异常或服务不可达' };
             }
         }
+        async function sendJSON(url, method, data) {
+            try {
+                const options = { method, headers: {} };
+                if (data !== undefined) {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(data);
+                }
+                const res = await fetch(API_BASE + url, options);
+                const text = await res.text();
+                let result = {};
+                if (text) {
+                    try { result = JSON.parse(text); }
+                    catch { result = { message: text }; }
+                }
+                if (!res.ok) {
+                    return { success: false, message: result.error || result.message || `HTTP ${res.status}` };
+                }
+                return Object.keys(result).length ? result : { success: true };
+            } catch (error) {
+                console.error('API Error:', error);
+                return { success: false, message: '网络连接异常或服务不可达' };
+            }
+        }
 
         function isSuccess(result) {
             return !!result && result.success !== false;
@@ -696,8 +754,47 @@
             if (value === 'low') return 'success';
             return 'info';
         }
+        function formatSeverityText(level) {
+            const value = String(level || '').toLowerCase();
+            if (value === 'critical') return '严重';
+            if (value === 'high') return '高危';
+            if (value === 'medium') return '中危';
+            if (value === 'low') return '低危';
+            return '未知';
+        }
+        function formatActionText(action) {
+            const value = String(action || '').toLowerCase();
+            if (value === 'block') return '封禁';
+            if (value === 'unblock') return '解封';
+            if (value === 'patch') return '修复';
+            if (value === 'ignore') return '忽略';
+            if (value === 'observe' || value === '') return '观察';
+            return '未知';
+        }
         function getStatusBadge(status) {
             return status === 0 ? 'warning' : 'success';
+        }
+        function setStrategyFormMode(mode) {
+            const title = document.getElementById('strategyFormTitle');
+            const subtitle = document.getElementById('strategyFormSubtitle');
+            const submit = document.getElementById('strategySubmitBtn');
+            const cancel = document.getElementById('strategyCancelBtn');
+            if (mode === 'edit') {
+                title.textContent = '编辑策略';
+                subtitle.textContent = '修改已有策略的匹配规则和描述';
+                submit.textContent = '保存修改';
+                cancel.style.display = 'inline-flex';
+                return;
+            }
+            title.textContent = '新增策略';
+            subtitle.textContent = '快速录入一条补丁或修复规则';
+            submit.textContent = '创建策略';
+            cancel.style.display = 'none';
+        }
+        function resetStrategyForm() {
+            document.getElementById('addStrategyForm').reset();
+            document.getElementById('strategyId').value = '';
+            setStrategyFormMode('create');
         }
         function toHexDump(str) {
             let result = '';
@@ -733,9 +830,9 @@
                 <tr>
                     <td>${formatDateTime(a.created_at)}</td>
                     <td class="mono">${safeText(a.source_ip)}</td>
-                    <td><span class="badge ${getSeverityBadge(a.severity)}">${safeText(a.severity || 'unknown')}</span></td>
+                    <td><span class="badge ${getSeverityBadge(a.severity)}">${formatSeverityText(a.severity)}</span></td>
                     <td class="truncate">${safeText(a.signature_name)}</td>
-                    <td><span class="badge info">${safeText((a.action || 'observe').toUpperCase())}</span></td>
+                    <td><span class="badge info">${formatActionText(a.action)}</span></td>
                 </tr>
             `).join('');
         }
@@ -789,7 +886,7 @@
             const tbody = document.getElementById('strategiesTable');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="empty">当前没有可用策略</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">当前没有可用策略</td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(strategy => `
@@ -798,25 +895,65 @@
                     <td>${safeText(strategy.sid || '通用')}</td>
                     <td class="mono truncate">${safeText(strategy.target_file)}</td>
                     <td>${safeText(strategy.description, '未填写描述')}</td>
+                    <td>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="editStrategy('${strategy.id}')">编辑</button>
+                            <button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="deleteStrategy('${strategy.id}')">删除</button>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         }
         async function addStrategy(event) {
             event.preventDefault();
-            const result = await postAPI('/api/strategies', {
+            const strategyId = document.getElementById('strategyId').value.trim();
+            const payload = {
+                sid: document.getElementById('strategySid').value.trim(),
                 target_file: document.getElementById('strategyFile').value.trim(),
                 match_regex: document.getElementById('strategyMatch').value.trim(),
                 replace_content: document.getElementById('strategyReplace').value,
                 description: document.getElementById('strategyDesc').value.trim(),
                 enabled: 1
-            });
+            };
+            const result = strategyId
+                ? await sendJSON(`/api/strategies/${strategyId}`, 'PUT', payload)
+                : await postAPI('/api/strategies', payload);
             if (!isSuccess(result)) {
-                alert(`策略创建失败：${result?.message || '未知错误'}`);
+                alert(`${strategyId ? '策略保存' : '策略创建'}失败：${result?.message || '未知错误'}`);
                 return;
             }
-            document.getElementById('addStrategyForm').reset();
+            resetStrategyForm();
             refreshStrategies();
-            alert('策略已创建。');
+            alert(strategyId ? '策略已更新。' : '策略已创建。');
+        }
+        async function editStrategy(id) {
+            const res = await fetchAPI(`/api/strategies/${id}`);
+            if (!res || !res.data) {
+                alert('未能读取策略详情。');
+                return;
+            }
+            const strategy = res.data;
+            document.getElementById('strategyId').value = strategy.id || '';
+            document.getElementById('strategySid').value = strategy.sid || '';
+            document.getElementById('strategyFile').value = strategy.target_file || '';
+            document.getElementById('strategyMatch').value = strategy.match_regex || '';
+            document.getElementById('strategyReplace').value = strategy.replace_content || '';
+            document.getElementById('strategyDesc').value = strategy.description || '';
+            setStrategyFormMode('edit');
+            document.getElementById('strategyFile').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        async function deleteStrategy(id) {
+            if (!confirm('确定要删除这条策略吗？')) return;
+            const result = await sendJSON(`/api/strategies/${id}`, 'DELETE');
+            if (!isSuccess(result)) {
+                alert(`删除策略失败：${result?.message || '未知错误'}`);
+                return;
+            }
+            if (document.getElementById('strategyId').value === String(id)) {
+                resetStrategyForm();
+            }
+            alert('策略已删除。');
+            refreshStrategies();
         }
 
         function toggleFilter() {
@@ -868,7 +1005,7 @@
                     <td>${formatDateTime(alert.created_at)}</td>
                     <td class="mono">${safeText(alert.source_ip)}</td>
                     <td class="mono">${safeText(alert.dest_ip)}</td>
-                    <td><span class="badge ${getSeverityBadge(alert.severity)}">${safeText((alert.severity || 'unknown').toUpperCase())}</span></td>
+                    <td><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></td>
                     <td class="truncate">${safeText(alert.signature_name)}</td>
                     <td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAlertDetails('${alert.id}')">审计</button><button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="blockIPFromAlert('${escapeHtml(alert.source_ip || '')}')">封禁</button></div></td>
                 </tr>
@@ -903,7 +1040,7 @@
                 modalBody.innerHTML = `
                     <div class="grid-2 mb-30">
                         <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">攻击上下文</div><div class="panel-subtitle">来源、目标与风险分数</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>来源 IP：</strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>目标 IP：</strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>特征 SID：</strong>${safeText(alert.sid)}</div><div><strong>风险评分：</strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
-                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">事件摘要</div><div class="panel-subtitle">签名、等级与系统动作</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>告警签名：</strong>${safeText(alert.signature_name)}</div><div><strong>严重等级：</strong><span class="badge ${getSeverityBadge(alert.severity)}">${safeText((alert.severity || 'unknown').toUpperCase())}</span></div><div><strong>发生时间：</strong>${formatDateTime(alert.created_at)}</div><div><strong>系统动作：</strong><span class="badge info">${safeText((alert.action || 'observe').toUpperCase())}</span></div></div></div>
+                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">事件摘要</div><div class="panel-subtitle">签名、等级与系统动作</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>告警签名：</strong>${safeText(alert.signature_name)}</div><div><strong>严重等级：</strong><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></div><div><strong>发生时间：</strong>${formatDateTime(alert.created_at)}</div><div><strong>系统动作：</strong><span class="badge info">${formatActionText(alert.action)}</span></div></div></div>
                     </div>
                     <div class="terminal-box"><div style="white-space:pre-wrap;word-break:break-word;">${highlightedText}</div><div class="payload-hex">${escapeHtml(toHexDump(rawText))}</div></div>
                     <div class="alert-note"><h4>人工决策建议</h4><p>请结合原始载荷、来源地址和业务上下文进行判断。如果确认是恶意攻击，建议立即封禁；如果确认为误报，建议加入白名单以减少后续噪音。</p><div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn-danger" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'block')">确认攻击并封禁</button><button class="btn btn-outline" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'whitelist')">判定误报并加入白名单</button></div></div>
