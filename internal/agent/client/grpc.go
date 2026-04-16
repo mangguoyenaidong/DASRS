@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"security-response-system/internal/proto"
@@ -21,16 +22,20 @@ type Client struct {
 	stopChan          chan struct{}
 	hostname          string
 	agentID           string
+	localIP           string
 	serviceClient     proto.SecurityServiceClient
 }
 
 func NewClient(address string, reconnectInterval int) *Client {
+	localIP := detectLocalIP()
+
 	return &Client{
 		address:           address,
 		reconnectInterval: reconnectInterval,
 		stopChan:          make(chan struct{}),
 		hostname:          "agent-host", // placeholder
 		agentID:           fmt.Sprintf("agent-%s", uuid.New().String()[:8]),
+		localIP:           localIP,
 	}
 }
 
@@ -135,7 +140,7 @@ func (c *Client) sendUnaryHeartbeat() {
 
 	req := &proto.HeartbeatRequest{
 		Hostname: c.hostname,
-		Ip:       "127.0.0.1",
+		Ip:       c.localIP,
 		CpuLoad:  0.0,
 		MemLoad:  0.0,
 	}
@@ -189,6 +194,33 @@ func (c *Client) Stop() {
 
 func (c *Client) GetAgentID() string {
 	return c.agentID
+}
+
+func (c *Client) GetLocalIP() string {
+	return c.localIP
+}
+
+func detectLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "127.0.0.1"
+	}
+
+	for _, addr := range addrs {
+		ipNet, ok := addr.(*net.IPNet)
+		if !ok || ipNet.IP == nil || ipNet.IP.IsLoopback() {
+			continue
+		}
+
+		ip := ipNet.IP.To4()
+		if ip == nil {
+			continue
+		}
+
+		return ip.String()
+	}
+
+	return "127.0.0.1"
 }
 
 // TestMasterConnectivity 尝试连接到 Master 并发送一个心跳请求以测试连通性。

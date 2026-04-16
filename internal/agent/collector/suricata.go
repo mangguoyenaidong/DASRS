@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -173,7 +172,9 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 			Signature   string `json:"signature"`
 			Severity    int    `json:"severity"`
 		} `json:"alert"`
-		Payload string `json:"payload"`
+		Payload          string `json:"payload"`
+		PayloadPrintable string `json:"payload_printable"`
+		Packet           string `json:"packet"`
 	}
 
 	if err := json.Unmarshal([]byte(line), &eve); err != nil {
@@ -187,6 +188,7 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 	// 过滤本机流量
 	if c.localIP != "" && c.localIP != "0.0.0.0" {
 		if eve.SrcIP != c.localIP && eve.DestIP != c.localIP {
+			log.Printf("Skipping alert outside local scope: src=%s dest=%s local=%s sid=%d", eve.SrcIP, eve.DestIP, c.localIP, eve.Alert.SignatureID)
 			return
 		}
 	}
@@ -194,6 +196,7 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 	// 过滤特定监控目标 IP (如果配置了)
 	if c.monitorIP != "" {
 		if eve.DestIP != c.monitorIP {
+			log.Printf("Skipping alert due to monitor_ip mismatch: dest=%s monitor_ip=%s sid=%d", eve.DestIP, c.monitorIP, eve.Alert.SignatureID)
 			return
 		}
 	}
@@ -218,15 +221,31 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 
 	req := &pb.AlertReportRequest{
 		Sid:           fmt.Sprintf("%d", eve.Alert.SignatureID),
-		Payload:       eve.Payload,
+		Payload:       selectAlertPayload(eve.Payload, eve.PayloadPrintable, eve.Packet),
 		SourceIp:      eve.SrcIP,
-		DestIp:        eve.DestIP,
 		AssetInfo:     fmt.Sprintf("Agent: %s", c.localIP), // 强制标记资产信息
 		Timestamp:     ts,
 		Severity:      severity,
 		SignatureName: eve.Alert.Signature,
 	}
 
+	if req.Payload == "" {
+		log.Printf("Alert payload missing in eve.json: sid=%s src=%s dest=%s", req.Sid, req.SourceIp, eve.DestIP)
+	}
+
 	atomic.AddInt64(&c.alertCount, 1)
 	reportFunc(req)
+}
+
+func selectAlertPayload(payload, payloadPrintable, packet string) string {
+	switch {
+	case payload != "":
+		return payload
+	case payloadPrintable != "":
+		return payloadPrintable
+	case packet != "":
+		return packet
+	default:
+		return ""
+	}
 }

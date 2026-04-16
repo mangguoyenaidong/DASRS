@@ -21,6 +21,100 @@ check_tool() {
     return 0
 }
 
+ensure_suricata_payload_logging() {
+    local suricata_conf="/etc/suricata/suricata.yaml"
+
+    if [ ! -f "$suricata_conf" ]; then
+        echo -e "${YELLOW}! 未检测到 $suricata_conf，跳过 Suricata 自动配置${NC}"
+        return 0
+    fi
+
+    echo -e "${BLUE}正在检查 Suricata 告警报文输出配置...${NC}"
+
+    local tmp_file
+    tmp_file=$(mktemp)
+    cp "$suricata_conf" "$tmp_file"
+
+    sed -Ei '/- alert:/,/tagged-packets:/ {
+        s/^([[:space:]]*)#?[[:space:]]*payload:[[:space:]].*/\1payload: yes/
+        s/^([[:space:]]*)#?[[:space:]]*payload-printable:[[:space:]].*/\1payload-printable: yes/
+        s/^([[:space:]]*)#?[[:space:]]*packet:[[:space:]].*/\1packet: yes/
+    }' "$tmp_file"
+
+    if cmp -s "$suricata_conf" "$tmp_file"; then
+        echo -e "${GREEN}✓ Suricata payload 输出已开启${NC}"
+        rm -f "$tmp_file"
+        return 0
+    fi
+
+    echo -e "${YELLOW}! 检测到 Suricata 配置需要更新，正在应用...${NC}"
+    sudo cp "$suricata_conf" "${suricata_conf}.bak.$(date +%Y%m%d%H%M%S)"
+    sudo cp "$tmp_file" "$suricata_conf"
+    rm -f "$tmp_file"
+
+    if sudo suricata -T -c "$suricata_conf" > /tmp/dasrs-suricata-check.log 2>&1; then
+        if command -v systemctl >/dev/null 2>&1; then
+            sudo systemctl restart suricata
+        else
+            sudo service suricata restart
+        fi
+        echo -e "${GREEN}✓ 已开启 payload / payload-printable / packet 输出并重启 Suricata${NC}"
+    else
+        echo -e "${RED}✗ Suricata 配置校验失败，保留备份并停止启动${NC}"
+        echo -e "${RED}  详情请查看 /tmp/dasrs-suricata-check.log${NC}"
+        return 1
+    fi
+}
+
+extract_agent_monitor_ip() {
+    python3 - <<'PY'
+from pathlib import Path
+import sys
+
+try:
+    from ruamel.yaml import YAML
+except Exception:
+    print("")
+    sys.exit(0)
+
+path = Path("configs/agent.yaml")
+if not path.exists():
+    print("")
+    sys.exit(0)
+
+yaml = YAML(typ="safe")
+data = yaml.load(path.read_text(encoding="utf-8")) or {}
+agent = data.get("agent") or {}
+print((agent.get("monitor_ip") or "").strip())
+PY
+}
+
+ensure_agent_monitor_ip() {
+    local agent_conf="configs/agent.yaml"
+
+    if [ ! -f "$agent_conf" ]; then
+        echo -e "${YELLOW}! 未检测到 $agent_conf，跳过 monitor_ip 校验${NC}"
+        return 0
+    fi
+
+    local monitor_ip
+    monitor_ip=$(extract_agent_monitor_ip)
+
+    if [ -z "$monitor_ip" ]; then
+        echo -e "${YELLOW}! 当前未配置 monitor_ip，Agent 将不会按目标主机定向过滤${NC}"
+        return 0
+    fi
+
+    echo -e "${BLUE}当前 Agent monitor_ip: ${monitor_ip}${NC}"
+
+    if ! ip addr | grep -F " ${monitor_ip}/" > /dev/null 2>&1; then
+        echo -e "${YELLOW}! monitor_ip (${monitor_ip}) 不属于当前主机网卡地址${NC}"
+        echo -e "${YELLOW}! 这会导致 Agent 可能过滤掉真正的攻击告警，请确认 configs/agent.yaml 配置${NC}"
+    else
+        echo -e "${GREEN}✓ monitor_ip 与当前主机网卡一致${NC}"
+    fi
+}
+
 # 自动配置 Go 代理
 go env -w GOPROXY=https://goproxy.cn,direct
 
@@ -71,6 +165,8 @@ case $choice in
     2)
         echo -e "${BLUE}按需编译 Agent...${NC}"
         make build-agent
+        ensure_suricata_payload_logging || exit 1
+        ensure_agent_monitor_ip
         echo -e "${GREEN}启动 Agent 节点...${NC}"
         sudo ./bin/agent
         ;;
@@ -79,6 +175,8 @@ case $choice in
         cd deploy && docker-compose up -d && cd ..
         echo -e "${BLUE}正在编译所有组件...${NC}"
         make build
+        ensure_suricata_payload_logging || exit 1
+        ensure_agent_monitor_ip
         echo -e "${GREEN}正在启动集群服务...${NC}"
         nohup ./bin/master > master.log 2>&1 &
         echo -e "${YELLOW}Master 已转入后台 (日志: master.log)${NC}"

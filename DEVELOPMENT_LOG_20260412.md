@@ -1,5 +1,7 @@
 # DASRS 开发与部署日志 (2026-04-12)
 
+> 注：本文件是阶段性开发记录，不作为实时部署真相源。启动命令、访问地址和配置项请优先以 `README.md`、`docs/USAGE.md` 及当前配置文件为准。
+
 ## 1. 项目当前状态 (Current Status)
 - **架构**: Master-Agent (gRPC 双向流)
 - **核心功能**: 实时告警上报、自动化 IP 封禁、Nginx 配置热修复、Web 管理后台。
@@ -10,7 +12,7 @@
 ### 2.1 Agent 连接 Master 失败
 - **现象**: Agent 报错 `dns: A record lookup error: lookup master`。
 - **原因**: 默认配置指向主机名 `master`，在非 Docker 环境下无法解析。
-- **解决**: 修改 `configs/agent.yaml` 中的 `master_address` 为 Master 机器的实际局域网 IP (`192.168.41.135:50051`)。
+- **解决**: 修改 `configs/agent.yaml` 中的 `master_address` 为当前环境下 Master 的实际可达地址，例如 `<master-ip>:50051`。
 - **注意**: 启动 Agent 时需明确指定配置文件：`go run ./cmd/agent/main.go --config configs/agent.yaml`。
 
 ### 2.2 IP 自动封禁问题
@@ -49,5 +51,5 @@
 ## 5. 后续操作建议
 1. **启动 Master**: `go run ./cmd/master/main.go`
 2. **启动 Agent**: `go run ./cmd/agent/main.go --config configs/agent.yaml`
-3. **管理后台**: `http://192.168.41.135:8080/`
-4. **Git 推送**: 所有代码已推送至 GitHub `main` 分支。
+3. **管理后台**: `http://<master-host>:8080/`
+4. **代码状态**: 请以当前 Git 仓库状态与远端分支为准，不在本文档中固化说明。
