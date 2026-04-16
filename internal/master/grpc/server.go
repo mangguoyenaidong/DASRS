@@ -256,7 +256,7 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		SID:           req.GetSid(),
 		Payload:       req.GetPayload(),
 		SourceIP:      req.GetSourceIp(),
-		DestIP:        req.GetDestIp(), // 正确映射字段
+		DestIP:        "",
 		AssetInfo:     req.GetAssetInfo(),
 		Timestamp:     req.GetTimestamp(),
 		Severity:      req.GetSeverity(),
