@@ -256,8 +256,8 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		SID:           req.GetSid(),
 		Payload:       req.GetPayload(),
 		SourceIP:      req.GetSourceIp(),
-		DestIP:        req.GetAssetInfo(), // 修正：目前 pb.go 中没有 DestIp 字段，暂用 AssetInfo 传递
-		AssetInfo:     "unknown",
+		DestIP:        req.GetDestIp(), // 正确映射字段
+		AssetInfo:     req.GetAssetInfo(),
 		Timestamp:     req.GetTimestamp(),
 		Severity:      req.GetSeverity(),
 		SignatureName: req.GetSignatureName(),
@@ -272,9 +272,20 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		}, err
 	}
 
+	// 尝试获取关联的 AgentID
+	var agentID string
+	if p, ok := peer.FromContext(ctx); ok {
+		// 通过对端 IP 查找 Agent 记录
+		var agent model.AgentNode
+		if err := s.db.(*gorm.DB).Where("ip = ?", p.Addr.String()).First(&agent).Error; err == nil {
+			agentID = agent.AgentID
+		}
+	}
+
 	// 保存告警到数据库
 	alertLog := &model.AlertLog{
 		AlertID:       decision.AlertID,
+		AgentID:       agentID, // 补全 AgentID
 		SourceIP:      alert.SourceIP,
 		DestIP:        alert.DestIP, // 保存目的 IP
 		SID:           alert.SID,
