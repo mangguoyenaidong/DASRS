@@ -28,8 +28,15 @@ func (b *IPBlocker) GetBlockCount() int64 {
 func (b *IPBlocker) BlockIP(ip string) error {
 	log.Printf("[Linux] Blocking IP: %s", ip)
 
-	// iptables -A INPUT -s <ip> -j DROP
-	cmd := exec.Command("iptables", "-A", "INPUT", "-s", ip, "-j", "DROP")
+	// 1. 幂等性检查：先检查规则是否已经存在 (iptables -C)
+	checkCmd := exec.Command("iptables", "-C", "INPUT", "-s", ip, "-j", "DROP")
+	if err := checkCmd.Run(); err == nil {
+		log.Printf("[Linux] IP %s is already blocked, skipping rule addition", ip)
+		return nil // 规则已存在，直接返回成功
+	}
+
+	// 2. 只有不存在时才执行添加 (iptables -I 优先置顶，更安全)
+	cmd := exec.Command("iptables", "-I", "INPUT", "-s", ip, "-j", "DROP")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to block IP %s via iptables: %v, output: %s", ip, err, string(output))
@@ -43,7 +50,14 @@ func (b *IPBlocker) BlockIP(ip string) error {
 func (b *IPBlocker) UnblockIP(ip string) error {
 	log.Printf("[Linux] Unblocking IP: %s", ip)
 
-	// iptables -D INPUT -s <ip> -j DROP
+	// 1. 检查规则是否存在，存在才删除
+	checkCmd := exec.Command("iptables", "-C", "INPUT", "-s", ip, "-j", "DROP")
+	if err := checkCmd.Run(); err != nil {
+		log.Printf("[Linux] IP %s is not in block list, nothing to unblock", ip)
+		return nil // 规则本身就不存在，无需删除
+	}
+
+	// 2. 执行删除操作
 	cmd := exec.Command("iptables", "-D", "INPUT", "-s", ip, "-j", "DROP")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
