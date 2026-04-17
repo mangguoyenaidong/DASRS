@@ -151,9 +151,9 @@ read -p "选择 [1-3/q]: " choice
 
 case "$choice" in
     1)
-        echo -e "${BLUE}正在拉起基础设施 (Docker)...${NC}"
+        echo -e "${BLUE}正在拉起基础设施 (Docker: mysql, redis)...${NC}"
         pushd deploy > /dev/null || exit 1
-        docker compose up -d || { popd > /dev/null; exit 1; }
+        docker compose up -d mysql redis || { popd > /dev/null; exit 1; }
         popd > /dev/null || exit 1
 
         echo -e "${BLUE}按需编译 Master...${NC}"
@@ -172,9 +172,9 @@ case "$choice" in
         sudo ./bin/agent
         ;;
     3)
-        echo -e "${BLUE}正在拉起基础设施 (Docker)...${NC}"
+        echo -e "${BLUE}正在拉起基础设施 (Docker: mysql, redis)...${NC}"
         pushd deploy > /dev/null || exit 1
-        docker compose up -d || { popd > /dev/null; exit 1; }
+        docker compose up -d mysql redis || { popd > /dev/null; exit 1; }
         popd > /dev/null || exit 1
 
         echo -e "${BLUE}正在编译所有组件...${NC}"
