@@ -14,12 +14,13 @@ import (
 
 // Agent orchestrates local collection, execution and service reporting.
 type Agent struct {
-	cfg        *Config
-	grpcClient *client.Client
-	collector  *collector.SuricataCollector
-	scanner    discovery.Scanner
-	blocker    *executor.IPBlocker
-	patcher    *executor.ConfigPatcher
+	cfg          *Config
+	grpcClient   *client.Client
+	collector    *collector.SuricataCollector
+	scanner      discovery.Scanner
+	blocker      *executor.IPBlocker
+	patcher      *executor.ConfigPatcher
+	ruleDeployer *executor.SuricataRuleDeployer
 }
 
 func NewAgent(
@@ -29,14 +30,16 @@ func NewAgent(
 	scanner discovery.Scanner,
 	blocker *executor.IPBlocker,
 	patcher *executor.ConfigPatcher,
+	ruleDeployer *executor.SuricataRuleDeployer,
 ) *Agent {
 	return &Agent{
-		cfg:        cfg,
-		grpcClient: grpcClient,
-		collector:  collector,
-		scanner:    scanner,
-		blocker:    blocker,
-		patcher:    patcher,
+		cfg:          cfg,
+		grpcClient:   grpcClient,
+		collector:    collector,
+		scanner:      scanner,
+		blocker:      blocker,
+		patcher:      patcher,
+		ruleDeployer: ruleDeployer,
 	}
 }
 
@@ -86,6 +89,16 @@ func (a *Agent) handleCommand(cmd *proto.CommandMessage) {
 			a.grpcClient.SendCommandResult(cmd.GetCommandId(), true, "IP unblocked successfully")
 		}
 	case proto.CommandType_PATCH_CONFIG:
+		if cmd.GetMatchRegex() == "__DASRS_AI_RULE_DEPLOY__" {
+			err := a.ruleDeployer.DeployRule(cmd.GetConfigPath(), cmd.GetReplaceContent())
+			if err != nil {
+				a.grpcClient.SendCommandResult(cmd.GetCommandId(), false, err.Error())
+			} else {
+				a.grpcClient.SendCommandResult(cmd.GetCommandId(), true, "Suricata rule deployed successfully")
+			}
+			return
+		}
+
 		err := a.patcher.SafePatch(cmd.GetConfigPath(), cmd.GetMatchRegex(), cmd.GetReplaceContent())
 		if err != nil {
 			a.grpcClient.SendCommandResult(cmd.GetCommandId(), false, err.Error())

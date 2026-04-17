@@ -111,6 +111,50 @@ func (WhitelistIP) TableName() string {
 	return "whitelist_ips"
 }
 
+// AIRuleTask stores AI-assisted rule generation requests and outputs.
+type AIRuleTask struct {
+	ID                uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	SourceType        string    `gorm:"type:varchar(50);index" json:"source_type"`
+	SourceContent     string    `gorm:"type:longtext" json:"source_content"`
+	TargetService     string    `gorm:"type:varchar(100)" json:"target_service"`
+	ProtocolHint      string    `gorm:"type:varchar(50)" json:"protocol_hint"`
+	NormalizedSummary string    `gorm:"type:text" json:"normalized_summary"`
+	GeneratedRule     string    `gorm:"type:longtext" json:"generated_rule"`
+	RawResponse       string    `gorm:"type:longtext" json:"raw_response"`
+	Status            string    `gorm:"type:varchar(50);index" json:"status"`
+	DeployStatus      string    `gorm:"type:varchar(50);index" json:"deploy_status"`
+	TargetAgentCount  int       `gorm:"default:0" json:"target_agent_count"`
+	SuccessAgentCount int       `gorm:"default:0" json:"success_agent_count"`
+	FailedAgentCount  int       `gorm:"default:0" json:"failed_agent_count"`
+	DeployMessage     string    `gorm:"type:longtext" json:"deploy_message"`
+	ValidationError   string    `gorm:"type:text" json:"validation_error"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+func (AIRuleTask) TableName() string {
+	return "ai_rule_tasks"
+}
+
+// AlertAIInsight stores AI-generated alert interpretation results.
+type AlertAIInsight struct {
+	ID                uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	AlertID           string    `gorm:"type:varchar(36);uniqueIndex;not null" json:"alert_id"`
+	AlertLogID        uint      `gorm:"index" json:"alert_log_id"`
+	Summary           string    `gorm:"type:text" json:"summary"`
+	AttackType        string    `gorm:"type:varchar(120)" json:"attack_type"`
+	RiskReason        string    `gorm:"type:text" json:"risk_reason"`
+	RecommendedAction string    `gorm:"type:varchar(50)" json:"recommended_action"`
+	Confidence        float64   `json:"confidence"`
+	RawResponse       string    `gorm:"type:longtext" json:"raw_response"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+func (AlertAIInsight) TableName() string {
+	return "alert_ai_insights"
+}
+
 func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&AgentNode{},
@@ -119,5 +163,7 @@ func AutoMigrate(db *gorm.DB) error {
 		&AlertLog{},
 		&OperationLog{},
 		&WhitelistIP{},
+		&AIRuleTask{},
+		&AlertAIInsight{},
 	)
 }

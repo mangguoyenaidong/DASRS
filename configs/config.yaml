@@ -30,6 +30,16 @@ master:
       - "192.168.41.1"
       - "127.0.0.1"
 
+  ai:
+    enabled: false
+    provider: "deepseek"
+    api:
+      vendor: "deepseek"
+      base_url: "https://api.deepseek.com"
+      api_key: ""
+      model: "deepseek-chat"
+      timeout_seconds: 30
+
   agent_management:
     allowed_agents: []
     auto_register: true

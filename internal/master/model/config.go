@@ -22,19 +22,30 @@ type Config struct {
 			MaxIdleConns int    `yaml:"max_idle_conns"`
 		} `yaml:"database"`
 		Redis struct {
-			Host      string `yaml:"host"`
-			Port      int    `yaml:"port"`
-			Password  string `yaml:"password"`
-			DB        int    `yaml:"db"`
-			PoolSize  int    `yaml:"pool_size"`
+			Host     string `yaml:"host"`
+			Port     int    `yaml:"port"`
+			Password string `yaml:"password"`
+			DB       int    `yaml:"db"`
+			PoolSize int    `yaml:"pool_size"`
 		} `yaml:"redis"`
 		Intelligence struct {
-			RepairThreshold     int      `yaml:"repair_threshold"`
-			BlockThreshold      int      `yaml:"block_threshold"`
-			TimeWindow          int      `yaml:"time_window"`
-			MaxAlertsPerWindow  int      `yaml:"max_alerts_per_window"`
-			Whitelist           []string `yaml:"whitelist"`
+			RepairThreshold    int      `yaml:"repair_threshold"`
+			BlockThreshold     int      `yaml:"block_threshold"`
+			TimeWindow         int      `yaml:"time_window"`
+			MaxAlertsPerWindow int      `yaml:"max_alerts_per_window"`
+			Whitelist          []string `yaml:"whitelist"`
 		} `yaml:"intelligence"`
+		AI struct {
+			Enabled  bool   `yaml:"enabled"`
+			Provider string `yaml:"provider"`
+			API      struct {
+				Vendor         string `yaml:"vendor"`
+				BaseURL        string `yaml:"base_url"`
+				APIKey         string `yaml:"api_key"`
+				Model          string `yaml:"model"`
+				TimeoutSeconds int    `yaml:"timeout_seconds"`
+			} `yaml:"api"`
+		} `yaml:"ai"`
 	} `yaml:"master"`
 	Agent struct {
 		MasterAddress     string `yaml:"master_address"`

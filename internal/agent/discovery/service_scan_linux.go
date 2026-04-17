@@ -5,6 +5,7 @@ package discovery
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -51,7 +52,10 @@ func (s *LocalServiceScanner) Scan(ctx context.Context) ([]ServiceRecord, error)
 	return normalizeRecords(records), nil
 }
 
-var processPattern = regexp.MustCompile(`users:\(\("([^"]+)"`)
+var (
+	processPattern = regexp.MustCompile(`users:\(\("([^"]+)"`)
+	pidPattern     = regexp.MustCompile(`pid=(\d+)`)
+)
 
 func parseSSLine(line, timestamp string) (ServiceRecord, bool) {
 	fields := strings.Fields(line)
@@ -71,7 +75,9 @@ func parseSSLine(line, timestamp string) (ServiceRecord, bool) {
 	}
 
 	process := detectProcess(line)
-	name := inferServiceName(port, process)
+	pid := detectPID(line)
+	cmdline := readProcessCmdline(pid)
+	name := inferServiceName(port, process, cmdline)
 	if name == "" {
 		name = "unknown"
 	}
@@ -126,8 +132,38 @@ func detectProcess(line string) string {
 	return ""
 }
 
-func inferServiceName(port int, process string) string {
+func detectPID(line string) int {
+	matches := pidPattern.FindStringSubmatch(line)
+	if len(matches) != 2 {
+		return 0
+	}
+	pid, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return 0
+	}
+	return pid
+}
+
+func readProcessCmdline(pid int) string {
+	if pid <= 0 {
+		return ""
+	}
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil || len(data) == 0 {
+		return ""
+	}
+	cmdline := strings.ReplaceAll(string(data), "\x00", " ")
+	return strings.TrimSpace(cmdline)
+}
+
+func inferServiceName(port int, process, cmdline string) string {
 	process = strings.ToLower(process)
+	cmdline = strings.ToLower(cmdline)
+
+	if fingerprinted := inferJavaService(port, process, cmdline); fingerprinted != "" {
+		return fingerprinted
+	}
+
 	switch {
 	case strings.Contains(process, "nginx"):
 		return "nginx"
@@ -139,8 +175,6 @@ func inferServiceName(port int, process string) string {
 		return "redis"
 	case strings.Contains(process, "postgres"):
 		return "postgresql"
-	case strings.Contains(process, "java"):
-		return "java-service"
 	case strings.Contains(process, "sshd"):
 		return "ssh"
 	}
@@ -162,5 +196,39 @@ func inferServiceName(port int, process string) string {
 		return "elasticsearch"
 	default:
 		return process
+	}
+}
+
+func inferJavaService(port int, process, cmdline string) string {
+	if !strings.Contains(process, "java") && !strings.Contains(cmdline, "java") {
+		return ""
+	}
+
+	switch {
+	case strings.Contains(cmdline, "catalina.startup.bootstrap"),
+		strings.Contains(cmdline, "catalina.home"),
+		strings.Contains(cmdline, "catalina.base"),
+		strings.Contains(cmdline, "tomcat"):
+		return "tomcat"
+	case strings.Contains(cmdline, "jenkins.war"),
+		strings.Contains(cmdline, "hudson.war"):
+		return "jenkins"
+	case strings.Contains(cmdline, "nacos"):
+		return "nacos"
+	case strings.Contains(cmdline, "org.elasticsearch.bootstrap.elasticsearch"),
+		strings.Contains(cmdline, "elasticsearch"):
+		return "elasticsearch"
+	case strings.Contains(cmdline, "kafka.kafka"),
+		strings.Contains(cmdline, "kafka-server-start"):
+		return "kafka"
+	case strings.Contains(cmdline, "org.springframework.boot.loader"),
+		strings.Contains(cmdline, "jarlauncher"),
+		strings.Contains(cmdline, "propertieslauncher"):
+		if port == 8080 || port == 8443 || port == 8090 {
+			return "spring-boot"
+		}
+		return "java-service"
+	default:
+		return "java-service"
 	}
 }

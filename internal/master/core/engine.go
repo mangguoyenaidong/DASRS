@@ -66,34 +66,40 @@ func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decisi
 	baseScore := e.calculateBaseScore(alert.Severity)
 	decision.BaseScore = baseScore
 
-	// 2. 上下文过滤 - 检查资产类型
-	if alert.SignatureName != "" && alert.AssetInfo != "" {
-		if e.isFalsePositive(alert, decision) {
-			decision.Action = "ignore"
-			decision.Score = 0
-			decision.Reason = "False positive detected by context filtering"
-			return decision, nil
-		}
-	}
+	// 2. 目标资产上下文评分 - 服务匹配加分，不匹配降分
+	contextScore, contextReason := e.evaluateTargetContext(alert)
+	decision.ContextScore = contextScore
 
 	// 3. 时序分析 - 检查告警频率
 	timeSeriesScore := e.analyzeTimeSeries(alert.SourceIP)
 	decision.TimeSeriesScore = timeSeriesScore
 
 	// 4. 计算最终评分
-	finalScore := baseScore + timeSeriesScore
+	finalScore := baseScore + contextScore + timeSeriesScore
+	if finalScore < 0 {
+		finalScore = 0
+	}
 	decision.Score = finalScore
 
 	// 5. 根据阈值决定动作
 	if finalScore >= e.cfg.Master.Intelligence.RepairThreshold {
 		decision.Action = "repair"
-		decision.Reason = fmt.Sprintf("Score %d >= repair threshold %d", finalScore, e.cfg.Master.Intelligence.RepairThreshold)
+		decision.Reason = combineReasons(
+			fmt.Sprintf("Score %d >= repair threshold %d", finalScore, e.cfg.Master.Intelligence.RepairThreshold),
+			contextReason,
+		)
 	} else if finalScore >= e.cfg.Master.Intelligence.BlockThreshold {
 		decision.Action = "block"
-		decision.Reason = fmt.Sprintf("Score %d >= block threshold %d", finalScore, e.cfg.Master.Intelligence.BlockThreshold)
+		decision.Reason = combineReasons(
+			fmt.Sprintf("Score %d >= block threshold %d", finalScore, e.cfg.Master.Intelligence.BlockThreshold),
+			contextReason,
+		)
 	} else {
 		decision.Action = "ignore"
-		decision.Reason = fmt.Sprintf("Score %d below block threshold %d", finalScore, e.cfg.Master.Intelligence.BlockThreshold)
+		decision.Reason = combineReasons(
+			fmt.Sprintf("Score %d below block threshold %d", finalScore, e.cfg.Master.Intelligence.BlockThreshold),
+			contextReason,
+		)
 	}
 
 	e.logger.Info("Alert analyzed: %s -> Action: %s, Score: %d", alert.SID, decision.Action, finalScore)
@@ -117,24 +123,66 @@ func (e *IntelligenceEngine) calculateBaseScore(severity string) int {
 	}
 }
 
-// isFalsePositive 检查是否为误报
-func (e *IntelligenceEngine) isFalsePositive(alert *Alert, decision *Decision) bool {
-	// 示例：如果告警攻击类型是 "IIS" 但资产库显示该 IP 运行 "Nginx" -> 判定为误报
-	// 这里需要从数据库查询资产信息
+func (e *IntelligenceEngine) evaluateTargetContext(alert *Alert) (int, string) {
+	targetIP := strings.TrimSpace(alert.DestIP)
+	if targetIP == "" {
+		return 0, "No target IP for asset context"
+	}
+
 	var asset model.Asset
-	result := e.db.Where("ip = ?", alert.SourceIP).First(&asset)
-	if result.Error != nil {
-		// 未找到资产，不做误报判定
-		return false
+	if err := e.db.Where("ip = ?", targetIP).First(&asset).Error; err != nil {
+		return 0, fmt.Sprintf("No asset profile for target %s", targetIP)
 	}
 
-	// 检查攻击签名名称中是否包含与资产不匹配的服务
-	if containsString(alert.SignatureName, []string{"IIS", "ASP.NET", "Windows"}) &&
-		containsString(asset.ServiceType, []string{"Nginx", "Apache", "Linux"}) {
-		return true
+	serviceType := strings.ToLower(strings.TrimSpace(asset.ServiceType))
+	if serviceType == "" {
+		return 0, fmt.Sprintf("Target %s has no service fingerprint", targetIP)
 	}
 
-	return false
+	positive, negative := e.signatureKeywordsByService(serviceType)
+	signature := strings.ToLower(alert.SignatureName)
+	payload := strings.ToLower(alert.Payload)
+
+	if containsString(signature, negative) || containsString(payload, negative) {
+		return -20, fmt.Sprintf("Target service %s mismatches attack signature", asset.ServiceType)
+	}
+
+	if containsString(signature, positive) || containsString(payload, positive) {
+		return 20, fmt.Sprintf("Target service %s matches attack signature", asset.ServiceType)
+	}
+
+	return 0, fmt.Sprintf("Target service %s has no strong signature match", asset.ServiceType)
+}
+
+func (e *IntelligenceEngine) signatureKeywordsByService(serviceType string) ([]string, []string) {
+	switch serviceType {
+	case "tomcat":
+		return []string{"tomcat", "catalina", "jsp", "ajp", "java"}, []string{"iis", "asp.net", "php-fpm"}
+	case "nginx":
+		return []string{"nginx", "php", "fastcgi"}, []string{"iis", "asp.net", "tomcat", "ajp"}
+	case "apache":
+		return []string{"apache", "httpd", "php", "cgi"}, []string{"iis", "asp.net"}
+	case "jenkins":
+		return []string{"jenkins", "script console", "groovy", "cli"}, []string{"iis", "asp.net"}
+	case "nacos":
+		return []string{"nacos"}, []string{"iis", "asp.net"}
+	case "elasticsearch":
+		return []string{"elasticsearch", "_cat", "_cluster", "lucene"}, []string{"iis", "asp.net"}
+	case "kafka":
+		return []string{"kafka"}, []string{"iis", "asp.net"}
+	case "mysql":
+		return []string{"mysql", "mariadb", "sql"}, []string{"iis", "asp.net"}
+	case "postgresql":
+		return []string{"postgres", "postgresql", "sql"}, []string{"iis", "asp.net"}
+	case "redis":
+		return []string{"redis"}, []string{"iis", "asp.net"}
+	case "ssh":
+		return []string{"ssh", "openssh"}, []string{"iis", "asp.net", "http"}
+	case "spring-boot":
+		return []string{"spring", "actuator", "java"}, []string{"iis", "asp.net"}
+	default:
+		return []string{serviceType}, []string{}
+	}
 }
 
 // analyzeTimeSeries 时序分析
@@ -170,6 +218,7 @@ type Decision struct {
 	Alert           *Alert
 	Score           int
 	BaseScore       int
+	ContextScore    int
 	TimeSeriesScore int
 	Action          string
 	Reason          string
@@ -230,6 +279,13 @@ func containsString(s string, substrs []string) bool {
 		}
 	}
 	return false
+}
+
+func combineReasons(primary, secondary string) string {
+	if strings.TrimSpace(secondary) == "" {
+		return primary
+	}
+	return primary + "; " + secondary
 }
 
 // GetAlertCorrelation 获取告警关联分析

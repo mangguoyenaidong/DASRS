@@ -10,6 +10,13 @@ agent:
   # Suricata 日志路径 (根据实际路径修改)
   suricata_log_path: "./suricata_logs/eve.json"
 
+  # AI 自动生成规则的落盘路径
+  suricata_rule_path: "./suricata_logs/dasrs_ai.rules"
+
+  # 可选：规则下发后执行的重载命令，例如：
+  # "suricatasc -c reload-rules"
+  suricata_reload_command: ""
+
   # 新增：监控目标 IP (仅采集发往此 IP 的告警)
   monitor_ip: "192.168.41.136"
 

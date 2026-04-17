@@ -229,4 +229,76 @@ A: 确保 Agent 具备所需权限，例如执行 `nginx -t`、reload 或变更�
 
 ## 9. 文档边界
 
+## 10. 2026-04 Recent Usage Updates
+
+### 10.1 Agent Service Discovery
+
+The Agent now supports local service discovery on Linux. After startup, it performs an initial scan and then reports the latest service inventory on a schedule.
+
+New configuration items under the Agent section:
+
+```yaml
+agent:
+  master_http_address: "192.168.41.136:8080"
+  agent_name: "agent-136"
+  service_scan_interval: 300
+```
+
+Notes:
+- `master_http_address` is used for HTTP registration and service inventory reporting.
+- If `master_http_address` is not provided, the Agent will try to derive it from `master_address`.
+- `service_scan_interval` is in seconds.
+
+### 10.2 Viewing Services in the Web Console
+
+On the asset page, clicking the node status opens a node detail panel. The panel now shows:
+
+- basic node information
+- current service inventory
+- inferred service types
+
+This is the main entry point for checking which services exist on a node.
+
+### 10.3 Lightweight Asset Fingerprint
+
+The service discovery result is also used to enrich the asset profile. The current lightweight fingerprint can update:
+
+- `os_type`
+- `service_type`
+- node `service_inventory`
+
+For Java processes, the system can now further distinguish several common service types instead of showing only `java-service`, including:
+
+- `tomcat`
+- `jenkins`
+- `nacos`
+- `spring-boot`
+- `elasticsearch`
+- `kafka`
+
+### 10.4 Updated Alert Scoring Logic
+
+The alert scoring logic has been adjusted to be more conservative and more context-aware.
+
+Current base scores:
+
+- `critical = 80`
+- `high = 60`
+- `medium = 35`
+- `low = 15`
+
+Current formula:
+
+```text
+final score = base score + target-service context score + time-series score
+```
+
+Target-service context score:
+
+- obvious match: `+20`
+- obvious mismatch: `-20`
+- unclear: `0`
+
+This allows the system to consider whether the attack signature actually matches the service exposed by the destination host, which helps reduce false positives.
+
 本文件聚焦“如何部署和使用当前系统”。如果你需要了解某次迭代的背景和问题记录，请查看根目录的开发日志文档。

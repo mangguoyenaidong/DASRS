@@ -144,3 +144,15 @@ func TestIntelligenceEngineStruct(t *testing.T) {
 		t.Error("Expected redis to be nil")
 	}
 }
+
+func TestSignatureKeywordsByService(t *testing.T) {
+	engine := &IntelligenceEngine{}
+
+	positive, negative := engine.signatureKeywordsByService("tomcat")
+	if !containsString("apache tomcat jsp upload attempt", positive) {
+		t.Fatal("expected tomcat positive keywords to match tomcat signature")
+	}
+	if !containsString("iis asp.net remote code execution", negative) {
+		t.Fatal("expected tomcat negative keywords to match IIS signature")
+	}
+}

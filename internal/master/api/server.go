@@ -1017,12 +1017,17 @@ func pickPrimaryServiceType(services []agentServiceView) string {
 	}
 
 	preferred := []string{
+		"tomcat",
+		"spring-boot",
+		"jenkins",
+		"nacos",
 		"nginx",
 		"apache",
 		"mysql",
 		"postgresql",
 		"redis",
 		"elasticsearch",
+		"kafka",
 		"ssh",
 		"java-service",
 		"https",

@@ -13,6 +13,8 @@ type Config struct {
 	MasterAddress       string `yaml:"master_address"`
 	MasterHTTPAddress   string `yaml:"master_http_address"`
 	SuricataLogPath     string `yaml:"suricata_log_path"`
+	SuricataRulePath    string `yaml:"suricata_rule_path"`
+	SuricataReloadCmd   string `yaml:"suricata_reload_command"`
 	MonitorIP           string `yaml:"monitor_ip"`
 	AgentName           string `yaml:"agent_name"`
 	ReconnectInterval   int    `yaml:"reconnect_interval"`
@@ -28,6 +30,7 @@ func LoadConfig(path string) (*Config, error) {
 	cfg := &Config{
 		MasterAddress:       "127.0.0.1:50051",
 		SuricataLogPath:     "./suricata_logs/eve.json",
+		SuricataRulePath:    "./suricata_logs/dasrs_ai.rules",
 		ReconnectInterval:   5,
 		HeartbeatInterval:   30,
 		ServiceScanInterval: 300,
@@ -47,6 +50,12 @@ func LoadConfig(path string) (*Config, error) {
 		}
 		if yCfg.Agent.SuricataLogPath != "" {
 			cfg.SuricataLogPath = yCfg.Agent.SuricataLogPath
+		}
+		if yCfg.Agent.SuricataRulePath != "" {
+			cfg.SuricataRulePath = yCfg.Agent.SuricataRulePath
+		}
+		if yCfg.Agent.SuricataReloadCmd != "" {
+			cfg.SuricataReloadCmd = yCfg.Agent.SuricataReloadCmd
 		}
 		if yCfg.Agent.MonitorIP != "" {
 			cfg.MonitorIP = yCfg.Agent.MonitorIP
@@ -73,6 +82,12 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if v := os.Getenv("SURICATA_LOG_PATH"); v != "" {
 		cfg.SuricataLogPath = v
+	}
+	if v := os.Getenv("SURICATA_RULE_PATH"); v != "" {
+		cfg.SuricataRulePath = v
+	}
+	if v := os.Getenv("SURICATA_RELOAD_COMMAND"); v != "" {
+		cfg.SuricataReloadCmd = v
 	}
 	if v := os.Getenv("MONITOR_IP"); v != "" {
 		cfg.MonitorIP = v

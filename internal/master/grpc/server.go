@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -207,12 +209,68 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 		CreatedAt:       time.Now(),
 	}
 	db.Create(opLog)
+	s.updateAIRuleTaskDeployStatus(agentID, result)
 
 	// 更新 Agent 最后活动时间
 	if _, ok := s.agentClients.Load(agentID); ok {
 		db.Model(&model.AgentNode{}).Where("agent_id = ?", agentID).
 			Update("last_seen_at", time.Now())
 	}
+}
+
+func (s *Server) updateAIRuleTaskDeployStatus(agentID string, result *proto.CommandResult) {
+	commandID := strings.TrimSpace(result.GetCommandId())
+	if !strings.HasPrefix(commandID, "ai-rule-") {
+		return
+	}
+
+	parts := strings.Split(commandID, "-")
+	if len(parts) < 3 {
+		return
+	}
+
+	taskID, err := strconv.ParseUint(parts[2], 10, 32)
+	if err != nil {
+		return
+	}
+
+	db := s.db.(*gorm.DB)
+	var task model.AIRuleTask
+	if err := db.First(&task, uint(taskID)).Error; err != nil {
+		return
+	}
+
+	entry := fmt.Sprintf("%s | %s | %s", time.Now().Format(time.RFC3339), agentID, strings.TrimSpace(result.GetMessage()))
+	if strings.TrimSpace(task.DeployMessage) == "" {
+		task.DeployMessage = entry
+	} else {
+		task.DeployMessage += "\n" + entry
+	}
+	if result.GetSuccess() {
+		task.SuccessAgentCount++
+	} else {
+		task.FailedAgentCount++
+	}
+
+	processed := task.SuccessAgentCount + task.FailedAgentCount
+	switch {
+	case task.TargetAgentCount <= 1 && task.FailedAgentCount == 0 && task.SuccessAgentCount > 0:
+		task.DeployStatus = "deployed"
+	case task.TargetAgentCount <= 1 && task.FailedAgentCount > 0:
+		task.DeployStatus = "failed"
+	case processed < task.TargetAgentCount && task.FailedAgentCount == 0:
+		task.DeployStatus = "in_progress"
+	case processed < task.TargetAgentCount && task.FailedAgentCount > 0:
+		task.DeployStatus = "partial"
+	case task.SuccessAgentCount == task.TargetAgentCount:
+		task.DeployStatus = "deployed"
+	case task.FailedAgentCount == task.TargetAgentCount:
+		task.DeployStatus = "failed"
+	default:
+		task.DeployStatus = "partial_failed"
+	}
+	task.UpdatedAt = time.Now()
+	_ = db.Save(&task).Error
 }
 
 func boolToInt(b bool) int {
@@ -256,7 +314,7 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		SID:           req.GetSid(),
 		Payload:       req.GetPayload(),
 		SourceIP:      req.GetSourceIp(),
-		DestIP:        "",
+		DestIP:        extractDestIP(req.GetAssetInfo()),
 		AssetInfo:     req.GetAssetInfo(),
 		Timestamp:     req.GetTimestamp(),
 		Severity:      req.GetSeverity(),
@@ -340,11 +398,11 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 	// 如果分析结果是需要修复漏洞 (Patch)
 	if decision.Action == "repair" {
 		s.logger.Info("Auto repairing for alert %s (SID: %s)", decision.AlertID, alert.SID)
-		
+
 		var strategy model.Strategy
 		if err := db.Where("sid = ? AND enabled = 1", alert.SID).First(&strategy).Error; err == nil {
 			s.logger.Info("Found matching strategy for SID %s: %s", alert.SID, strategy.Description)
-			
+
 			cmd := &proto.CommandMessage{
 				CommandId:      fmt.Sprintf("cmd-patch-%d", time.Now().Unix()),
 				Type:           proto.CommandType_PATCH_CONFIG,
@@ -352,7 +410,7 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 				MatchRegex:     strategy.MatchRegex,
 				ReplaceContent: strategy.ReplaceContent,
 			}
-			
+
 			// 下发给所有在线 Agent (实际生产中应根据 AssetInfo 过滤)
 			agents := s.GetConnectedAgents()
 			for _, agent := range agents {
@@ -455,15 +513,19 @@ func (s *Server) RegisterAgentInDB(agentID, hostname, ip, name string) error {
 	// 如果 IP 或 ID 已存在，执行更新
 	// 注意：我们要把记录的 agent_id 更新为当前最新的连接 ID，确保后续指令能正确送达
 	updates := map[string]interface{}{
-		"agent_id":     agentID, 
+		"agent_id":     agentID,
 		"status":       1,
 		"last_seen_at": now,
 		"updated_at":   now,
 	}
-	
+
 	// 如果传入了有效的主机名或名称，也一并更新
-	if hostname != "" { updates["hostname"] = hostname }
-	if name != "" { updates["name"] = name }
+	if hostname != "" {
+		updates["hostname"] = hostname
+	}
+	if name != "" {
+		updates["name"] = name
+	}
 
 	return db.Model(&agent).Updates(updates).Error
 }
@@ -510,4 +572,22 @@ func (s *Server) GetAgentByID(agentID string) (*model.AgentNode, error) {
 func (s *Server) DeleteAgentFromDB(agentID string) error {
 	db := s.db.(*gorm.DB)
 	return db.Where("agent_id = ?", agentID).Delete(&model.AgentNode{}).Error
+}
+
+func extractDestIP(assetInfo string) string {
+	if assetInfo == "" {
+		return ""
+	}
+
+	const marker = "DestIP:"
+	idx := strings.Index(assetInfo, marker)
+	if idx == -1 {
+		return ""
+	}
+
+	value := strings.TrimSpace(assetInfo[idx+len(marker):])
+	if pipe := strings.Index(value, "|"); pipe >= 0 {
+		value = strings.TrimSpace(value[:pipe])
+	}
+	return value
 }
