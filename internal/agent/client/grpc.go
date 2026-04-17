@@ -1,12 +1,20 @@
 package client
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"net/http"
+	"os"
+	"runtime"
+	"strings"
 	"time"
 
+	"security-response-system/internal/agent/discovery"
 	"security-response-system/internal/proto"
 
 	"github.com/google/uuid"
@@ -23,19 +31,33 @@ type Client struct {
 	hostname          string
 	agentID           string
 	localIP           string
+	osType            string
+	httpAddress       string
+	agentName         string
+	httpClient        *http.Client
 	serviceClient     proto.SecurityServiceClient
 }
 
-func NewClient(address string, reconnectInterval int) *Client {
+func NewClient(address, httpAddress, agentName string, reconnectInterval int) *Client {
 	localIP := detectLocalIP()
+	hostname, err := os.Hostname()
+	if err != nil || hostname == "" {
+		hostname = "agent-host"
+	}
 
 	return &Client{
 		address:           address,
 		reconnectInterval: reconnectInterval,
 		stopChan:          make(chan struct{}),
-		hostname:          "agent-host", // placeholder
+		hostname:          hostname,
 		agentID:           fmt.Sprintf("agent-%s", uuid.New().String()[:8]),
 		localIP:           localIP,
+		osType:            runtime.GOOS,
+		httpAddress:       httpAddress,
+		agentName:         agentName,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 	}
 }
 
@@ -198,6 +220,46 @@ func (c *Client) GetAgentID() string {
 
 func (c *Client) GetLocalIP() string {
 	return c.localIP
+}
+
+func (c *Client) RegisterAgent(services []discovery.ServiceRecord) error {
+	if c.httpAddress == "" {
+		return fmt.Errorf("master http address is empty")
+	}
+
+	payload := map[string]interface{}{
+		"agent_id":          c.agentID,
+		"hostname":          c.hostname,
+		"ip":                c.localIP,
+		"name":              c.agentName,
+		"os_type":           c.osType,
+		"service_inventory": services,
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal registration payload: %w", err)
+	}
+
+	url := fmt.Sprintf("http://%s/api/agents/register", c.httpAddress)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("build registration request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("register agent via http: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("register agent failed: status=%s body=%s", resp.Status, strings.TrimSpace(string(respBody)))
+	}
+
+	return nil
 }
 
 func detectLocalIP() string {

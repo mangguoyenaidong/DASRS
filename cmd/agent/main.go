@@ -12,6 +12,7 @@ import (
 
 	"security-response-system/internal/agent/client"
 	"security-response-system/internal/agent/collector"
+	"security-response-system/internal/agent/discovery"
 	"security-response-system/internal/agent/executor"
 )
 
@@ -37,9 +38,12 @@ func main() {
 
 	log.Printf("Configuration loaded:")
 	log.Printf("  - Master Address: %s", cfg.MasterAddress)
+	log.Printf("  - Master HTTP Address: %s", cfg.MasterHTTPAddress)
 	log.Printf("  - Suricata Log Path: %s", cfg.SuricataLogPath)
+	log.Printf("  - Agent Name: %s", cfg.AgentName)
 	log.Printf("  - Reconnect Interval: %ds", cfg.ReconnectInterval)
 	log.Printf("  - Heartbeat Interval: %ds", cfg.HeartbeatInterval)
+	log.Printf("  - Service Scan Interval: %ds", cfg.ServiceScanInterval)
 
 	// 检查配置文件是否存在
 	if _, err := os.Stat(cfg.SuricataLogPath); os.IsNotExist(err) {
@@ -63,10 +67,11 @@ func main() {
 	log.Println("Initializing executors...")
 	blocker := executor.NewIPBlocker()
 	patcher := executor.NewConfigPatcher()
+	scanner := discovery.NewLocalServiceScanner()
 
 	// 初始化 gRPC 客户端 (这里会生成 agentID 和主机名)
 	log.Printf("Connecting to Master at %s...", cfg.MasterAddress)
-	grpcClient := client.NewClient(cfg.MasterAddress, cfg.ReconnectInterval)
+	grpcClient := client.NewClient(cfg.MasterAddress, cfg.MasterHTTPAddress, cfg.AgentName, cfg.ReconnectInterval)
 
 	// 获取本地 IP 以供过滤
 	localIP := grpcClient.GetLocalIP() // 利用 client 已经实现好的逻辑
@@ -77,7 +82,7 @@ func main() {
 	logCollector := collector.NewSuricataCollector(cfg.SuricataLogPath, localIP, cfg.MonitorIP)
 
 	// 创建 Agent
-	agent := NewAgent(cfg, grpcClient, logCollector, blocker, patcher)
+	agent := NewAgent(cfg, grpcClient, logCollector, scanner, blocker, patcher)
 
 	// 启动
 	log.Println("Agent starting...")

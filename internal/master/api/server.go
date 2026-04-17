@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -34,6 +35,22 @@ type Server struct {
 type Config struct {
 	Host string
 	Port int
+}
+
+type agentServiceView struct {
+	Name      string `json:"name"`
+	Port      int    `json:"port"`
+	Protocol  string `json:"protocol"`
+	Process   string `json:"process"`
+	Listen    string `json:"listen"`
+	Status    string `json:"status"`
+	Source    string `json:"source"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+type agentDetailView struct {
+	model.AgentNode
+	Services []agentServiceView `json:"services"`
 }
 
 // NewServer 创建服务器
@@ -253,7 +270,20 @@ func (s *Server) getAgent(c *gin.Context) {
 		return
 	}
 
-	c.PureJSON(http.StatusOK, gin.H{"data": agent})
+	detail := buildAgentDetail(agent)
+	if len(detail.Services) == 0 && strings.TrimSpace(agent.IP) != "" {
+		var asset model.Asset
+		if err := s.db.Where("ip = ?", agent.IP).First(&asset).Error; err == nil && strings.TrimSpace(asset.ServiceType) != "" {
+			detail.Services = []agentServiceView{{
+				Name:      asset.ServiceType,
+				Status:    "discovered",
+				Source:    "asset-profile",
+				UpdatedAt: asset.UpdatedAt.Format(time.RFC3339),
+			}}
+		}
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{"data": detail})
 }
 
 // listAlerts 获取告警列表
@@ -499,8 +529,8 @@ func (s *Server) getStats(c *gin.Context) {
 // blockIP 手动封禁 IP
 func (s *Server) blockIP(c *gin.Context) {
 	var req struct {
-		IP      string `json:"ip" binding:"required"`
-		Reason  string `json:"reason"`
+		IP     string `json:"ip" binding:"required"`
+		Reason string `json:"reason"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -749,10 +779,12 @@ func (s *Server) getAlertCorrelation(c *gin.Context) {
 // registerAgent Agent 注册接口 (供远程 Agent 调用)
 func (s *Server) registerAgent(c *gin.Context) {
 	var req struct {
-		AgentID  string `json:"agent_id" binding:"required"`
-		Hostname string `json:"hostname"`
-		IP       string `json:"ip"`
-		Name     string `json:"name"`
+		AgentID          string             `json:"agent_id" binding:"required"`
+		Hostname         string             `json:"hostname"`
+		IP               string             `json:"ip"`
+		Name             string             `json:"name"`
+		OSType           string             `json:"os_type"`
+		ServiceInventory []agentServiceView `json:"service_inventory"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -763,20 +795,22 @@ func (s *Server) registerAgent(c *gin.Context) {
 	now := time.Now()
 	// 严格以 IP 为唯一标识进行维护
 	var existingAgent model.AgentNode
+	serviceInventoryJSON := encodeServiceInventory(req.ServiceInventory)
 	result := s.db.Where("ip = ?", req.IP).First(&existingAgent)
 
 	if result.Error != nil {
 		// 未找到资产，创建新资产记录
 		newAgent := &model.AgentNode{
-			AgentID:      req.AgentID,
-			Name:         req.Name,
-			Hostname:     req.Hostname,
-			IP:           req.IP,
-			Status:       1,
-			LastSeenAt:   now,
-			RegisteredAt: now,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+			AgentID:          req.AgentID,
+			Name:             req.Name,
+			Hostname:         req.Hostname,
+			IP:               req.IP,
+			ServiceInventory: serviceInventoryJSON,
+			Status:           1,
+			LastSeenAt:       now,
+			RegisteredAt:     now,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		}
 		if err := s.db.Create(newAgent).Error; err != nil {
 			c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -785,14 +819,17 @@ func (s *Server) registerAgent(c *gin.Context) {
 	} else {
 		// 找到资产，更新现有记录 (保持 IP 不变)
 		s.db.Model(&existingAgent).Updates(map[string]interface{}{
-			"agent_id":     req.AgentID,
-			"status":       1,
-			"last_seen_at": now,
-			"hostname":     req.Hostname,
-			"name":         req.Name,
-			"updated_at":   now,
+			"agent_id":          req.AgentID,
+			"status":            1,
+			"last_seen_at":      now,
+			"hostname":          req.Hostname,
+			"name":              req.Name,
+			"service_inventory": serviceInventoryJSON,
+			"updated_at":        now,
 		})
 	}
+
+	s.syncAssetProfile(req.IP, req.Hostname, req.OSType, req.ServiceInventory, now)
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success":   true,
@@ -893,4 +930,139 @@ func (s *Server) deleteWhitelist(c *gin.Context) {
 	}
 
 	c.PureJSON(http.StatusOK, gin.H{"message": "IP removed from whitelist"})
+}
+
+func buildAgentDetail(agent model.AgentNode) agentDetailView {
+	return agentDetailView{
+		AgentNode: agent,
+		Services:  decodeServiceInventory(agent.ServiceInventory),
+	}
+}
+
+func decodeServiceInventory(raw string) []agentServiceView {
+	if strings.TrimSpace(raw) == "" {
+		return []agentServiceView{}
+	}
+
+	var services []agentServiceView
+	if err := json.Unmarshal([]byte(raw), &services); err != nil {
+		return []agentServiceView{}
+	}
+
+	return services
+}
+
+func encodeServiceInventory(services []agentServiceView) string {
+	if len(services) == 0 {
+		return "[]"
+	}
+
+	data, err := json.Marshal(services)
+	if err != nil {
+		return "[]"
+	}
+
+	return string(data)
+}
+
+func (s *Server) syncAssetProfile(ip, hostname, osType string, services []agentServiceView, now time.Time) {
+	if strings.TrimSpace(ip) == "" {
+		return
+	}
+
+	serviceType := pickPrimaryServiceType(services)
+	normalizedOSType := normalizeOSType(osType)
+
+	var asset model.Asset
+	result := s.db.Where("ip = ?", ip).First(&asset)
+	if result.Error != nil {
+		asset = model.Asset{
+			IP:          ip,
+			Hostname:    hostname,
+			OSType:      normalizedOSType,
+			ServiceType: serviceType,
+			Status:      1,
+			CreatedAt:   now,
+			UpdatedAt:   now,
+		}
+		_ = s.db.Create(&asset).Error
+		return
+	}
+
+	updates := map[string]interface{}{
+		"status":     1,
+		"updated_at": now,
+	}
+	if strings.TrimSpace(hostname) != "" {
+		updates["hostname"] = hostname
+	}
+	if strings.TrimSpace(normalizedOSType) != "" {
+		updates["os_type"] = normalizedOSType
+	}
+	if strings.TrimSpace(serviceType) != "" {
+		updates["service_type"] = serviceType
+	}
+
+	_ = s.db.Model(&asset).Updates(updates).Error
+}
+
+func pickPrimaryServiceType(services []agentServiceView) string {
+	if len(services) == 0 {
+		return ""
+	}
+
+	ignore := map[string]struct{}{
+		"":        {},
+		"unknown": {},
+	}
+
+	preferred := []string{
+		"nginx",
+		"apache",
+		"mysql",
+		"postgresql",
+		"redis",
+		"elasticsearch",
+		"ssh",
+		"java-service",
+		"https",
+		"http",
+	}
+
+	seen := make(map[string]struct{})
+	for _, service := range services {
+		name := strings.TrimSpace(strings.ToLower(service.Name))
+		if _, skip := ignore[name]; skip {
+			continue
+		}
+		seen[name] = struct{}{}
+	}
+
+	for _, candidate := range preferred {
+		if _, ok := seen[candidate]; ok {
+			return candidate
+		}
+	}
+
+	for _, service := range services {
+		name := strings.TrimSpace(service.Name)
+		if name != "" && strings.ToLower(name) != "unknown" {
+			return name
+		}
+	}
+
+	return ""
+}
+
+func normalizeOSType(osType string) string {
+	switch strings.ToLower(strings.TrimSpace(osType)) {
+	case "linux":
+		return "Linux"
+	case "windows":
+		return "Windows"
+	case "darwin", "macos":
+		return "macOS"
+	default:
+		return strings.TrimSpace(osType)
+	}
 }

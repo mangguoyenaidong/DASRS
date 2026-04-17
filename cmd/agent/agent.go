@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"security-response-system/internal/agent/client"
 	"security-response-system/internal/agent/collector"
+	"security-response-system/internal/agent/discovery"
 	"security-response-system/internal/agent/executor"
 	"security-response-system/internal/proto"
 )
 
-// Agent Agent 客户端
+// Agent orchestrates local collection, execution and service reporting.
 type Agent struct {
 	cfg        *Config
 	grpcClient *client.Client
 	collector  *collector.SuricataCollector
+	scanner    discovery.Scanner
 	blocker    *executor.IPBlocker
 	patcher    *executor.ConfigPatcher
 }
@@ -22,6 +26,7 @@ func NewAgent(
 	cfg *Config,
 	grpcClient *client.Client,
 	collector *collector.SuricataCollector,
+	scanner discovery.Scanner,
 	blocker *executor.IPBlocker,
 	patcher *executor.ConfigPatcher,
 ) *Agent {
@@ -29,6 +34,7 @@ func NewAgent(
 		cfg:        cfg,
 		grpcClient: grpcClient,
 		collector:  collector,
+		scanner:    scanner,
 		blocker:    blocker,
 		patcher:    patcher,
 	}
@@ -37,14 +43,12 @@ func NewAgent(
 func (a *Agent) Start() {
 	log.Println("Starting agent...")
 
-	// 启动日志采集
-	err := a.collector.Start(a.handleAlert)
-	if err != nil {
+	if err := a.collector.Start(a.handleAlert); err != nil {
 		log.Printf("Failed to start collector: %v", err)
 	}
 
-	// 连接 Master 并启动双向流
 	a.grpcClient.Start(a.handleCommand)
+	go a.reportServicesLoop()
 }
 
 func (a *Agent) Stop() {
@@ -53,7 +57,6 @@ func (a *Agent) Stop() {
 }
 
 func (a *Agent) handleAlert(alert *proto.AlertReportRequest) {
-	// 发送到 Master
 	resp, err := a.grpcClient.ReportAlert(alert)
 	if err != nil {
 		log.Printf("Failed to report alert: %v", err)
@@ -92,4 +95,42 @@ func (a *Agent) handleCommand(cmd *proto.CommandMessage) {
 	default:
 		log.Printf("Unknown command type: %s", cmd.GetType())
 	}
+}
+
+func (a *Agent) reportServicesLoop() {
+	a.reportServices()
+
+	interval := time.Duration(a.cfg.ServiceScanInterval) * time.Second
+	if interval <= 0 {
+		interval = 5 * time.Minute
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		a.reportServices()
+	}
+}
+
+func (a *Agent) reportServices() {
+	if a.scanner == nil {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	services, err := a.scanner.Scan(ctx)
+	if err != nil {
+		log.Printf("Failed to scan local services: %v", err)
+		return
+	}
+
+	if err := a.grpcClient.RegisterAgent(services); err != nil {
+		log.Printf("Failed to report local services: %v", err)
+		return
+	}
+
+	log.Printf("Reported %d local services to master", len(services))
 }

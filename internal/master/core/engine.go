@@ -105,13 +105,13 @@ func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decisi
 func (e *IntelligenceEngine) calculateBaseScore(severity string) int {
 	switch severity {
 	case "critical":
-		return 100
+		return 80
 	case "high":
-		return 75
+		return 60
 	case "medium":
-		return 50
+		return 35
 	case "low":
-		return 25
+		return 15
 	default:
 		return 0
 	}
@@ -215,10 +215,10 @@ func (e *IntelligenceEngine) IsIPBlocked(ip string) bool {
 	// 这里简化处理：检查最近 24 小时内是否有成功的 BLOCK_IP 操作
 	// 实际生产中建议维护一个活跃封禁 IP 表
 	e.db.Model(&model.OperationLog{}).
-		Where("target = ? AND command_type = ? AND result = ? AND created_at >= ?", 
+		Where("target = ? AND command_type = ? AND result = ? AND created_at >= ?",
 			ip, "block_ip", 1, time.Now().Add(-24*time.Hour)).
 		Count(&count)
-	
+
 	return count > 0
 }
 
@@ -352,7 +352,7 @@ func (e *IntelligenceEngine) GetAttackTrends(days int) (map[string]int, error) {
 	}
 
 	startDate := time.Now().AddDate(0, 0, -days)
-	
+
 	// 使用更通用的格式化查询 (MySQL 兼容)
 	err := e.db.Model(&model.AlertLog{}).
 		Select("DATE_FORMAT(created_at, '%Y-%m-%d') as day, COUNT(*) as count").

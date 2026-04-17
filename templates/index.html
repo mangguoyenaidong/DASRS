@@ -1195,6 +1195,109 @@
             `).join('');
         }
 
+        async function showAgentDetails(agentID) {
+            const modal = document.getElementById('alertModal');
+            const modalBody = document.getElementById('modalBody');
+            const modalTitle = document.querySelector('#alertModal .modal-title');
+            const modalSubtitle = document.querySelector('#alertModal .panel-subtitle');
+            if (modalTitle) modalTitle.textContent = '节点服务详情';
+            if (modalSubtitle) modalSubtitle.textContent = '查看当前节点的基础状态与服务清单';
+            modalBody.innerHTML = '<div class="empty">正在拉取节点详情...</div>';
+            modal.style.display = 'flex';
+            try {
+                const res = await fetchAPI(`/api/agents/${encodeURIComponent(agentID)}`);
+                if (!res || !res.data) {
+                    modalBody.innerHTML = '<div class="empty">未能获取节点详情。</div>';
+                    return;
+                }
+                const agent = res.data;
+                const services = Array.isArray(agent.services) ? agent.services : [];
+                const servicesHTML = services.length
+                    ? `
+                        <div class="table-shell" style="margin-top:18px;">
+                            <table>
+                                <thead><tr><th>服务</th><th>端口</th><th>协议</th><th>进程</th><th>监听地址</th><th>状态</th></tr></thead>
+                                <tbody>
+                                    ${services.map(service => `
+                                        <tr>
+                                            <td>${safeText(service.name, '未命名')}</td>
+                                            <td class="mono">${safeText(service.port, '-')}</td>
+                                            <td>${safeText(service.protocol, '-')}</td>
+                                            <td>${safeText(service.process, '-')}</td>
+                                            <td class="mono">${safeText(service.listen, '-')}</td>
+                                            <td><span class="badge ${service.status === 'running' ? 'success' : 'info'}">${safeText(service.status || 'unknown')}</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>`
+                    : '<div class="empty" style="margin-top:18px;">当前节点还没有服务扫描数据，下一步我们再把 Agent 本地服务发现接进来。</div>';
+
+                modalBody.innerHTML = `
+                    <div class="grid-2 mb-30">
+                        <div class="glass-panel" style="margin-bottom:0;">
+                            <div class="panel-title">节点基本信息</div>
+                            <div class="panel-subtitle">在线状态、IP 地址和最后心跳</div>
+                            <div style="display:grid;gap:12px;margin-top:18px;">
+                                <div><strong>节点状态：</strong><span class="badge ${agent.status === 1 ? 'success' : 'info'}">${agent.status === 1 ? '在线' : '离线'}</span></div>
+                                <div><strong>资产 IP：</strong><span class="mono">${safeText(agent.ip)}</span></div>
+                                <div><strong>主机名：</strong>${safeText(agent.hostname, '-')}</div>
+                                <div><strong>节点 ID：</strong><span class="mono">${safeText(agent.agent_id)}</span></div>
+                                <div><strong>节点名称：</strong>${safeText(agent.name, '-')}</div>
+                                <div><strong>最后心跳：</strong>${formatDateTime(agent.last_seen_at)}</div>
+                            </div>
+                        </div>
+                        <div class="glass-panel" style="margin-bottom:0;">
+                            <div class="panel-title">服务概览</div>
+                            <div class="panel-subtitle">当前节点已经记录的服务及其运行信息</div>
+                            <div style="display:grid;gap:12px;margin-top:18px;">
+                                <div><strong>服务数量：</strong><span style="font-size:22px;font-weight:800;color:var(--primary);">${services.length}</span></div>
+                                <div><strong>数据来源：</strong>${services[0] ? safeText(services[0].source, 'agent') : '未上报'}</div>
+                                <div><strong>最近更新：</strong>${services[0] && services[0].updated_at ? safeText(services[0].updated_at) : '未提供'}</div>
+                                <div class="hint-block">这里先展示 Master 已保存的服务清单。等我们把 Agent 本地扫描接上后，这个面板就会自动更新。</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel" style="margin-bottom:0;">
+                        <div class="panel-title">服务清单</div>
+                        <div class="panel-subtitle">点击节点状态后可直接查看该节点当前有哪些服务</div>
+                        ${servicesHTML}
+                    </div>
+                `;
+            } catch (error) {
+                modalBody.innerHTML = `<div class="empty">读取节点详情失败：${escapeHtml(error.message)}</div>`;
+            }
+        }
+
+        refreshAgents = async function() {
+            const res = await fetchAPI('/api/agents');
+            const tbody = document.getElementById('agentsTable');
+            if (!tbody) return;
+            if (!res || !res.data || res.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">当前没有已注册的 Agent 节点</td></tr>';
+                return;
+            }
+            tbody.innerHTML = res.data.map(agent => `
+                <tr>
+                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAgentDetails('${escapeHtml(agent.agent_id || '')}')"><span class="status-dot" style="background:${agent.status === 1 ? 'var(--success)' : '#94a3b8'};box-shadow:0 0 0 5px ${agent.status === 1 ? 'rgba(15,159,116,0.12)' : 'rgba(128,144,170,0.15)'};"></span>${agent.status === 1 ? '在线' : '离线'}</button></td>
+                    <td class="mono">${safeText(agent.ip)}</td>
+                    <td>${safeText(agent.hostname)}</td>
+                    <td class="mono">${safeText(agent.agent_id)}</td>
+                    <td>${safeText(agent.name)}</td>
+                    <td>${formatDateTime(agent.last_seen_at)}</td>
+                </tr>
+            `).join('');
+        };
+
+        const originalShowAlertDetails = showAlertDetails;
+        showAlertDetails = async function(id) {
+            const modalTitle = document.querySelector('#alertModal .modal-title');
+            const modalSubtitle = document.querySelector('#alertModal .panel-subtitle');
+            if (modalTitle) modalTitle.textContent = '告警审计详情';
+            if (modalSubtitle) modalSubtitle.textContent = '查看事件内容、原始载荷和处置建议';
+            return originalShowAlertDetails(id);
+        };
+
         window.onclick = event => {
             if (event.target.classList.contains('modal')) closeModal();
         };

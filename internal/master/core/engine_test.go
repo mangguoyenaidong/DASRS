@@ -3,6 +3,8 @@ package core
 import (
 	"testing"
 	"time"
+
+	"security-response-system/internal/master/model"
 )
 
 func TestCalculateBaseScore(t *testing.T) {
@@ -12,10 +14,10 @@ func TestCalculateBaseScore(t *testing.T) {
 		severity string
 		expected int
 	}{
-		{"critical", 100},
-		{"high", 75},
-		{"medium", 50},
-		{"low", 25},
+		{"critical", 80},
+		{"high", 60},
+		{"medium", 35},
+		{"low", 15},
 		{"unknown", 0},
 		{"", 0},
 	}
@@ -32,8 +34,8 @@ func TestCalculateBaseScore(t *testing.T) {
 
 func TestContainsString(t *testing.T) {
 	tests := []struct {
-		s       string
-		substrs []string
+		s        string
+		substrs  []string
 		expected bool
 	}{
 		{"IIS attack detected", []string{"IIS", "ASP.NET"}, true},
@@ -102,7 +104,7 @@ func TestAlert(t *testing.T) {
 }
 
 func TestAsset(t *testing.T) {
-	asset := Asset{
+	asset := model.Asset{
 		ID:          1,
 		IP:          "192.168.1.100",
 		Hostname:    "web-server-01",
