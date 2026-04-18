@@ -29,11 +29,15 @@ type Config struct {
 			PoolSize int    `yaml:"pool_size"`
 		} `yaml:"redis"`
 		Intelligence struct {
-			RepairThreshold    int      `yaml:"repair_threshold"`
-			BlockThreshold     int      `yaml:"block_threshold"`
-			TimeWindow         int      `yaml:"time_window"`
-			MaxAlertsPerWindow int      `yaml:"max_alerts_per_window"`
-			Whitelist          []string `yaml:"whitelist"`
+			RepairThreshold     int      `yaml:"repair_threshold"`
+			BlockThreshold      int      `yaml:"block_threshold"`
+			TimeWindow          int      `yaml:"time_window"`
+			MaxAlertsPerWindow  int      `yaml:"max_alerts_per_window"`
+			Whitelist           []string `yaml:"whitelist"`
+			DemoMode            bool     `yaml:"demo_mode"`
+			DemoBlockThreshold  int      `yaml:"demo_block_threshold"`
+			DemoRepairThreshold int      `yaml:"demo_repair_threshold"`
+			DemoExploitBonus    int      `yaml:"demo_exploit_bonus"`
 		} `yaml:"intelligence"`
 		AI struct {
 			Enabled  bool   `yaml:"enabled"`
@@ -45,6 +49,16 @@ type Config struct {
 				Model          string `yaml:"model"`
 				TimeoutSeconds int    `yaml:"timeout_seconds"`
 			} `yaml:"api"`
+			Prompts struct {
+				RuleGenerationSystem string `yaml:"rule_generation_system"`
+				RuleGenerationUser   string `yaml:"rule_generation_user"`
+				AlertAnalysisSystem  string `yaml:"alert_analysis_system"`
+				AlertAnalysisUser    string `yaml:"alert_analysis_user"`
+			} `yaml:"prompts"`
+			Testing struct {
+				CommandTemplate string `yaml:"command_template"`
+				SuccessMatch    string `yaml:"success_match"`
+			} `yaml:"testing"`
 		} `yaml:"ai"`
 	} `yaml:"master"`
 	Agent struct {

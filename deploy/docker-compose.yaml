@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # MySQL 数据库
   mysql:
     image: mysql:8.0
     container_name: dasrs-mysql
@@ -19,7 +16,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis 缓存/消息队列
   redis:
     image: redis:7.0
     container_name: dasrs-redis
@@ -33,15 +29,14 @@ services:
       timeout: 5s
       retries: 5
 
-  # Master 服务
   master:
     build:
       context: ../.
       dockerfile: deploy/Dockerfile.master
     container_name: dasrs-master
     ports:
-      - "50051:50051"  # gRPC
-      - "8080:8080"    # HTTP API
+      - "50051:50051"
+      - "8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
@@ -59,7 +54,6 @@ services:
       - ../configs:/app/configs
       - ../templates:/app/templates
 
-  # Agent 服务 (示例部署)
   agent:
     build:
       context: ../.

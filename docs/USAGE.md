@@ -42,7 +42,12 @@ pip install ruamel.yaml
 - `master.redis.*`：Redis 连接配置
 - `master.intelligence.block_threshold`：自动封禁阈值
 - `master.intelligence.repair_threshold`：自动修复阈值
+- `master.intelligence.demo_mode`：比赛演示模式开关
+- `master.intelligence.demo_block_threshold`：演示模式封禁阈值
+- `master.intelligence.demo_repair_threshold`：演示模式修复阈值
+- `master.intelligence.demo_exploit_bonus`：演示模式下对明显利用类告警的额外加分
 - `master.intelligence.whitelist`：静态白名单
+- `master.ai.*`：DeepSeek、提示词、测试命令等 AI 联动配置
 
 ### 3.2 Agent 配置
 
@@ -144,6 +149,7 @@ go run ./cmd/agent --config configs/agent.yaml --test-master-conn
 - 白名单管理：动态增删白名单 IP
 - 策略管理：查看和维护自动化策略
 - 仪表盘：查看趋势、攻击源、严重程度分布和执行统计
+- AI 联动：生成候选规则、人工修订、测试、下发、告警 AI 研判
 
 ## 7. API 参考
 
@@ -205,7 +211,83 @@ go run ./cmd/agent --config configs/agent.yaml --test-master-conn
 | `/api/dashboard/severity-distribution` | GET | 严重程度分布 |
 | `/api/dashboard/action-stats` | GET | 动作执行统计 |
 
-## 8. 常见问题排查
+### 7.7 AI 联动接口
+
+| 路径 | 方法 | 说明 |
+|------|------|------|
+| `/api/ai/status` | GET | 获取 AI 状态、Provider 与 Demo Mode 信息 |
+| `/api/ai/rules/generate` | POST | 生成候选 Suricata 规则 |
+| `/api/ai/rules/:id` | GET | 获取规则任务详情 |
+| `/api/ai/rules/:id` | PUT | 保存人工修改后的候选规则 |
+| `/api/ai/rules/:id/test` | POST | 测试候选规则，支持 Master/Agent |
+| `/api/ai/rules/:id/deploy` | POST | 下发候选规则到目标 Agent |
+| `/api/alerts/:id/ai-analysis` | GET | 获取告警 AI 研判结果，支持 `force=true` 重新研判 |
+
+## 8. AI 联动与 Demo Mode
+
+### 8.1 AI 规则生成与下发
+
+推荐流程：
+
+1. 在 Web 后台进入 `AI 联动`
+2. 输入 `CVE / PoC / 漏洞描述`
+3. 生成候选 `Suricata` 规则
+4. 如有需要，先人工修订
+5. 先做 `Master` 静态校验或 `Agent` 动态测试
+6. 测试通过后再下发到目标 Agent
+
+### 8.2 AI 告警研判
+
+AI 告警研判会结合以下上下文：
+
+- 告警基础字段
+- 资产服务类型与操作系统
+- 最近同源告警
+- 最近操作日志
+- 规则引擎动作与风险评分
+- 从 Payload 中提取的可疑路径、参数名和命令片段
+
+当前结构化输出包括：
+
+- 摘要
+- 攻击类型
+- 风险原因
+- 影响范围
+- 研判证据
+- 可疑路径
+- 可疑参数
+- 命令片段
+- 运维建议
+- 推荐动作
+- 置信度
+
+### 8.3 Demo Mode
+
+如果你是比赛演示环境，可以在 `configs/config.yaml` 中打开：
+
+```yaml
+master:
+  intelligence:
+    demo_mode: true
+```
+
+建议同时保留以下默认演示参数：
+
+```yaml
+master:
+  intelligence:
+    demo_block_threshold: 40
+    demo_repair_threshold: 65
+    demo_exploit_bonus: 15
+```
+
+说明：
+
+- `demo_mode=false` 时，系统仍使用原始封禁/修复阈值
+- `demo_mode=true` 时，会使用更适合演示的阈值
+- 对明显利用类告警会追加演示分，便于现场更稳定地触发 `block / repair`
+- 该模式建议只用于演示环境，不建议直接作为生产默认配置
+## 9. 常见问题排查
 
 **Q: Agent 无法连接到 Master？**
 
@@ -227,9 +309,9 @@ A: 检查风险评分是否达到 `block_threshold`。低严重程度告警通�
 
 A: 确保 Agent 具备所需权限，例如执行 `nginx -t`、reload 或变更防火墙规则时通常需要更高权限，并确认配置文件路径与挂载目录正确。
 
-## 9. 文档边界
+## 10. 文档边界
 
-## 10. 2026-04 Recent Usage Updates
+## 11. 2026-04 Recent Usage Updates
 
 ### 10.1 Agent Service Discovery
 

@@ -10,6 +10,8 @@ DASRS（Distributed Intelligence-Driven Emergency Response System）是一个基
 - 支持部分节点侧修复动作与回滚
 - 提供 Web 管理后台、审计日志、白名单与策略管理
 - 支持节点本地服务发现与轻量资产指纹
+- 支持 AI 候选规则生成、人工修订、测试后下发
+- 支持 AI 告警研判、证据提取和运维建议生成
 
 ## 技术栈
 
@@ -88,7 +90,45 @@ go run ./cmd/agent --config configs/agent.yaml
 
 ## 2026-04 Recent Updates
 
-本轮更新主要集中在“资产感知增强”和“上下文评分增强”两部分。
+本轮更新主要集中在“AI 联动闭环”“演示模式”和“资产感知增强”三部分。
+
+### 0. AI 联动闭环
+
+- 新增 `DeepSeek` 接入，可用于：
+  - 漏洞语义到 Suricata 候选规则生成
+  - 告警语义研判与处置建议
+- 新增 AI 工作台，支持：
+  - `生成 -> 人工修订 -> 测试 -> 下发` 四步流程
+  - 候选规则人工编辑
+  - `Master` 静态测试与 `Agent` 动态测试
+  - 告警数据库 ID 触发 AI 研判
+- AI 告警研判结果新增结构化字段：
+  - `impact_scope`
+  - `evidence_points`
+  - `suspicious_path`
+  - `suspicious_params`
+  - `command_fragments`
+  - `operator_advice`
+
+### 0.1 Demo Mode 演示模式
+
+为了比赛演示时更容易出现自动封禁/修复效果，新增了独立的演示模式配置：
+
+```yaml
+master:
+  intelligence:
+    demo_mode: false
+    demo_block_threshold: 40
+    demo_repair_threshold: 65
+    demo_exploit_bonus: 15
+```
+
+说明：
+
+- 默认 `demo_mode: false`，系统仍使用原始生产阈值
+- 开启后只会放宽演示阈值，不会改动默认配置逻辑
+- 对明显利用类告警会追加少量演示分，便于现场更稳定地展示 `block / repair`
+- Web 的 AI 工作台会直接显示当前是否开启 `Demo Mode`
 
 ### 1. Agent 本地服务发现
 

@@ -123,10 +123,13 @@ type AIRuleTask struct {
 	RawResponse       string    `gorm:"type:longtext" json:"raw_response"`
 	Status            string    `gorm:"type:varchar(50);index" json:"status"`
 	DeployStatus      string    `gorm:"type:varchar(50);index" json:"deploy_status"`
+	TestStatus        string    `gorm:"type:varchar(50);index" json:"test_status"`
 	TargetAgentCount  int       `gorm:"default:0" json:"target_agent_count"`
 	SuccessAgentCount int       `gorm:"default:0" json:"success_agent_count"`
 	FailedAgentCount  int       `gorm:"default:0" json:"failed_agent_count"`
 	DeployMessage     string    `gorm:"type:longtext" json:"deploy_message"`
+	TestMessage       string    `gorm:"type:text" json:"test_message"`
+	TestReport        string    `gorm:"type:longtext" json:"test_report"`
 	ValidationError   string    `gorm:"type:text" json:"validation_error"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -144,6 +147,12 @@ type AlertAIInsight struct {
 	Summary           string    `gorm:"type:text" json:"summary"`
 	AttackType        string    `gorm:"type:varchar(120)" json:"attack_type"`
 	RiskReason        string    `gorm:"type:text" json:"risk_reason"`
+	ImpactScope       string    `gorm:"type:text" json:"impact_scope"`
+	EvidencePoints    string    `gorm:"type:text" json:"evidence_points"`
+	SuspiciousPath    string    `gorm:"type:text" json:"suspicious_path"`
+	SuspiciousParams  string    `gorm:"type:text" json:"suspicious_params"`
+	CommandFragments  string    `gorm:"type:text" json:"command_fragments"`
+	OperatorAdvice    string    `gorm:"type:text" json:"operator_advice"`
 	RecommendedAction string    `gorm:"type:varchar(50)" json:"recommended_action"`
 	Confidence        float64   `json:"confidence"`
 	RawResponse       string    `gorm:"type:longtext" json:"raw_response"`

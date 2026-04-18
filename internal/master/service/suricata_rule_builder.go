@@ -32,7 +32,11 @@ func (b *SuricataRuleBuilder) Build(result *ai.RuleGenResult, sid uint) (string,
 	if len(result.TargetPorts) > 0 {
 		ports := sanitizePorts(result.TargetPorts)
 		if len(ports) > 0 {
-			destPort = strings.Join(ports, ",")
+			if len(ports) == 1 {
+				destPort = ports[0]
+			} else {
+				destPort = "[" + strings.Join(ports, ",") + "]"
+			}
 		}
 	}
 
@@ -137,12 +141,25 @@ func escapeContent(value string) string {
 
 func escapePCRE(value string) string {
 	value = strings.TrimSpace(value)
-	value = strings.TrimPrefix(value, `/`)
-	value = strings.TrimSuffix(value, `/`)
-	value = strings.ReplaceAll(value, `"`, `\"`)
 	if value == "" {
 		return ""
 	}
+
+	if strings.HasPrefix(value, "/") {
+		lastSlash := strings.LastIndex(value, "/")
+		if lastSlash > 0 {
+			body := value[1:lastSlash]
+			flags := value[lastSlash+1:]
+			body = strings.ReplaceAll(body, `"`, `\"`)
+			flags = sanitizePCREFlags(flags)
+			if flags != "" {
+				return "/" + body + "/" + flags
+			}
+			return "/" + body + "/"
+		}
+	}
+
+	value = strings.ReplaceAll(value, `"`, `\"`)
 	return "/" + value + "/"
 }
 
@@ -152,7 +169,7 @@ func nextCandidateSID(id uint) uint {
 
 func sanitizePorts(ports []string) []string {
 	valid := make([]string, 0, len(ports))
-	pattern := regexp.MustCompile(`^\$?[A-Za-z0-9_\-]+$`)
+	pattern := regexp.MustCompile(`^(\$?[A-Za-z0-9_\-]+|\d{1,5}(:\d{1,5})?)$`)
 	for _, port := range ports {
 		port = strings.TrimSpace(port)
 		if port == "" {
@@ -163,4 +180,24 @@ func sanitizePorts(ports []string) []string {
 		}
 	}
 	return valid
+}
+
+func sanitizePCREFlags(flags string) string {
+	if flags == "" {
+		return ""
+	}
+
+	var builder strings.Builder
+	seen := map[rune]struct{}{}
+	for _, flag := range flags {
+		switch flag {
+		case 'i', 'm', 's', 'x', 'A', 'E', 'G', 'R', 'U', 'I', 'P', 'H', 'D', 'M', 'C', 'K', 'S', 'Y', 'B', 'O':
+			if _, ok := seen[flag]; ok {
+				continue
+			}
+			seen[flag] = struct{}{}
+			builder.WriteRune(flag)
+		}
+	}
+	return builder.String()
 }

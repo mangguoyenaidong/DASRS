@@ -17,6 +17,14 @@ type DeepSeekProvider struct {
 	apiKey  string
 	model   string
 	client  *http.Client
+	prompts promptConfig
+}
+
+type promptConfig struct {
+	ruleGenerationSystem string
+	ruleGenerationUser   string
+	alertAnalysisSystem  string
+	alertAnalysisUser    string
 }
 
 type chatCompletionRequest struct {
@@ -80,27 +88,39 @@ func NewDeepSeekProvider(cfg *model.Config) (*DeepSeekProvider, error) {
 		client: &http.Client{
 			Timeout: timeout,
 		},
+		prompts: promptConfig{
+			ruleGenerationSystem: strings.TrimSpace(cfg.Master.AI.Prompts.RuleGenerationSystem),
+			ruleGenerationUser:   strings.TrimSpace(cfg.Master.AI.Prompts.RuleGenerationUser),
+			alertAnalysisSystem:  strings.TrimSpace(cfg.Master.AI.Prompts.AlertAnalysisSystem),
+			alertAnalysisUser:    strings.TrimSpace(cfg.Master.AI.Prompts.AlertAnalysisUser),
+		},
 	}, nil
 }
 
 func (p *DeepSeekProvider) GenerateRule(ctx context.Context, input RuleGenInput) (*RuleGenResult, error) {
-	systemPrompt := strings.Join([]string{
-		"You are a security engineer that converts vulnerability intelligence into structured Suricata detection hints.",
-		"Return JSON only with keys: summary, protocol, direction, attack_type, message, classtype, target_ports, matchers.",
-		"direction must be one of: to_server, to_client, either.",
-		"matchers must be an array of objects with keys type and value.",
-		"Allowed matcher type values: content, pcre.",
-		"Prefer HTTP and web attack indicators when the input is a PoC for an HTTP vulnerability.",
-		"Do not include markdown fences or commentary.",
-	}, "\n")
+	systemPrompt := p.prompts.ruleGenerationSystem
+	if systemPrompt == "" {
+		systemPrompt = strings.Join([]string{
+			"You are a security engineer that converts vulnerability intelligence into structured Suricata detection hints.",
+			"Return JSON only with keys: summary, protocol, direction, attack_type, message, classtype, target_ports, matchers.",
+			"direction must be one of: to_server, to_client, either.",
+			"matchers must be an array of objects with keys type and value.",
+			"Allowed matcher type values: content, pcre.",
+			"Prefer HTTP and web attack indicators when the input is a PoC for an HTTP vulnerability.",
+			"Do not include markdown fences or commentary.",
+		}, "\n")
+	}
 
-	userPrompt := fmt.Sprintf(
-		"source_type: %s\nprotocol_hint: %s\ntarget_service: %s\nsource_content:\n%s",
-		emptyDefault(input.SourceType, "poc"),
-		emptyDefault(input.ProtocolHint, "http"),
-		emptyDefault(input.TargetService, "web"),
-		input.SourceContent,
-	)
+	userPrompt := p.prompts.ruleGenerationUser
+	if userPrompt == "" {
+		userPrompt = "source_type: {{SOURCE_TYPE}}\nprotocol_hint: {{PROTOCOL_HINT}}\ntarget_service: {{TARGET_SERVICE}}\nsource_content:\n{{SOURCE_CONTENT}}"
+	}
+	userPrompt = strings.NewReplacer(
+		"{{SOURCE_TYPE}}", emptyDefault(input.SourceType, "poc"),
+		"{{PROTOCOL_HINT}}", emptyDefault(input.ProtocolHint, "http"),
+		"{{TARGET_SERVICE}}", emptyDefault(input.TargetService, "web"),
+		"{{SOURCE_CONTENT}}", input.SourceContent,
+	).Replace(userPrompt)
 
 	content, err := p.chat(ctx, systemPrompt, userPrompt)
 	if err != nil {
@@ -116,31 +136,46 @@ func (p *DeepSeekProvider) GenerateRule(ctx context.Context, input RuleGenInput)
 }
 
 func (p *DeepSeekProvider) AnalyzeAlert(ctx context.Context, input AlertAnalysisInput) (*AlertAnalysisResult, error) {
-	systemPrompt := strings.Join([]string{
-		"You explain security alerts for operators in concise Chinese.",
-		"Return JSON only with keys: summary, attack_type, risk_reason, recommended_action, confidence.",
-		"recommended_action must be one of: ignore, observe, block, repair.",
-		"confidence must be a number between 0 and 1.",
-		"Do not include markdown fences or any extra text.",
-	}, "\n")
+	systemPrompt := p.prompts.alertAnalysisSystem
+	if systemPrompt == "" {
+		systemPrompt = strings.Join([]string{
+			"You explain security alerts for operators in concise Chinese.",
+			"Return JSON only with keys: summary, attack_type, risk_reason, impact_scope, evidence_points, suspicious_path, suspicious_params, command_fragments, operator_advice, recommended_action, confidence.",
+			"recommended_action must be one of: ignore, observe, block, repair.",
+			"confidence must be a number between 0 and 1.",
+			"Prefer to explain the concrete attack intent, target impact, and why the current action is suitable.",
+			"If available, extract concrete suspicious indicators such as path, parameter names, or command fragments.",
+			"If the evidence is weak, be conservative and use observe instead of block.",
+			"Do not include markdown fences or any extra text.",
+		}, "\n")
+	}
 
-	userPrompt := fmt.Sprintf(
-		"alert_id: %s\nsid: %s\nsignature_name: %s\nseverity: %s\nsource_ip: %s\ndest_ip: %s\npayload: %s\nasset_info: %s\nasset_service: %s\nasset_os: %s\nrisk_score: %d\nrule_action: %s\nrule_reason: %s\nrecent_alerts: %s",
-		input.AlertID,
-		input.SID,
-		input.SignatureName,
-		input.Severity,
-		input.SourceIP,
-		input.DestIP,
-		trimForPrompt(input.Payload, 1200),
-		input.AssetInfo,
-		input.AssetService,
-		input.AssetOS,
-		input.RiskScore,
-		input.RuleAction,
-		input.RuleReason,
-		trimForPrompt(input.RecentAlertText, 1800),
-	)
+	userPrompt := p.prompts.alertAnalysisUser
+	if userPrompt == "" {
+		userPrompt = "alert_id: {{ALERT_ID}}\nagent_id: {{AGENT_ID}}\ncreated_at: {{CREATED_AT}}\nalert_status: {{ALERT_STATUS}}\nsid: {{SID}}\nsignature_name: {{SIGNATURE_NAME}}\nseverity: {{SEVERITY}}\nsource_ip: {{SOURCE_IP}}\ndest_ip: {{DEST_IP}}\npayload: {{PAYLOAD}}\nasset_info: {{ASSET_INFO}}\nasset_service: {{ASSET_SERVICE}}\nasset_os: {{ASSET_OS}}\nrisk_score: {{RISK_SCORE}}\nrule_action: {{RULE_ACTION}}\nrule_reason: {{RULE_REASON}}\nrecent_event_count: {{RECENT_EVENT_COUNT}}\nrecent_alerts:\n{{RECENT_ALERTS}}\nrecent_operations:\n{{RECENT_OPS}}\nextracted_signals:\n{{EXTRACTED_SIGNALS}}"
+	}
+	userPrompt = strings.NewReplacer(
+		"{{ALERT_ID}}", input.AlertID,
+		"{{AGENT_ID}}", input.AgentID,
+		"{{CREATED_AT}}", input.CreatedAt,
+		"{{ALERT_STATUS}}", fmt.Sprintf("%d", input.AlertStatus),
+		"{{SID}}", input.SID,
+		"{{SIGNATURE_NAME}}", input.SignatureName,
+		"{{SEVERITY}}", input.Severity,
+		"{{SOURCE_IP}}", input.SourceIP,
+		"{{DEST_IP}}", input.DestIP,
+		"{{PAYLOAD}}", trimForPrompt(input.Payload, 1200),
+		"{{ASSET_INFO}}", input.AssetInfo,
+		"{{ASSET_SERVICE}}", input.AssetService,
+		"{{ASSET_OS}}", input.AssetOS,
+		"{{RISK_SCORE}}", fmt.Sprintf("%d", input.RiskScore),
+		"{{RULE_ACTION}}", input.RuleAction,
+		"{{RULE_REASON}}", input.RuleReason,
+		"{{RECENT_EVENT_COUNT}}", fmt.Sprintf("%d", input.RecentEventCount),
+		"{{RECENT_ALERTS}}", trimForPrompt(input.RecentAlertText, 1800),
+		"{{RECENT_OPS}}", trimForPrompt(input.RecentOpsText, 1200),
+		"{{EXTRACTED_SIGNALS}}", trimForPrompt(input.ExtractedSignals, 800),
+	).Replace(userPrompt)
 
 	content, err := p.chat(ctx, systemPrompt, userPrompt)
 	if err != nil {
@@ -151,6 +186,7 @@ func (p *DeepSeekProvider) AnalyzeAlert(ctx context.Context, input AlertAnalysis
 	if err := decodeJSONContent(content, &result); err != nil {
 		return nil, fmt.Errorf("decode alert analysis response: %w", err)
 	}
+	result = normalizeAlertResult(result)
 	result.RawResponse = content
 	return &result, nil
 }
@@ -224,4 +260,29 @@ func trimForPrompt(value string, limit int) string {
 		return value
 	}
 	return value[:limit] + "...(truncated)"
+}
+
+func normalizeAlertResult(result AlertAnalysisResult) AlertAnalysisResult {
+	result.Summary = strings.TrimSpace(result.Summary)
+	result.AttackType = strings.TrimSpace(result.AttackType)
+	result.RiskReason = strings.TrimSpace(result.RiskReason)
+	result.ImpactScope = strings.TrimSpace(result.ImpactScope)
+	result.EvidencePoints = strings.TrimSpace(result.EvidencePoints)
+	result.SuspiciousPath = strings.TrimSpace(result.SuspiciousPath)
+	result.SuspiciousParams = strings.TrimSpace(result.SuspiciousParams)
+	result.CommandFragments = strings.TrimSpace(result.CommandFragments)
+	result.OperatorAdvice = strings.TrimSpace(result.OperatorAdvice)
+	result.RecommendedAction = strings.ToLower(strings.TrimSpace(result.RecommendedAction))
+	switch result.RecommendedAction {
+	case "ignore", "observe", "block", "repair":
+	default:
+		result.RecommendedAction = ""
+	}
+	if result.Confidence < 0 {
+		result.Confidence = 0
+	}
+	if result.Confidence > 1 {
+		result.Confidence = 1
+	}
+	return result
 }

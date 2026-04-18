@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"time"
 
@@ -89,6 +90,29 @@ func (a *Agent) handleCommand(cmd *proto.CommandMessage) {
 			a.grpcClient.SendCommandResult(cmd.GetCommandId(), true, "IP unblocked successfully")
 		}
 	case proto.CommandType_PATCH_CONFIG:
+		if cmd.GetMatchRegex() == "__DASRS_AI_RULE_TEST__" {
+			var req struct {
+				RuleContent     string `json:"rule_content"`
+				CommandTemplate string `json:"command_template"`
+			}
+			if err := json.Unmarshal([]byte(cmd.GetReplaceContent()), &req); err != nil {
+				a.grpcClient.SendCommandResult(cmd.GetCommandId(), false, "invalid ai rule test payload: "+err.Error())
+				return
+			}
+
+			output, err := a.ruleDeployer.TestRule(req.RuleContent, req.CommandTemplate)
+			if err != nil {
+				a.grpcClient.SendCommandResult(cmd.GetCommandId(), false, err.Error())
+			} else {
+				message := "Suricata rule test passed"
+				if output != "" {
+					message += " | " + output
+				}
+				a.grpcClient.SendCommandResult(cmd.GetCommandId(), true, message)
+			}
+			return
+		}
+
 		if cmd.GetMatchRegex() == "__DASRS_AI_RULE_DEPLOY__" {
 			err := a.ruleDeployer.DeployRule(cmd.GetConfigPath(), cmd.GetReplaceContent())
 			if err != nil {

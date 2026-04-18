@@ -210,6 +210,7 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 	}
 	db.Create(opLog)
 	s.updateAIRuleTaskDeployStatus(agentID, result)
+	s.updateAIRuleTaskTestStatus(agentID, result)
 
 	// 更新 Agent 最后活动时间
 	if _, ok := s.agentClients.Load(agentID); ok {
@@ -268,6 +269,47 @@ func (s *Server) updateAIRuleTaskDeployStatus(agentID string, result *proto.Comm
 		task.DeployStatus = "failed"
 	default:
 		task.DeployStatus = "partial_failed"
+	}
+	task.UpdatedAt = time.Now()
+	_ = db.Save(&task).Error
+}
+
+func (s *Server) updateAIRuleTaskTestStatus(agentID string, result *proto.CommandResult) {
+	commandID := strings.TrimSpace(result.GetCommandId())
+	if !strings.HasPrefix(commandID, "ai-rule-test-") {
+		return
+	}
+
+	parts := strings.Split(commandID, "-")
+	if len(parts) < 4 {
+		return
+	}
+
+	taskID, err := strconv.ParseUint(parts[3], 10, 32)
+	if err != nil {
+		return
+	}
+
+	db := s.db.(*gorm.DB)
+	var task model.AIRuleTask
+	if err := db.First(&task, uint(taskID)).Error; err != nil {
+		return
+	}
+
+	entry := fmt.Sprintf("%s | %s | %s", time.Now().Format(time.RFC3339), agentID, strings.TrimSpace(result.GetMessage()))
+	if strings.TrimSpace(task.TestReport) == "" {
+		task.TestReport = entry
+	} else {
+		task.TestReport += "\n" + entry
+	}
+
+	if result.GetSuccess() {
+		task.TestStatus = "passed"
+		task.TestMessage = fmt.Sprintf("agent test passed on %s", agentID)
+		task.Status = "tested"
+	} else {
+		task.TestStatus = "failed"
+		task.TestMessage = fmt.Sprintf("agent test failed on %s", agentID)
 	}
 	task.UpdatedAt = time.Now()
 	_ = db.Save(&task).Error

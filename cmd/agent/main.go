@@ -41,6 +41,7 @@ func main() {
 	log.Printf("  - Master HTTP Address: %s", cfg.MasterHTTPAddress)
 	log.Printf("  - Suricata Log Path: %s", cfg.SuricataLogPath)
 	log.Printf("  - Suricata Rule Path: %s", cfg.SuricataRulePath)
+	log.Printf("  - Suricata Test Command: %s", cfg.SuricataTestCmd)
 	log.Printf("  - Agent Name: %s", cfg.AgentName)
 	log.Printf("  - Reconnect Interval: %ds", cfg.ReconnectInterval)
 	log.Printf("  - Heartbeat Interval: %ds", cfg.HeartbeatInterval)
@@ -68,7 +69,7 @@ func main() {
 	log.Println("Initializing executors...")
 	blocker := executor.NewIPBlocker()
 	patcher := executor.NewConfigPatcher()
-	ruleDeployer := executor.NewSuricataRuleDeployer(cfg.SuricataRulePath, cfg.SuricataReloadCmd)
+	ruleDeployer := executor.NewSuricataRuleDeployer(cfg.SuricataRulePath, cfg.SuricataReloadCmd, cfg.SuricataTestCmd)
 	scanner := discovery.NewLocalServiceScanner()
 
 	// 初始化 gRPC 客户端 (这里会生成 agentID 和主机名)

@@ -3,6 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,14 +20,26 @@ type AIRuleService struct {
 	provider  ai.Provider
 	builder   *SuricataRuleBuilder
 	validator *SuricataRuleValidator
+	testing   ruleTestingConfig
 }
 
-func NewAIRuleService(db *gorm.DB, provider ai.Provider) *AIRuleService {
+type ruleTestingConfig struct {
+	commandTemplate string
+	successMatch    string
+}
+
+func NewAIRuleService(db *gorm.DB, provider ai.Provider, cfg *model.Config) *AIRuleService {
+	testing := ruleTestingConfig{}
+	if cfg != nil {
+		testing.commandTemplate = strings.TrimSpace(cfg.Master.AI.Testing.CommandTemplate)
+		testing.successMatch = strings.TrimSpace(cfg.Master.AI.Testing.SuccessMatch)
+	}
 	return &AIRuleService{
 		db:        db,
 		provider:  provider,
 		builder:   NewSuricataRuleBuilder(),
 		validator: NewSuricataRuleValidator(),
+		testing:   testing,
 	}
 }
 
@@ -45,6 +60,7 @@ func (s *AIRuleService) GenerateCandidate(ctx context.Context, input ai.RuleGenI
 		ProtocolHint:  strings.TrimSpace(input.ProtocolHint),
 		Status:        "generating",
 		DeployStatus:  "pending",
+		TestStatus:    "pending",
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
@@ -84,6 +100,7 @@ func (s *AIRuleService) GenerateCandidate(ctx context.Context, input ai.RuleGenI
 
 	task.GeneratedRule = ruleText
 	task.Status = "ready"
+	task.TestStatus = "pending"
 	task.ValidationError = ""
 	task.UpdatedAt = time.Now()
 	if err := s.db.Save(task).Error; err != nil {
@@ -101,25 +118,166 @@ func (s *AIRuleService) GetTask(id uint) (*model.AIRuleTask, error) {
 	return &task, nil
 }
 
-func (s *AIRuleService) UpdateDeployResult(taskID uint, agentID string, success bool, message string) error {
-	var task model.AIRuleTask
-	if err := s.db.First(&task, taskID).Error; err != nil {
-		return err
+func (s *AIRuleService) UpdateCandidate(taskID uint, ruleText, summary string) (*model.AIRuleTask, error) {
+	task, err := s.GetTask(taskID)
+	if err != nil {
+		return nil, err
 	}
 
-	status := "failed"
-	if success {
-		status = "deployed"
+	ruleText = strings.TrimSpace(ruleText)
+	if ruleText == "" {
+		return nil, fmt.Errorf("generated rule cannot be empty")
+	}
+	if err := s.validator.Validate(ruleText); err != nil {
+		return nil, err
 	}
 
-	entry := fmt.Sprintf("%s | %s | %s", time.Now().Format(time.RFC3339), agentID, strings.TrimSpace(message))
-	if strings.TrimSpace(task.DeployMessage) == "" {
-		task.DeployMessage = entry
-	} else {
-		task.DeployMessage = task.DeployMessage + "\n" + entry
+	task.GeneratedRule = ruleText
+	if strings.TrimSpace(summary) != "" {
+		task.NormalizedSummary = strings.TrimSpace(summary)
 	}
-	task.DeployStatus = status
+	task.Status = "ready"
+	task.TestStatus = "pending"
+	task.TestMessage = "candidate rule updated manually; re-test required"
+	task.TestReport = ""
+	task.DeployStatus = "pending"
+	task.TargetAgentCount = 0
+	task.SuccessAgentCount = 0
+	task.FailedAgentCount = 0
+	task.DeployMessage = ""
+	task.ValidationError = ""
 	task.UpdatedAt = time.Now()
+	if err := s.db.Save(task).Error; err != nil {
+		return nil, err
+	}
 
-	return s.db.Save(&task).Error
+	return task, nil
+}
+
+func (s *AIRuleService) TestCandidate(ctx context.Context, taskID uint, mode, sampleContent, samplePath, commandTemplate, successMatch string) (*model.AIRuleTask, error) {
+	task, err := s.GetTask(taskID)
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(task.GeneratedRule) == "" {
+		return nil, fmt.Errorf("rule task has no generated rule")
+	}
+
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode == "" {
+		mode = "master"
+	}
+	if mode != "master" {
+		return nil, fmt.Errorf("test mode %q is not supported yet", mode)
+	}
+
+	task.TestStatus = "running"
+	task.TestMessage = "rule test started"
+	task.UpdatedAt = time.Now()
+	if err := s.db.Save(task).Error; err != nil {
+		return nil, err
+	}
+
+	if err := s.validator.Validate(task.GeneratedRule); err != nil {
+		task.TestStatus = "failed"
+		task.TestMessage = err.Error()
+		task.TestReport = "validator rejected candidate rule"
+		task.UpdatedAt = time.Now()
+		_ = s.db.Save(task).Error
+		return task, err
+	}
+
+	commandTemplate = strings.TrimSpace(commandTemplate)
+	if commandTemplate == "" {
+		commandTemplate = s.testing.commandTemplate
+	}
+	successMatch = strings.TrimSpace(successMatch)
+	if successMatch == "" {
+		successMatch = s.testing.successMatch
+	}
+
+	report := []string{"validator: passed"}
+	if commandTemplate == "" {
+		task.TestStatus = "passed"
+		task.TestMessage = "validator passed; no test command configured"
+		task.TestReport = strings.Join(report, "\n")
+		task.Status = "tested"
+		task.UpdatedAt = time.Now()
+		if err := s.db.Save(task).Error; err != nil {
+			return nil, err
+		}
+		return task, nil
+	}
+
+	tmpDir, err := os.MkdirTemp("", "dasrs-ai-rule-test-*")
+	if err != nil {
+		task.TestStatus = "failed"
+		task.TestMessage = fmt.Sprintf("create temp dir: %v", err)
+		task.TestReport = strings.Join(report, "\n")
+		task.UpdatedAt = time.Now()
+		_ = s.db.Save(task).Error
+		return task, err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	ruleFile := filepath.Join(tmpDir, "candidate.rules")
+	if err := os.WriteFile(ruleFile, []byte(strings.TrimSpace(task.GeneratedRule)+"\n"), 0644); err != nil {
+		task.TestStatus = "failed"
+		task.TestMessage = fmt.Sprintf("write rule file: %v", err)
+		task.TestReport = strings.Join(report, "\n")
+		task.UpdatedAt = time.Now()
+		_ = s.db.Save(task).Error
+		return task, err
+	}
+
+	sampleFile := strings.TrimSpace(samplePath)
+	if strings.TrimSpace(sampleContent) != "" {
+		sampleFile = filepath.Join(tmpDir, "sample.txt")
+		if err := os.WriteFile(sampleFile, []byte(sampleContent), 0644); err != nil {
+			task.TestStatus = "failed"
+			task.TestMessage = fmt.Sprintf("write sample file: %v", err)
+			task.TestReport = strings.Join(report, "\n")
+			task.UpdatedAt = time.Now()
+			_ = s.db.Save(task).Error
+			return task, err
+		}
+	}
+
+	rendered := strings.NewReplacer(
+		"{{RULE_FILE}}", ruleFile,
+		"{{RULE_SID}}", fmt.Sprintf("%d", nextCandidateSID(task.ID)),
+		"{{SAMPLE_FILE}}", sampleFile,
+	).Replace(commandTemplate)
+
+	cmd := exec.CommandContext(ctx, "/bin/sh", "-lc", rendered)
+	output, err := cmd.CombinedOutput()
+	report = append(report, "command: "+rendered, "output:\n"+strings.TrimSpace(string(output)))
+	if err != nil {
+		task.TestStatus = "failed"
+		task.TestMessage = fmt.Sprintf("test command failed: %v", err)
+		task.TestReport = strings.Join(report, "\n")
+		task.UpdatedAt = time.Now()
+		_ = s.db.Save(task).Error
+		return task, err
+	}
+
+	if successMatch != "" && !strings.Contains(string(output), successMatch) {
+		err = fmt.Errorf("test output did not contain expected marker %q", successMatch)
+		task.TestStatus = "failed"
+		task.TestMessage = err.Error()
+		task.TestReport = strings.Join(report, "\n")
+		task.UpdatedAt = time.Now()
+		_ = s.db.Save(task).Error
+		return task, err
+	}
+
+	task.TestStatus = "passed"
+	task.TestMessage = "rule test passed"
+	task.TestReport = strings.Join(report, "\n")
+	task.Status = "tested"
+	task.UpdatedAt = time.Now()
+	if err := s.db.Save(task).Error; err != nil {
+		return nil, err
+	}
+	return task, nil
 }

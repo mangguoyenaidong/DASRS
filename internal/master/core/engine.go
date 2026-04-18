@@ -74,37 +74,92 @@ func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decisi
 	timeSeriesScore := e.analyzeTimeSeries(alert.SourceIP)
 	decision.TimeSeriesScore = timeSeriesScore
 
+	// 3.5 演示模式加分 - 用于比赛时更容易展示动作分层
+	demoBonus := e.calculateDemoBonus(alert, baseScore, timeSeriesScore)
+
 	// 4. 计算最终评分
-	finalScore := baseScore + contextScore + timeSeriesScore
+	finalScore := baseScore + contextScore + timeSeriesScore + demoBonus
 	if finalScore < 0 {
 		finalScore = 0
 	}
 	decision.Score = finalScore
 
 	// 5. 根据阈值决定动作
-	if finalScore >= e.cfg.Master.Intelligence.RepairThreshold {
+	blockThreshold, repairThreshold := e.getEffectiveThresholds()
+	if finalScore >= repairThreshold {
 		decision.Action = "repair"
 		decision.Reason = combineReasons(
-			fmt.Sprintf("Score %d >= repair threshold %d", finalScore, e.cfg.Master.Intelligence.RepairThreshold),
+			fmt.Sprintf("Score %d >= repair threshold %d", finalScore, repairThreshold),
 			contextReason,
+			e.demoReason(demoBonus),
 		)
-	} else if finalScore >= e.cfg.Master.Intelligence.BlockThreshold {
+	} else if finalScore >= blockThreshold {
 		decision.Action = "block"
 		decision.Reason = combineReasons(
-			fmt.Sprintf("Score %d >= block threshold %d", finalScore, e.cfg.Master.Intelligence.BlockThreshold),
+			fmt.Sprintf("Score %d >= block threshold %d", finalScore, blockThreshold),
 			contextReason,
+			e.demoReason(demoBonus),
 		)
 	} else {
 		decision.Action = "ignore"
 		decision.Reason = combineReasons(
-			fmt.Sprintf("Score %d below block threshold %d", finalScore, e.cfg.Master.Intelligence.BlockThreshold),
+			fmt.Sprintf("Score %d below block threshold %d", finalScore, blockThreshold),
 			contextReason,
+			e.demoReason(demoBonus),
 		)
 	}
 
 	e.logger.Info("Alert analyzed: %s -> Action: %s, Score: %d", alert.SID, decision.Action, finalScore)
 
 	return decision, nil
+}
+
+func (e *IntelligenceEngine) getEffectiveThresholds() (int, int) {
+	blockThreshold := e.cfg.Master.Intelligence.BlockThreshold
+	repairThreshold := e.cfg.Master.Intelligence.RepairThreshold
+
+	if !e.cfg.Master.Intelligence.DemoMode {
+		return blockThreshold, repairThreshold
+	}
+
+	if e.cfg.Master.Intelligence.DemoBlockThreshold > 0 {
+		blockThreshold = e.cfg.Master.Intelligence.DemoBlockThreshold
+	}
+	if e.cfg.Master.Intelligence.DemoRepairThreshold > 0 {
+		repairThreshold = e.cfg.Master.Intelligence.DemoRepairThreshold
+	}
+	if repairThreshold < blockThreshold {
+		repairThreshold = blockThreshold
+	}
+	return blockThreshold, repairThreshold
+}
+
+func (e *IntelligenceEngine) calculateDemoBonus(alert *Alert, baseScore, timeSeriesScore int) int {
+	if !e.cfg.Master.Intelligence.DemoMode {
+		return 0
+	}
+
+	signature := strings.ToLower(strings.TrimSpace(alert.SignatureName))
+	payload := strings.ToLower(strings.TrimSpace(alert.Payload))
+	exploitKeywords := []string{
+		"rce", "command", "inject", "injection", "shell", "actuator", "upload",
+		"deserialize", "deserialization", "template", "ssti", "xxe", "sql", "xss",
+	}
+
+	bonus := 0
+	if containsString(signature, exploitKeywords) || containsString(payload, exploitKeywords) {
+		if e.cfg.Master.Intelligence.DemoExploitBonus > 0 {
+			bonus += e.cfg.Master.Intelligence.DemoExploitBonus
+		} else {
+			bonus += 15
+		}
+	}
+
+	if baseScore >= 60 && timeSeriesScore > 0 {
+		bonus += 5
+	}
+
+	return bonus
 }
 
 // calculateBaseScore 计算基础评分
@@ -281,11 +336,22 @@ func containsString(s string, substrs []string) bool {
 	return false
 }
 
-func combineReasons(primary, secondary string) string {
-	if strings.TrimSpace(secondary) == "" {
-		return primary
+func combineReasons(parts ...string) string {
+	filtered := make([]string, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part != "" {
+			filtered = append(filtered, part)
+		}
 	}
-	return primary + "; " + secondary
+	return strings.Join(filtered, "; ")
+}
+
+func (e *IntelligenceEngine) demoReason(bonus int) string {
+	if !e.cfg.Master.Intelligence.DemoMode || bonus <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("Demo mode bonus applied: +%d", bonus)
 }
 
 // GetAlertCorrelation 获取告警关联分析

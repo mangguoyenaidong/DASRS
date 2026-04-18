@@ -26,6 +26,10 @@ master:
     block_threshold: 50
     time_window: 60
     max_alerts_per_window: 10
+    demo_mode: false
+    demo_block_threshold: 40
+    demo_repair_threshold: 65
+    demo_exploit_bonus: 15
     whitelist:
       - "192.168.41.1"
       - "127.0.0.1"
@@ -39,6 +43,14 @@ master:
       api_key: ""
       model: "deepseek-chat"
       timeout_seconds: 30
+    prompts:
+      rule_generation_system: ""
+      rule_generation_user: ""
+      alert_analysis_system: ""
+      alert_analysis_user: ""
+    testing:
+      command_template: ""
+      success_match: ""
 
   agent_management:
     allowed_agents: []

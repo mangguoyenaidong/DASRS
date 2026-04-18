@@ -156,3 +156,40 @@ func TestSignatureKeywordsByService(t *testing.T) {
 		t.Fatal("expected tomcat negative keywords to match IIS signature")
 	}
 }
+
+func TestGetEffectiveThresholds(t *testing.T) {
+	cfg := &model.Config{}
+	cfg.Master.Intelligence.BlockThreshold = 50
+	cfg.Master.Intelligence.RepairThreshold = 80
+
+	engine := &IntelligenceEngine{cfg: cfg}
+	block, repair := engine.getEffectiveThresholds()
+	if block != 50 || repair != 80 {
+		t.Fatalf("expected default thresholds 50/80, got %d/%d", block, repair)
+	}
+
+	cfg.Master.Intelligence.DemoMode = true
+	cfg.Master.Intelligence.DemoBlockThreshold = 40
+	cfg.Master.Intelligence.DemoRepairThreshold = 65
+	block, repair = engine.getEffectiveThresholds()
+	if block != 40 || repair != 65 {
+		t.Fatalf("expected demo thresholds 40/65, got %d/%d", block, repair)
+	}
+}
+
+func TestCalculateDemoBonus(t *testing.T) {
+	cfg := &model.Config{}
+	cfg.Master.Intelligence.DemoMode = true
+	cfg.Master.Intelligence.DemoExploitBonus = 15
+
+	engine := &IntelligenceEngine{cfg: cfg}
+	alert := &Alert{
+		SignatureName: "Spring RCE attempt",
+		Payload:       "POST /actuator/gateway/routes/test cmd=whoami",
+	}
+
+	bonus := engine.calculateDemoBonus(alert, 60, 25)
+	if bonus <= 0 {
+		t.Fatalf("expected positive demo bonus, got %d", bonus)
+	}
+}

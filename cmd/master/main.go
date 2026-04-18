@@ -51,7 +51,7 @@ func main() {
 		}
 	}
 
-	aiRuleService := service.NewAIRuleService(db, aiProvider)
+	aiRuleService := service.NewAIRuleService(db, aiProvider, cfg)
 	aiAlertService := service.NewAIAlertService(db, aiProvider)
 
 	grpcServer := grpc.NewServer(cfg, engine, db, redisClient)

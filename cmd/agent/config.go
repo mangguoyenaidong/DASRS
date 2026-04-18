@@ -15,6 +15,7 @@ type Config struct {
 	SuricataLogPath     string `yaml:"suricata_log_path"`
 	SuricataRulePath    string `yaml:"suricata_rule_path"`
 	SuricataReloadCmd   string `yaml:"suricata_reload_command"`
+	SuricataTestCmd     string `yaml:"suricata_test_command"`
 	MonitorIP           string `yaml:"monitor_ip"`
 	AgentName           string `yaml:"agent_name"`
 	ReconnectInterval   int    `yaml:"reconnect_interval"`
@@ -57,6 +58,9 @@ func LoadConfig(path string) (*Config, error) {
 		if yCfg.Agent.SuricataReloadCmd != "" {
 			cfg.SuricataReloadCmd = yCfg.Agent.SuricataReloadCmd
 		}
+		if yCfg.Agent.SuricataTestCmd != "" {
+			cfg.SuricataTestCmd = yCfg.Agent.SuricataTestCmd
+		}
 		if yCfg.Agent.MonitorIP != "" {
 			cfg.MonitorIP = yCfg.Agent.MonitorIP
 		}
@@ -88,6 +92,9 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if v := os.Getenv("SURICATA_RELOAD_COMMAND"); v != "" {
 		cfg.SuricataReloadCmd = v
+	}
+	if v := os.Getenv("SURICATA_TEST_COMMAND"); v != "" {
+		cfg.SuricataTestCmd = v
 	}
 	if v := os.Getenv("MONITOR_IP"); v != "" {
 		cfg.MonitorIP = v

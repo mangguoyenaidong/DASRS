@@ -1,35 +1,17 @@
-# DASRS Agent 远程部署配置文件
-# 此文件用于在不同机器上部署的 Agent
+# DASRS agent configuration
 
-# Agent 服务配置
 agent:
-  # Master 服务地址 (IP:端口，必须填写实际 Master 地址)
-  # 示例: "192.168.1.100:50051" 或 "master.example.com:50051"
   master_address: "127.0.0.1:50051"
-
-  # Suricata 日志路径 (根据实际路径修改)
   suricata_log_path: "./suricata_logs/eve.json"
-
-  # AI 自动生成规则的落盘路径
   suricata_rule_path: "./suricata_logs/dasrs_ai.rules"
-
-  # 可选：规则下发后执行的重载命令，例如：
-  # "suricatasc -c reload-rules"
   suricata_reload_command: ""
-
-  # 新增：监控目标 IP (仅采集发往此 IP 的告警)
+  # Optional test command. Supported placeholders: {{RULE_FILE}} {{TMP_DIR}}
+  suricata_test_command: ""
   monitor_ip: "192.168.41.136"
-
-  # Agent 名称 (可选，用于标识此节点)
   agent_name: "agent-01"
-
-  # 重连间隔（秒）
   reconnect_interval: 5
-
-  # 心跳间隔（秒）
   heartbeat_interval: 30
 
-# 日志配置
 logging:
   level: "info"
   format: "json"
