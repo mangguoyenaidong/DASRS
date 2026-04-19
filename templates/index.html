@@ -785,9 +785,9 @@
                         <div class="panel-header"><div><div class="panel-title">提示词模板</div><div class="panel-subtitle">可分别约束规则生成与告警分析的 system/user prompt</div></div></div>
                         <div class="form-grid">
                             <div><label for="aiRuleGenSystemPrompt">规则生成 System Prompt</label><textarea id="aiRuleGenSystemPrompt" placeholder="限制 AI 只输出结构化 JSON、只允许 content/pcre 等"></textarea></div>
-                            <div><label for="aiRuleGenUserPrompt">规则生成 User Prompt</label><textarea id="aiRuleGenUserPrompt" placeholder="可使用 {{SOURCE_TYPE}} / {{PROTOCOL_HINT}} / {{TARGET_SERVICE}} / {{SOURCE_CONTENT}}"></textarea></div>
+                            <div><label for="aiRuleGenUserPrompt">规则生成 User Prompt</label><textarea id="aiRuleGenUserPrompt" placeholder="可使用 SOURCE_TYPE / PROTOCOL_HINT / TARGET_SERVICE / SOURCE_CONTENT 这些模板变量"></textarea></div>
                             <div><label for="aiAlertSystemPrompt">告警分析 System Prompt</label><textarea id="aiAlertSystemPrompt" placeholder="约束 AI 输出摘要、证据、影响范围、建议动作等"></textarea></div>
-                            <div><label for="aiAlertUserPrompt">告警分析 User Prompt</label><textarea id="aiAlertUserPrompt" placeholder="可使用 alert_id、payload、recent_alerts、extracted_signals 等模板变量"></textarea></div>
+                            <div><label for="aiAlertUserPrompt">告警分析 User Prompt</label><textarea id="aiAlertUserPrompt" placeholder="可使用 ALERT_ID、PAYLOAD、RECENT_ALERTS、EXTRACTED_SIGNALS 等模板变量"></textarea></div>
                         </div>
                         <div class="sub-actions">
                             <button class="btn btn-primary" onclick="saveAISettings()">保存配置</button>
