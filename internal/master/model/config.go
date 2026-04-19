@@ -8,7 +8,8 @@ import (
 
 // Config Master 配置结构
 type Config struct {
-	Master struct {
+	SourcePath string `yaml:"-"`
+	Master     struct {
 		Host     string `yaml:"host"`
 		GRPCPort int    `yaml:"grpc_port"`
 		HTTPPort int    `yaml:"http_port"`
@@ -83,6 +84,18 @@ func LoadConfig(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
+	cfg.SourcePath = path
 
 	return &cfg, nil
+}
+
+func SaveConfig(path string, cfg *Config) error {
+	if cfg == nil {
+		return os.ErrInvalid
+	}
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
 }

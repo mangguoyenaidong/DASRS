@@ -64,6 +64,8 @@ func NewServerWithAI(
 	aiGroup := server.router.Group("/api/ai")
 	{
 		aiGroup.GET("/status", server.getAIStatus)
+		aiGroup.GET("/settings", server.getAISettings)
+		aiGroup.PUT("/settings", server.updateAISettings)
 		aiGroup.POST("/rules/generate", server.generateAIRule)
 		aiGroup.GET("/rules/:id", server.getAIRuleTask)
 		aiGroup.PUT("/rules/:id", server.updateAIRule)
@@ -79,6 +81,31 @@ func (s *Server) getAIDependencies() aiDependencies {
 		return deps.(aiDependencies)
 	}
 	return aiDependencies{}
+}
+
+func (s *Server) refreshAIDependencies() error {
+	var aiProvider ai.Provider
+	var err error
+	if s.appCfg != nil && s.appCfg.Master.AI.Enabled {
+		aiProvider, err = ai.NewProviderFromConfig(s.appCfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	deps := aiDependencies{
+		rule:                service.NewAIRuleService(s.db, aiProvider, s.appCfg),
+		alert:               service.NewAIAlertService(s.db, aiProvider),
+		provider:            strings.TrimSpace(s.appCfg.Master.AI.Provider),
+		enabled:             s.appCfg.Master.AI.Enabled,
+		demoMode:            s.appCfg.Master.Intelligence.DemoMode,
+		blockThreshold:      s.appCfg.Master.Intelligence.BlockThreshold,
+		repairThreshold:     s.appCfg.Master.Intelligence.RepairThreshold,
+		demoBlockThreshold:  s.appCfg.Master.Intelligence.DemoBlockThreshold,
+		demoRepairThreshold: s.appCfg.Master.Intelligence.DemoRepairThreshold,
+	}
+	serverAI.Store(s, deps)
+	return nil
 }
 
 func (s *Server) getAlertAIAnalysis(c *gin.Context) {
@@ -123,6 +150,117 @@ func (s *Server) getAIStatus(c *gin.Context) {
 			"repair_threshold":      deps.repairThreshold,
 			"demo_block_threshold":  deps.demoBlockThreshold,
 			"demo_repair_threshold": deps.demoRepairThreshold,
+		},
+	})
+}
+
+func (s *Server) getAISettings(c *gin.Context) {
+	if s.appCfg == nil {
+		c.PureJSON(http.StatusServiceUnavailable, gin.H{"error": "config is unavailable"})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"enabled":                s.appCfg.Master.AI.Enabled,
+			"provider":               emptyAIProvider(s.appCfg.Master.AI.Provider),
+			"base_url":               s.appCfg.Master.AI.API.BaseURL,
+			"api_key":                s.appCfg.Master.AI.API.APIKey,
+			"model":                  s.appCfg.Master.AI.API.Model,
+			"timeout_seconds":        s.appCfg.Master.AI.API.TimeoutSeconds,
+			"rule_generation_system": s.appCfg.Master.AI.Prompts.RuleGenerationSystem,
+			"rule_generation_user":   s.appCfg.Master.AI.Prompts.RuleGenerationUser,
+			"alert_analysis_system":  s.appCfg.Master.AI.Prompts.AlertAnalysisSystem,
+			"alert_analysis_user":    s.appCfg.Master.AI.Prompts.AlertAnalysisUser,
+			"demo_mode":              s.appCfg.Master.Intelligence.DemoMode,
+			"demo_block_threshold":   s.appCfg.Master.Intelligence.DemoBlockThreshold,
+			"demo_repair_threshold":  s.appCfg.Master.Intelligence.DemoRepairThreshold,
+			"demo_exploit_bonus":     s.appCfg.Master.Intelligence.DemoExploitBonus,
+			"config_path":            s.appCfg.SourcePath,
+		},
+	})
+}
+
+func (s *Server) updateAISettings(c *gin.Context) {
+	if s.appCfg == nil {
+		c.PureJSON(http.StatusServiceUnavailable, gin.H{"error": "config is unavailable"})
+		return
+	}
+
+	var req struct {
+		Enabled              *bool  `json:"enabled"`
+		Provider             string `json:"provider"`
+		BaseURL              string `json:"base_url"`
+		APIKey               string `json:"api_key"`
+		Model                string `json:"model"`
+		TimeoutSeconds       int    `json:"timeout_seconds"`
+		RuleGenerationSystem string `json:"rule_generation_system"`
+		RuleGenerationUser   string `json:"rule_generation_user"`
+		AlertAnalysisSystem  string `json:"alert_analysis_system"`
+		AlertAnalysisUser    string `json:"alert_analysis_user"`
+		DemoMode             *bool  `json:"demo_mode"`
+		DemoBlockThreshold   int    `json:"demo_block_threshold"`
+		DemoRepairThreshold  int    `json:"demo_repair_threshold"`
+		DemoExploitBonus     int    `json:"demo_exploit_bonus"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Enabled != nil {
+		s.appCfg.Master.AI.Enabled = *req.Enabled
+	}
+	if strings.TrimSpace(req.Provider) != "" {
+		s.appCfg.Master.AI.Provider = strings.TrimSpace(req.Provider)
+	}
+	s.appCfg.Master.AI.API.BaseURL = strings.TrimSpace(req.BaseURL)
+	s.appCfg.Master.AI.API.APIKey = strings.TrimSpace(req.APIKey)
+	s.appCfg.Master.AI.API.Model = strings.TrimSpace(req.Model)
+	if req.TimeoutSeconds > 0 {
+		s.appCfg.Master.AI.API.TimeoutSeconds = req.TimeoutSeconds
+	}
+	s.appCfg.Master.AI.Prompts.RuleGenerationSystem = req.RuleGenerationSystem
+	s.appCfg.Master.AI.Prompts.RuleGenerationUser = req.RuleGenerationUser
+	s.appCfg.Master.AI.Prompts.AlertAnalysisSystem = req.AlertAnalysisSystem
+	s.appCfg.Master.AI.Prompts.AlertAnalysisUser = req.AlertAnalysisUser
+	if req.DemoMode != nil {
+		s.appCfg.Master.Intelligence.DemoMode = *req.DemoMode
+	}
+	if req.DemoBlockThreshold > 0 {
+		s.appCfg.Master.Intelligence.DemoBlockThreshold = req.DemoBlockThreshold
+	}
+	if req.DemoRepairThreshold > 0 {
+		s.appCfg.Master.Intelligence.DemoRepairThreshold = req.DemoRepairThreshold
+	}
+	if req.DemoExploitBonus >= 0 {
+		s.appCfg.Master.Intelligence.DemoExploitBonus = req.DemoExploitBonus
+	}
+
+	configPath := strings.TrimSpace(s.appCfg.SourcePath)
+	if configPath == "" {
+		configPath = "configs/config.yaml"
+	}
+	if err := model.SaveConfig(configPath, s.appCfg); err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := s.refreshAIDependencies(); err != nil {
+		c.PureJSON(http.StatusUnprocessableEntity, gin.H{
+			"error":   err.Error(),
+			"message": "config saved, but AI provider refresh failed; please check the API settings",
+		})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"message": "ai settings updated",
+		"data": gin.H{
+			"enabled":     s.appCfg.Master.AI.Enabled,
+			"provider":    emptyAIProvider(s.appCfg.Master.AI.Provider),
+			"demo_mode":   s.appCfg.Master.Intelligence.DemoMode,
+			"config_path": configPath,
 		},
 	})
 }

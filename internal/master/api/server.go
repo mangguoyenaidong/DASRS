@@ -24,6 +24,7 @@ type Server struct {
 	router     *gin.Engine
 	server     *http.Server
 	cfg        *Config
+	appCfg     *model.Config
 	db         *gorm.DB
 	redis      interface{}
 	engine     *core.IntelligenceEngine
@@ -64,6 +65,7 @@ func NewServer(cfg *model.Config, db *gorm.DB, redis interface{}, engine *core.I
 			Host: cfg.Master.Host,
 			Port: cfg.Master.HTTPPort,
 		},
+		appCfg:     cfg,
 		db:         db,
 		redis:      redis,
 		engine:     engine,

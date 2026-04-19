@@ -434,6 +434,7 @@
                 <button class="nav-item" data-page="block" onclick="showPage('block')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="1.8"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.5 8.5l7 7"/></svg></span><span class="nav-copy"><strong>封禁控制</strong><span>手动与批量操作</span></span></button>
                 <button class="nav-item" data-page="whitelist" onclick="showPage('whitelist')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4"/></svg></span><span class="nav-copy"><strong>白名单</strong><span>可信地址管理</span></span></button>
                 <button class="nav-item" data-page="ai" onclick="showPage('ai')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v3m0 12v3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12M3 12h3m12 0h3M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12"/><circle cx="12" cy="12" r="4" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 联动</strong><span>生成规则与语义分析</span></span></button>
+                <button class="nav-item" data-page="ai-settings" onclick="showPage('ai-settings')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.33 4.32l1.24-1.96a1 1 0 011.7 0l1.24 1.96a1 1 0 00.76.46l2.24.3a1 1 0 01.57 1.72l-1.55 1.53a1 1 0 00-.28.88l.38 2.19a1 1 0 01-1.45 1.05L12.9 11.3a1 1 0 00-.93 0l-2.03 1.15a1 1 0 01-1.45-1.05l.38-2.19a1 1 0 00-.28-.88L7.04 6.8a1 1 0 01.57-1.72l2.24-.3a1 1 0 00.48-.46z"/><circle cx="12" cy="16" r="3" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 配置</strong><span>Key 与提示词管理</span></span></button>
                 <button class="nav-item" data-page="logs" onclick="showPage('logs')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8M8 12h8m-8 5h5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg></span><span class="nav-copy"><strong>操作日志</strong><span>处置结果回放</span></span></button>
             </nav>
 
@@ -744,6 +745,56 @@
                         </section>
                     </div>
                 </section>
+
+                <section class="page" id="ai-settings">
+                    <div class="page-header">
+                        <div><h3>AI 配置</h3><p>在这里维护 DeepSeek API Key、模型地址和提示词模板。保存后会写回配置文件，并刷新当前 Master 的 AI 配置。</p></div>
+                        <div class="toolbar">
+                            <button class="btn btn-outline" onclick="loadAISettings()">刷新配置</button>
+                            <button class="btn btn-primary" onclick="saveAISettings()">保存配置</button>
+                        </div>
+                    </div>
+
+                    <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">运行参数</div><div class="panel-subtitle">用于配置 AI Provider、API Key 和演示模式阈值</div></div></div>
+                        <div class="form-grid">
+                            <div class="grid-2">
+                                <div><label for="aiSettingsEnabled">启用 AI</label><select id="aiSettingsEnabled"><option value="true">启用</option><option value="false">禁用</option></select></div>
+                                <div><label for="aiSettingsProvider">Provider</label><input type="text" id="aiSettingsProvider" placeholder="deepseek"></div>
+                            </div>
+                            <div class="grid-2">
+                                <div><label for="aiSettingsBaseURL">Base URL</label><input type="text" id="aiSettingsBaseURL" placeholder="https://api.deepseek.com"></div>
+                                <div><label for="aiSettingsModel">模型名</label><input type="text" id="aiSettingsModel" placeholder="deepseek-chat"></div>
+                            </div>
+                            <div class="grid-2">
+                                <div><label for="aiSettingsAPIKey">API Key</label><input type="password" id="aiSettingsAPIKey" placeholder="sk-..."></div>
+                                <div><label for="aiSettingsTimeout">超时秒数</label><input type="number" id="aiSettingsTimeout" min="1" placeholder="30"></div>
+                            </div>
+                            <div class="grid-2">
+                                <div><label for="aiSettingsDemoMode">Demo Mode</label><select id="aiSettingsDemoMode"><option value="false">关闭</option><option value="true">开启</option></select></div>
+                                <div><label for="aiSettingsDemoBonus">演示加分</label><input type="number" id="aiSettingsDemoBonus" min="0" placeholder="15"></div>
+                            </div>
+                            <div class="grid-2">
+                                <div><label for="aiSettingsDemoBlock">演示封禁阈值</label><input type="number" id="aiSettingsDemoBlock" min="1" placeholder="40"></div>
+                                <div><label for="aiSettingsDemoRepair">演示修复阈值</label><input type="number" id="aiSettingsDemoRepair" min="1" placeholder="65"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">提示词模板</div><div class="panel-subtitle">可分别约束规则生成与告警分析的 system/user prompt</div></div></div>
+                        <div class="form-grid">
+                            <div><label for="aiRuleGenSystemPrompt">规则生成 System Prompt</label><textarea id="aiRuleGenSystemPrompt" placeholder="限制 AI 只输出结构化 JSON、只允许 content/pcre 等"></textarea></div>
+                            <div><label for="aiRuleGenUserPrompt">规则生成 User Prompt</label><textarea id="aiRuleGenUserPrompt" placeholder="可使用 {{SOURCE_TYPE}} / {{PROTOCOL_HINT}} / {{TARGET_SERVICE}} / {{SOURCE_CONTENT}}"></textarea></div>
+                            <div><label for="aiAlertSystemPrompt">告警分析 System Prompt</label><textarea id="aiAlertSystemPrompt" placeholder="约束 AI 输出摘要、证据、影响范围、建议动作等"></textarea></div>
+                            <div><label for="aiAlertUserPrompt">告警分析 User Prompt</label><textarea id="aiAlertUserPrompt" placeholder="可使用 alert_id、payload、recent_alerts、extracted_signals 等模板变量"></textarea></div>
+                        </div>
+                        <div class="sub-actions">
+                            <button class="btn btn-primary" onclick="saveAISettings()">保存配置</button>
+                        </div>
+                        <div id="aiSettingsStatus" class="hint-block">这里会显示配置文件保存结果和当前 AI 配置状态。</div>
+                    </section>
+                </section>
             </main>
         </div>
     </div>
@@ -795,6 +846,7 @@
                 case 'block': await refreshBlockedIps(); break;
                 case 'whitelist': await refreshWhitelist(); break;
                 case 'ai': await loadAIWorkbench(); break;
+                case 'ai-settings': await loadAISettings(); break;
                 case 'logs': await refreshLogs(); break;
             }
         }
@@ -1190,6 +1242,60 @@
             }
 
             updateAIProgress(lastGeneratedRuleTask);
+        }
+
+        async function loadAISettings() {
+            const res = await fetchAPI('/api/ai/settings');
+            if (!res || !res.data) {
+                setText('aiSettingsStatus', '未能读取 AI 配置，请确认 Master API 正常运行。');
+                return;
+            }
+
+            const data = res.data;
+            document.getElementById('aiSettingsEnabled').value = String(!!data.enabled);
+            document.getElementById('aiSettingsProvider').value = data.provider || 'deepseek';
+            document.getElementById('aiSettingsBaseURL').value = data.base_url || '';
+            document.getElementById('aiSettingsAPIKey').value = data.api_key || '';
+            document.getElementById('aiSettingsModel').value = data.model || '';
+            document.getElementById('aiSettingsTimeout').value = data.timeout_seconds || 30;
+            document.getElementById('aiRuleGenSystemPrompt').value = data.rule_generation_system || '';
+            document.getElementById('aiRuleGenUserPrompt').value = data.rule_generation_user || '';
+            document.getElementById('aiAlertSystemPrompt').value = data.alert_analysis_system || '';
+            document.getElementById('aiAlertUserPrompt').value = data.alert_analysis_user || '';
+            document.getElementById('aiSettingsDemoMode').value = String(!!data.demo_mode);
+            document.getElementById('aiSettingsDemoBlock').value = data.demo_block_threshold || 40;
+            document.getElementById('aiSettingsDemoRepair').value = data.demo_repair_threshold || 65;
+            document.getElementById('aiSettingsDemoBonus').value = data.demo_exploit_bonus || 15;
+            setText('aiSettingsStatus', `当前配置文件：${data.config_path || 'configs/config.yaml'} | Provider：${data.provider || '-'} | Demo Mode：${data.demo_mode ? '开启' : '关闭'}`);
+        }
+
+        async function saveAISettings() {
+            const payload = {
+                enabled: document.getElementById('aiSettingsEnabled').value === 'true',
+                provider: document.getElementById('aiSettingsProvider').value.trim(),
+                base_url: document.getElementById('aiSettingsBaseURL').value.trim(),
+                api_key: document.getElementById('aiSettingsAPIKey').value.trim(),
+                model: document.getElementById('aiSettingsModel').value.trim(),
+                timeout_seconds: Number(document.getElementById('aiSettingsTimeout').value || 30),
+                rule_generation_system: document.getElementById('aiRuleGenSystemPrompt').value,
+                rule_generation_user: document.getElementById('aiRuleGenUserPrompt').value,
+                alert_analysis_system: document.getElementById('aiAlertSystemPrompt').value,
+                alert_analysis_user: document.getElementById('aiAlertUserPrompt').value,
+                demo_mode: document.getElementById('aiSettingsDemoMode').value === 'true',
+                demo_block_threshold: Number(document.getElementById('aiSettingsDemoBlock').value || 0),
+                demo_repair_threshold: Number(document.getElementById('aiSettingsDemoRepair').value || 0),
+                demo_exploit_bonus: Number(document.getElementById('aiSettingsDemoBonus').value || 0)
+            };
+
+            setText('aiSettingsStatus', '正在保存 AI 配置...');
+            const result = await sendJSON('/api/ai/settings', 'PUT', payload);
+            if (!isSuccess(result)) {
+                setText('aiSettingsStatus', `保存失败：${result?.message || '未知错误'}`);
+                return;
+            }
+
+            setText('aiSettingsStatus', `保存成功：${result?.data?.config_path || 'configs/config.yaml'}，当前 Demo Mode：${result?.data?.demo_mode ? '开启' : '关闭'}。`);
+            await loadAIWorkbench();
         }
 
         function fillAIDemoInput() {
