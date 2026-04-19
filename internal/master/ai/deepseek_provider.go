@@ -106,14 +106,31 @@ func (p *DeepSeekProvider) GenerateRule(ctx context.Context, input RuleGenInput)
 			"direction must be one of: to_server, to_client, either.",
 			"matchers must be an array of objects with keys type and value.",
 			"Allowed matcher type values: content, pcre.",
+			"Do not use custom matcher types such as method, uri, path, header, body, keyword, regex, or pattern.",
+			"matchers must contain at least one usable matcher. If information is limited, still return one conservative content matcher.",
 			"Prefer HTTP and web attack indicators when the input is a PoC for an HTTP vulnerability.",
+			"Prefer stable request paths, parameter names, command fragments, header fragments, or exploit keywords that can be matched with content or pcre.",
 			"Do not include markdown fences or commentary.",
 		}, "\n")
 	}
 
 	userPrompt := p.prompts.ruleGenerationUser
 	if userPrompt == "" {
-		userPrompt = "source_type: {{SOURCE_TYPE}}\nprotocol_hint: {{PROTOCOL_HINT}}\ntarget_service: {{TARGET_SERVICE}}\nsource_content:\n{{SOURCE_CONTENT}}"
+		userPrompt = strings.Join([]string{
+			"Please convert the following source material into structured Suricata rule hints.",
+			"source_type: {{SOURCE_TYPE}}",
+			"protocol_hint: {{PROTOCOL_HINT}}",
+			"target_service: {{TARGET_SERVICE}}",
+			"source_content:",
+			"{{SOURCE_CONTENT}}",
+			"",
+			"Requirements:",
+			"- Output JSON only.",
+			"- matchers must contain at least one item.",
+			"- Every matcher must use type=content or type=pcre.",
+			"- Do not return matcher types like method, uri, path, header, body, regex, keyword, or pattern.",
+			"- If there is only one stable feature, return one conservative content matcher instead of an empty array.",
+		}, "\n")
 	}
 	userPrompt = strings.NewReplacer(
 		"{{SOURCE_TYPE}}", emptyDefault(input.SourceType, "poc"),

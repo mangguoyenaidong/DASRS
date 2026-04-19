@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"security-response-system/internal/master/ai"
@@ -66,10 +67,13 @@ func (b *SuricataRuleBuilder) Build(result *ai.RuleGenResult, sid uint) (string,
 	options = append(options, fmt.Sprintf("flow:%s", flow))
 
 	matcherCount := 0
+	emptyValueCount := 0
+	unsupportedTypes := map[string]struct{}{}
 	for _, matcher := range result.Matchers {
 		mType := strings.ToLower(strings.TrimSpace(matcher.Type))
 		value := strings.TrimSpace(matcher.Value)
 		if value == "" {
+			emptyValueCount++
 			continue
 		}
 		switch mType {
@@ -82,10 +86,15 @@ func (b *SuricataRuleBuilder) Build(result *ai.RuleGenResult, sid uint) (string,
 				options = append(options, fmt.Sprintf(`pcre:"%s"`, pcre))
 				matcherCount++
 			}
+		default:
+			if mType == "" {
+				mType = "<empty>"
+			}
+			unsupportedTypes[mType] = struct{}{}
 		}
 	}
 	if matcherCount == 0 {
-		return "", fmt.Errorf("no valid matchers generated for candidate rule")
+		return "", fmt.Errorf("no valid matchers generated for candidate rule: %s", describeMatcherFailure(result.Matchers, emptyValueCount, unsupportedTypes))
 	}
 
 	options = append(options, fmt.Sprintf("classtype:%s", classtype))
@@ -200,4 +209,25 @@ func sanitizePCREFlags(flags string) string {
 		}
 	}
 	return builder.String()
+}
+
+func describeMatcherFailure(matchers []ai.RuleMatcher, emptyValueCount int, unsupportedTypes map[string]struct{}) string {
+	if len(matchers) == 0 {
+		return "AI returned an empty matchers array; prompt must produce at least one matcher with type content or pcre"
+	}
+
+	details := []string{fmt.Sprintf("received %d matcher(s)", len(matchers))}
+	if len(unsupportedTypes) > 0 {
+		types := make([]string, 0, len(unsupportedTypes))
+		for matcherType := range unsupportedTypes {
+			types = append(types, matcherType)
+		}
+		sort.Strings(types)
+		details = append(details, fmt.Sprintf("unsupported matcher type(s): %s", strings.Join(types, ", ")))
+	}
+	if emptyValueCount > 0 {
+		details = append(details, fmt.Sprintf("%d matcher(s) had empty values", emptyValueCount))
+	}
+	details = append(details, "supported matcher types are content and pcre")
+	return strings.Join(details, "; ")
 }

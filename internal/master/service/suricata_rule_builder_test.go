@@ -49,3 +49,48 @@ func TestSuricataRuleBuilderPreservesPCREFlags(t *testing.T) {
 		t.Fatalf("expected PCRE flags to be preserved, got %s", rule)
 	}
 }
+
+func TestSuricataRuleBuilderReportsEmptyMatchersClearly(t *testing.T) {
+	builder := NewSuricataRuleBuilder()
+
+	_, err := builder.Build(&ai.RuleGenResult{
+		Protocol:  "http",
+		Direction: "to_server",
+		Message:   "test rule",
+		Classtype: "web-application-attack",
+	}, 9000003)
+	if err == nil {
+		t.Fatal("expected Build to fail for empty matchers")
+	}
+
+	if !strings.Contains(err.Error(), "empty matchers array") {
+		t.Fatalf("expected detailed empty matcher error, got %v", err)
+	}
+}
+
+func TestSuricataRuleBuilderReportsUnsupportedMatcherTypesClearly(t *testing.T) {
+	builder := NewSuricataRuleBuilder()
+
+	_, err := builder.Build(&ai.RuleGenResult{
+		Protocol:  "http",
+		Direction: "to_server",
+		Message:   "test rule",
+		Classtype: "web-application-attack",
+		Matchers: []ai.RuleMatcher{
+			{Type: "uri", Value: "/login"},
+			{Type: "method", Value: "POST"},
+			{Type: "content", Value: ""},
+		},
+	}, 9000004)
+	if err == nil {
+		t.Fatal("expected Build to fail for unsupported matchers")
+	}
+
+	message := err.Error()
+	if !strings.Contains(message, "unsupported matcher type(s): method, uri") {
+		t.Fatalf("expected unsupported type details, got %v", err)
+	}
+	if !strings.Contains(message, "1 matcher(s) had empty values") {
+		t.Fatalf("expected empty matcher detail, got %v", err)
+	}
+}
