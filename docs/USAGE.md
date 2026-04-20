@@ -1,386 +1,338 @@
-# DASRS 使用文档
+# DASRS Usage Guide
 
-## 1. 系统概览
+## 1. Overview
 
-DASRS (Distributed Intelligence-Driven Emergency Response System) 是一个基于 Master-Agent 架构的分布式安全响应系统。
+DASRS is a `Master-Agent` based distributed detection and response platform. It consumes Suricata alerts, scores them, persists them, and lets operators respond through a Web console. It also includes AI-assisted rule generation and AI-based alert analysis.
 
-核心能力包括：
+## 2. Runtime Requirements
 
-- 实时采集 Suricata EVE JSON 告警
-- 基于风险评分、时序频率和白名单进行决策
-- 通过在线 Agent 执行 IP 封禁与解封
-- 支持 Nginx 配置文件原子性热修复
-- 提供 Web 管理后台、告警审计与白名单管理
+- Linux recommended
+- Go `1.25+`
+- MySQL `8.0`
+- Redis `7.0`
+- Docker / Docker Compose
+- Python `3`
 
-## 2. 运行环境
+## 3. Configuration
 
-- 操作系统：Linux（推荐 Ubuntu 20.04+）
-- Go：1.25+
-- Python：3.x
-- 数据库：MySQL 8.0
-- 缓存：Redis 7.0
-- 容器环境：Docker、Docker Compose
+### 3.1 Master config
 
-如需使用交互式配置助手：
+File: [configs/config.yaml](/D:/file/DASRS/configs/config.yaml)
 
-```bash
-pip install ruamel.yaml
-```
+Important fields:
 
-## 3. 配置说明
+- `master.host`
+- `master.grpc_port`
+- `master.http_port`
+- `master.database.*`
+- `master.redis.*`
+- `master.intelligence.*`
+- `master.ai.*`
 
-### 3.1 Master 配置
+### 3.2 Agent config
 
-文件：`configs/config.yaml`
+File: [configs/agent.yaml](/D:/file/DASRS/configs/agent.yaml)
 
-主要配置项：
+Important fields:
 
-- `master.host`：HTTP 服务绑定地址
-- `master.grpc_port`：gRPC 监听端口
-- `master.http_port`：HTTP API 监听端口
-- `master.database.*`：MySQL 连接配置
-- `master.redis.*`：Redis 连接配置
-- `master.intelligence.block_threshold`：自动封禁阈值
-- `master.intelligence.repair_threshold`：自动修复阈值
-- `master.intelligence.demo_mode`：比赛演示模式开关
-- `master.intelligence.demo_block_threshold`：演示模式封禁阈值
-- `master.intelligence.demo_repair_threshold`：演示模式修复阈值
-- `master.intelligence.demo_exploit_bonus`：演示模式下对明显利用类告警的额外加分
-- `master.intelligence.whitelist`：静态白名单
-- `master.ai.*`：DeepSeek、提示词、测试命令等 AI 联动配置
+- `agent.master_address`
+- `agent.suricata_log_path`
+- `agent.suricata_rule_path`
+- `agent.suricata_reload_command`
+- `agent.suricata_test_command`
+- `agent.monitor_ip`
+- `agent.agent_name`
 
-### 3.2 Agent 配置
+Notes:
 
-文件：`configs/agent.yaml`
+- `monitor_ip` is used to keep the Agent focused on the monitored target host.
+- The collector now keeps traffic when either `src_ip` or `dest_ip` matches the monitored scope.
+- If `suricata_test_command` is empty, Agent-side dynamic rule testing is unavailable.
 
-主要配置项：
+### 3.3 AI config
 
-- `agent.master_address`：Master 的可达地址，格式为 `IP:PORT` 或域名
-- `agent.suricata_log_path`：Suricata `eve.json` 路径
-- `agent.monitor_ip`：仅采集发往该 IP 的告警，可用于多主机环境中的定向过滤
-- `agent.agent_name`：Agent 名称
-- `agent.reconnect_interval`：重连间隔（秒）
-- `agent.heartbeat_interval`：心跳间隔（秒）
+Master AI configuration supports:
 
-注意：
+- enable/disable switch
+- DeepSeek API key
+- base URL
+- model
+- rule-generation prompts
+- alert-analysis prompts
+- test command template and success marker
 
-- `master:50051` 这类地址仅适用于 Docker 内部网络。
-- 在非 Docker 或跨主机部署中，请将 `master_address` 改为 Master 的实际 IP 或域名。
-- 如果未正确设置 `monitor_ip`，可能会采集到不属于当前节点的告警流量。
+You can manage these through the `AI Settings` page in the Web console.
 
-### 3.3 交互式配置
+## 4. Startup
 
-推荐先执行：
-
-```bash
-python3 configure.py
-```
-
-该脚本可辅助更新：
-
-- `configs/config.yaml`
-- `configs/agent.yaml`
-- 本地 Suricata 网卡绑定与 Payload 输出配置
-
-## 4. 启动方式
-
-### 4.1 启动基础设施
+### 4.1 Start infrastructure
 
 ```bash
 cd deploy
-docker-compose up -d
+docker compose up -d mysql redis
 ```
 
-### 4.2 启动 Master
+### 4.2 Start Master
 
 ```bash
 go run ./cmd/master --config configs/config.yaml
 ```
 
-默认监听：
-
-- gRPC：`50051`
-- HTTP：`8080`
-
-### 4.3 启动 Agent
+### 4.3 Start Agent
 
 ```bash
 go run ./cmd/agent --config configs/agent.yaml
 ```
 
-如需仅测试 Agent 到 Master 的连通性：
+Expected Agent startup signs:
 
-```bash
-go run ./cmd/agent --config configs/agent.yaml --test-master-conn
+- connected to Master
+- Suricata collector started
+- service inventory reported
+
+Typical healthy log fragments:
+
+```text
+Connected to master, starting bidirectional stream...
+Started Suricata collector on /var/log/suricata/eve.json
+Reported 6 local services to master
 ```
 
-## 5. Docker 部署说明
+## 5. Web Console Usage
 
-`deploy/docker-compose.yaml` 默认包含以下服务：
+### 5.1 Alerts
 
-- `mysql`
-- `redis`
-- `master`
-- `agent`
+The alert page supports:
 
-默认约定：
+- severity filtering
+- action filtering
+- source/destination IP filtering
+- signature search
+- time-range filtering
+- whitelist-only view
 
-- Master 对外暴露 `50051` 和 `8080`
-- Agent 通过 `MASTER_ADDRESS=master:50051` 连接容器内 Master
-- 示例 Agent 挂载 `../suricata_logs` 作为 Suricata 日志目录
+When troubleshooting missing alerts, clear all filters first.
 
-如果是跨机器部署，不要直接照搬容器内的 `master:50051`，应改为真实地址。
+### 5.2 AI Workflow
 
-## 6. 管理后台
+The AI workflow page supports:
 
-默认访问地址：
+- candidate Suricata rule generation
+- manual rule editing
+- workflow progress display
+- rule testing
+- rule deployment
+- AI alert analysis
 
-- `http://localhost:8080`
+Recommended process:
 
-远程部署时，请替换为 Master 的实际 IP 或域名，例如：
+1. Generate rule
+2. Review or edit rule
+3. Test rule
+4. Deploy rule
+5. Trigger traffic
+6. Review alert and AI analysis
 
-- `http://<master-host>:8080`
+### 5.3 AI Settings
 
-后台主要功能：
+The AI settings page is a separate page for:
 
-- 资产管理：查看 Agent 在线状态、名称、IP 与注册信息
-- 告警审计：查看告警详情、Payload、Hex/Text 双视图
-- 手动处置：手动封禁、解封、批量操作
-- 白名单管理：动态增删白名单 IP
-- 策略管理：查看和维护自动化策略
-- 仪表盘：查看趋势、攻击源、严重程度分布和执行统计
-- AI 联动：生成候选规则、人工修订、测试、下发、告警 AI 研判
+- DeepSeek API key
+- base URL
+- model
+- rule generation prompts
+- alert analysis prompts
+- demo mode settings
 
-## 7. API 参考
+## 6. AI Rule Generation
 
-### 7.1 基础接口
+### 6.1 Expected model output
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| `/health` | GET | 健康检查 |
-| `/api/stats` | GET | 获取全局统计数据 |
-| `/api/logs` | GET | 获取操作日志 |
+Candidate rule generation expects JSON with:
 
-### 7.2 Agent 管理
+- `summary`
+- `protocol`
+- `direction`
+- `attack_type`
+- `message`
+- `classtype`
+- `target_ports`
+- `matchers`
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| `/api/agents` | GET | 获取 Agent 列表 |
-| `/api/agents/:id` | GET | 获取 Agent 详情 |
-| `/api/agents/:id` | DELETE | 删除 Agent |
-| `/api/agents/:id/unblock` | POST | 解除指定 Agent 相关封禁 |
-| `/api/agents/register` | POST | Agent 注册/更新 |
+Each matcher must contain:
 
-### 7.3 告警管理
+- `type`
+- `value`
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| `/api/alerts` | GET | 获取告警列表，支持多种过滤条件 |
-| `/api/alerts/:id` | GET | 获取单条告警详情 |
-| `/api/alerts/:id/correlation` | GET | 获取告警关联分析 |
+Supported matcher types:
 
-### 7.4 手动处置
+- `content`
+- `pcre`
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| `/api/block` | POST | 手动封禁单个 IP |
-| `/api/unblock` | POST | 手动解封单个 IP |
-| `/api/batch-block` | POST | 批量封禁 IP |
-| `/api/batch-unblock` | POST | 批量解封 IP |
+### 6.2 Common generation failure
 
-### 7.5 白名单管理
+If you see:
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| `/api/whitelist` | GET | 获取白名单列表 |
-| `/api/whitelist` | POST | 添加白名单 IP |
-| `/api/whitelist/:id` | DELETE | 删除白名单记录 |
+```text
+no valid matchers generated for candidate rule
+```
 
-### 7.6 策略与仪表盘
+the usual causes are:
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| `/api/strategies` | GET | 获取策略列表 |
-| `/api/strategies` | POST | 创建策略 |
-| `/api/strategies/:id` | GET | 获取策略详情 |
-| `/api/strategies/:id` | PUT | 更新策略 |
-| `/api/strategies/:id` | DELETE | 删除策略 |
-| `/api/dashboard/overview` | GET | 仪表盘概览 |
-| `/api/dashboard/trends` | GET | 攻击趋势 |
-| `/api/dashboard/top-sources` | GET | Top 攻击源 |
-| `/api/dashboard/severity-distribution` | GET | 严重程度分布 |
-| `/api/dashboard/action-stats` | GET | 动作执行统计 |
+- model returned an empty `matchers` array
+- model returned unsupported matcher types such as `uri`, `method`, `header`, `regex`
+- matcher values were empty
 
-### 7.7 AI 联动接口
+Use prompts that explicitly require:
 
-| 路径 | 方法 | 说明 |
-|------|------|------|
-| `/api/ai/status` | GET | 获取 AI 状态、Provider 与 Demo Mode 信息 |
-| `/api/ai/rules/generate` | POST | 生成候选 Suricata 规则 |
-| `/api/ai/rules/:id` | GET | 获取规则任务详情 |
-| `/api/ai/rules/:id` | PUT | 保存人工修改后的候选规则 |
-| `/api/ai/rules/:id/test` | POST | 测试候选规则，支持 Master/Agent |
-| `/api/ai/rules/:id/deploy` | POST | 下发候选规则到目标 Agent |
-| `/api/alerts/:id/ai-analysis` | GET | 获取告警 AI 研判结果，支持 `force=true` 重新研判 |
+- JSON only
+- at least one matcher
+- matcher type must be `content` or `pcre`
 
-## 8. AI 联动与 Demo Mode
+### 6.3 Rule testing
 
-### 8.1 AI 规则生成与下发
+Master-side testing:
 
-推荐流程：
+- static validation
+- optional command template execution
 
-1. 在 Web 后台进入 `AI 联动`
-2. 输入 `CVE / PoC / 漏洞描述`
-3. 生成候选 `Suricata` 规则
-4. 如有需要，先人工修订
-5. 先做 `Master` 静态校验或 `Agent` 动态测试
-6. 测试通过后再下发到目标 Agent
+Agent-side testing:
 
-### 8.2 AI 告警研判
+- sends test command to target Agent
+- writes temporary rule file
+- runs `suricata_test_command`
+- reports result back to Master
 
-AI 告警研判会结合以下上下文：
+Deployment is expected only after `test_status=passed`.
 
-- 告警基础字段
-- 资产服务类型与操作系统
-- 最近同源告警
-- 最近操作日志
-- 规则引擎动作与风险评分
-- 从 Payload 中提取的可疑路径、参数名和命令片段
+## 7. AI Alert Analysis
 
-当前结构化输出包括：
+AI alert analysis consumes:
 
-- 摘要
-- 攻击类型
-- 风险原因
-- 影响范围
-- 研判证据
-- 可疑路径
-- 可疑参数
-- 命令片段
-- 运维建议
-- 推荐动作
-- 置信度
+- alert metadata
+- payload
+- asset info
+- recent alerts
+- recent operations
+- extracted suspicious signals
 
-### 8.3 Demo Mode
+Structured output includes:
 
-如果你是比赛演示环境，可以在 `configs/config.yaml` 中打开：
+- `summary`
+- `attack_type`
+- `risk_reason`
+- `impact_scope`
+- `evidence_points`
+- `suspicious_path`
+- `suspicious_params`
+- `command_fragments`
+- `operator_advice`
+- `recommended_action`
+- `confidence`
+
+## 8. Demo Mode
+
+For demos and competitions:
 
 ```yaml
 master:
   intelligence:
     demo_mode: true
-```
-
-建议同时保留以下默认演示参数：
-
-```yaml
-master:
-  intelligence:
     demo_block_threshold: 40
     demo_repair_threshold: 65
     demo_exploit_bonus: 15
 ```
 
-说明：
+This mode keeps production defaults intact when disabled, and applies looser thresholds when enabled.
 
-- `demo_mode=false` 时，系统仍使用原始封禁/修复阈值
-- `demo_mode=true` 时，会使用更适合演示的阈值
-- 对明显利用类告警会追加演示分，便于现场更稳定地触发 `block / repair`
-- 该模式建议只用于演示环境，不建议直接作为生产默认配置
-## 9. 常见问题排查
+## 9. API Overview
 
-**Q: Agent 无法连接到 Master？**
+### Core
 
-A: 先检查 `configs/agent.yaml` 中的 `master_address` 是否为当前环境下真实可达的地址。如果不在 Docker 内部网络，请不要使用 `master:50051`。也可以执行：
+- `GET /health`
+- `GET /api/stats`
+- `GET /api/logs`
+
+### Alerts
+
+- `GET /api/alerts`
+- `GET /api/alerts/:id`
+- `GET /api/alerts/:id/correlation`
+- `GET /api/alerts/:id/ai-analysis`
+
+### AI
+
+- `GET /api/ai/status`
+- `GET /api/ai/settings`
+- `PUT /api/ai/settings`
+- `POST /api/ai/rules/generate`
+- `GET /api/ai/rules/:id`
+- `PUT /api/ai/rules/:id`
+- `POST /api/ai/rules/:id/test`
+- `POST /api/ai/rules/:id/deploy`
+
+### Agent and operations
+
+- `GET /api/agents`
+- `GET /api/agents/:id`
+- `POST /api/agents/register`
+- `POST /api/block`
+- `POST /api/unblock`
+- `POST /api/batch-block`
+- `POST /api/batch-unblock`
+
+## 10. Troubleshooting
+
+### 10.1 Agent connected but no alerts in Web
+
+Check in this order:
+
+1. Traffic reaches the target
 
 ```bash
-go run ./cmd/agent --config configs/agent.yaml --test-master-conn
+sudo tcpdump -ni any host <src_ip> and host <dst_ip>
 ```
 
-**Q: 为什么 Agent 启动后没有采集到告警？**
+2. Suricata emits `alert` events
 
-A: 检查 `suricata_log_path` 是否存在，Agent 启动日志会提示路径不存在；同时确认 `monitor_ip` 是否配置为当前节点需要监控的目标 IP。
-
-**Q: 为什么某些告警没有触发封禁？**
-
-A: 检查风险评分是否达到 `block_threshold`。低严重程度告警通常需要频率加成后才会越过封禁阈值；白名单 IP 会被直接忽略。
-
-**Q: 配置文件修复失败？**
-
-A: 确保 Agent 具备所需权限，例如执行 `nginx -t`、reload 或变更防火墙规则时通常需要更高权限，并确认配置文件路径与挂载目录正确。
-
-## 10. 文档边界
-
-## 11. 2026-04 Recent Usage Updates
-
-### 10.1 Agent Service Discovery
-
-The Agent now supports local service discovery on Linux. After startup, it performs an initial scan and then reports the latest service inventory on a schedule.
-
-New configuration items under the Agent section:
-
-```yaml
-agent:
-  master_http_address: "192.168.41.136:8080"
-  agent_name: "agent-136"
-  service_scan_interval: 300
+```bash
+tail -f /var/log/suricata/eve.json | grep --line-buffered '"event_type":"alert"'
 ```
 
-Notes:
-- `master_http_address` is used for HTTP registration and service inventory reporting.
-- If `master_http_address` is not provided, the Agent will try to derive it from `master_address`.
-- `service_scan_interval` is in seconds.
+3. Agent reports alerts successfully
 
-### 10.2 Viewing Services in the Web Console
-
-On the asset page, clicking the node status opens a node detail panel. The panel now shows:
-
-- basic node information
-- current service inventory
-- inferred service types
-
-This is the main entry point for checking which services exist on a node.
-
-### 10.3 Lightweight Asset Fingerprint
-
-The service discovery result is also used to enrich the asset profile. The current lightweight fingerprint can update:
-
-- `os_type`
-- `service_type`
-- node `service_inventory`
-
-For Java processes, the system can now further distinguish several common service types instead of showing only `java-service`, including:
-
-- `tomcat`
-- `jenkins`
-- `nacos`
-- `spring-boot`
-- `elasticsearch`
-- `kafka`
-
-### 10.4 Updated Alert Scoring Logic
-
-The alert scoring logic has been adjusted to be more conservative and more context-aware.
-
-Current base scores:
-
-- `critical = 80`
-- `high = 60`
-- `medium = 35`
-- `low = 15`
-
-Current formula:
+Look for:
 
 ```text
-final score = base score + target-service context score + time-series score
+Alert reported successfully, Master ID: ...
 ```
 
-Target-service context score:
+If traffic is visible in `tcpdump` but `eve.json` has no `alert`, the issue is usually in the Suricata rule layer, not in DASRS.
 
-- obvious match: `+20`
-- obvious mismatch: `-20`
-- unclear: `0`
+### 10.2 AI alert analysis not showing
 
-This allows the system to consider whether the attack signature actually matches the service exposed by the destination host, which helps reduce false positives.
+Check:
 
-本文件聚焦“如何部署和使用当前系统”。如果你需要了解某次迭代的背景和问题记录，请查看根目录的开发日志文档。
+- `master.ai.enabled=true`
+- API key saved correctly
+- `GET /api/ai/status` shows `configuration_status=ready`
+
+### 10.3 Agent-side AI rule test not running
+
+Check:
+
+- `agent.suricata_test_command` is configured
+- the Agent host has Suricata installed
+- the command works manually with `suricata -T`
+
+### 10.4 Rule deploy succeeded but traffic still does not alert
+
+Check:
+
+- the rule file is actually loaded by Suricata
+- `suricata -T` passes
+- the request really matches the generated rule
+- `eve.json` path matches the Agent config
+
+For rule loading and validation details, see [docs/SURICATA_RULES.md](/D:/file/DASRS/docs/SURICATA_RULES.md).
+

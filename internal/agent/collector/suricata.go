@@ -164,15 +164,8 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 		return
 	}
 
-	if c.localIP != "" && c.localIP != "0.0.0.0" {
-		if eve.SrcIP != c.localIP && eve.DestIP != c.localIP {
-			log.Printf("Skipping alert outside local scope: src=%s dest=%s local=%s sid=%d", eve.SrcIP, eve.DestIP, c.localIP, eve.Alert.SignatureID)
-			return
-		}
-	}
-
-	if c.monitorIP != "" && eve.DestIP != c.monitorIP {
-		log.Printf("Skipping alert due to monitor_ip mismatch: dest=%s monitor_ip=%s sid=%d", eve.DestIP, c.monitorIP, eve.Alert.SignatureID)
+	if !c.inMonitoredScope(eve.SrcIP, eve.DestIP) {
+		log.Printf("Skipping alert outside monitored scope: src=%s dest=%s local=%s monitor_ip=%s sid=%d", eve.SrcIP, eve.DestIP, c.localIP, c.monitorIP, eve.Alert.SignatureID)
 		return
 	}
 
@@ -211,6 +204,28 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 
 	atomic.AddInt64(&c.alertCount, 1)
 	reportFunc(req)
+}
+
+func (c *SuricataCollector) inMonitoredScope(srcIP, destIP string) bool {
+	scopeIPs := make([]string, 0, 2)
+	for _, ip := range []string{strings.TrimSpace(c.monitorIP), strings.TrimSpace(c.localIP)} {
+		if ip == "" || ip == "0.0.0.0" {
+			continue
+		}
+		scopeIPs = append(scopeIPs, ip)
+	}
+
+	if len(scopeIPs) == 0 {
+		return true
+	}
+
+	for _, ip := range scopeIPs {
+		if srcIP == ip || destIP == ip {
+			return true
+		}
+	}
+
+	return false
 }
 
 func selectAlertPayload(payload, payloadPrintable, packet string) string {

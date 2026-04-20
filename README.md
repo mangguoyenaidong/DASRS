@@ -1,201 +1,260 @@
 # DASRS
 
-DASRS（Distributed Intelligence-Driven Emergency Response System）是一个基于 `Master-Agent` 架构的分布式安全检测与响应系统，用于采集 `Suricata` 告警、进行风险评分，并联动 Agent 执行封禁或修复动作。
+DASRS is a distributed security detection and response system built on a `Master-Agent` architecture. It ingests `Suricata` alerts, scores risk with asset context and time-series signals, and coordinates response actions such as block, unblock, patch, and AI-assisted rule generation.
 
-## 项目能力
+## Highlights
 
-- 实时采集 `Suricata EVE JSON` 告警
-- 基于严重等级、时序频率、白名单和目标服务上下文的风险评分
-- 通过 `gRPC` 向在线 Agent 下发封禁 / 解封指令
-- 支持部分节点侧修复动作与回滚
-- 提供 Web 管理后台、审计日志、白名单与策略管理
-- 支持节点本地服务发现与轻量资产指纹
-- 支持 AI 候选规则生成、人工修订、测试后下发
-- 支持 AI 告警研判、证据提取和运维建议生成
+- Real-time collection of `Suricata EVE JSON` alerts
+- Asset-aware alert scoring with whitelist and burst-frequency correction
+- `gRPC` command delivery from Master to online Agents
+- Web console for assets, alerts, blocking, strategies, logs, and AI workflows
+- AI-powered candidate rule generation with manual review, testing, and deployment
+- AI alert analysis with structured evidence extraction and operator guidance
+- Demo mode thresholds for competition and showcase scenarios
 
-## 技术栈
-
-- Go 1.25+
-- Gin
-- gRPC + Protocol Buffers
-- MySQL 8.0
-- Redis 7.0
-- Python 3
-- Docker / Docker Compose
-
-## 仓库结构
+## Architecture
 
 ```text
-cmd/                 程序入口
-configs/             Master / Agent 配置
-deploy/              Docker 部署文件
-docs/                使用文档
-internal/            核心业务代码
-proto/               Protobuf 定义
-templates/           Web 管理后台模板
-configure.py         配置辅助脚本
+Suricata -> Agent -> gRPC -> Master -> MySQL/Redis -> Web Console
+                           |
+                           +-> AI rule generation / AI alert analysis
+                           +-> block / unblock / patch / deploy rule
 ```
 
-## 快速开始
+## Main Components
 
-### 1. 准备依赖
+- `cmd/master`
+  Master startup entry
+- `cmd/agent`
+  Agent startup entry
+- `internal/master`
+  scoring engine, HTTP API, gRPC server, AI services
+- `internal/agent`
+  Suricata collector, local service discovery, executors
+- `templates/index.html`
+  Web console
+- `configs/config.yaml`
+  Master configuration
+- `configs/agent.yaml`
+  Agent configuration
 
-- Docker / Docker Compose
-- Go 1.25+
-- Python 3
+## Core Features
 
-如需使用配置辅助脚本：
+### Alert detection and response
 
-```bash
-pip install ruamel.yaml
-```
+- Collect `alert` events from `eve.json`
+- Score alerts by:
+  - severity
+  - target asset/service context
+  - time-window frequency
+  - whitelist status
+- Trigger actions:
+  - `ignore`
+  - `block`
+  - `repair`
 
-### 2. 配置系统
+### AI workflow
 
-推荐先运行：
-
-```bash
-python3 configure.py
-```
-
-也可以手动修改：
-
-- `configs/config.yaml`：Master、数据库、Redis、白名单等配置
-- `configs/agent.yaml`：Agent 连接地址、Suricata 日志路径、`monitor_ip` 等配置
-
-### 3. 启动基础设施
-
-```bash
-cd deploy
-docker-compose up -d
-```
-
-### 4. 启动服务
-
-```bash
-go run ./cmd/master --config configs/config.yaml
-go run ./cmd/agent --config configs/agent.yaml
-```
-
-### 5. 访问后台
-
-- 默认地址：`http://localhost:8080`
-- 远程部署时请改为 Master 实际 IP 或域名
-
-## 常用文档
-
-- [项目使用文档](D:/file/DASRS/docs/USAGE.md)
-- [开发与部署日志](D:/file/DASRS/DEVELOPMENT_LOG_20260412.md)
-- [项目技能说明](D:/file/DASRS/Skill.md)
-
-## 2026-04 Recent Updates
-
-本轮更新主要集中在“AI 联动闭环”“演示模式”和“资产感知增强”三部分。
-
-### 0. AI 联动闭环
-
-- 新增 `DeepSeek` 接入，可用于：
-  - 漏洞语义到 Suricata 候选规则生成
-  - 告警语义研判与处置建议
-- 新增 AI 工作台，支持：
-  - `生成 -> 人工修订 -> 测试 -> 下发` 四步流程
-  - 候选规则人工编辑
-  - `Master` 静态测试与 `Agent` 动态测试
-  - 告警数据库 ID 触发 AI 研判
-- AI 告警研判结果新增结构化字段：
+- DeepSeek-based rule generation
+- Candidate rule manual editing in Web UI
+- Static validation on Master
+- Dynamic testing on Agent
+- Deployment to managed Suricata rule file
+- AI alert analysis with:
+  - `summary`
+  - `attack_type`
+  - `risk_reason`
   - `impact_scope`
   - `evidence_points`
   - `suspicious_path`
   - `suspicious_params`
   - `command_fragments`
   - `operator_advice`
+  - `recommended_action`
+  - `confidence`
 
-### 0.1 Demo Mode 演示模式
+### Demo mode
 
-为了比赛演示时更容易出现自动封禁/修复效果，新增了独立的演示模式配置：
+When `master.intelligence.demo_mode=true`, the system can use looser action thresholds and a small exploit bonus for more visible on-stage responses.
+
+## Quick Start
+
+### 1. Prerequisites
+
+- Go `1.25+`
+- MySQL `8.0`
+- Redis `7.0`
+- Docker / Docker Compose
+- Python `3` for helper scripts
+
+If you use the configuration helper:
+
+```bash
+pip install ruamel.yaml
+```
+
+### 2. Configure
+
+Recommended:
+
+```bash
+python3 configure.py
+```
+
+Or edit manually:
+
+- [configs/config.yaml](/D:/file/DASRS/configs/config.yaml)
+- [configs/agent.yaml](/D:/file/DASRS/configs/agent.yaml)
+
+### 3. Start infrastructure
+
+```bash
+cd deploy
+docker compose up -d mysql redis
+```
+
+### 4. Start Master and Agent
+
+```bash
+go run ./cmd/master --config configs/config.yaml
+go run ./cmd/agent --config configs/agent.yaml
+```
+
+### 5. Open the Web console
+
+- Default: [http://localhost:8080](http://localhost:8080)
+- Remote: `http://<master-host>:8080`
+
+## Key Configuration
+
+### Master
+
+See [configs/config.yaml](/D:/file/DASRS/configs/config.yaml).
+
+Important sections:
+
+- `master.database`
+- `master.redis`
+- `master.intelligence`
+- `master.ai`
+
+Example AI section:
 
 ```yaml
 master:
-  intelligence:
-    demo_mode: false
-    demo_block_threshold: 40
-    demo_repair_threshold: 65
-    demo_exploit_bonus: 15
+  ai:
+    enabled: true
+    provider: "deepseek"
+    api:
+      base_url: "https://api.deepseek.com"
+      api_key: "your_key"
+      model: "deepseek-chat"
+      timeout_seconds: 30
 ```
 
-说明：
+### Agent
 
-- 默认 `demo_mode: false`，系统仍使用原始生产阈值
-- 开启后只会放宽演示阈值，不会改动默认配置逻辑
-- 对明显利用类告警会追加少量演示分，便于现场更稳定地展示 `block / repair`
-- Web 的 AI 工作台会直接显示当前是否开启 `Demo Mode`
+See [configs/agent.yaml](/D:/file/DASRS/configs/agent.yaml).
 
-### 1. Agent 本地服务发现
+Important fields:
 
-- Agent 新增 Linux 本地服务发现能力
-- 启动后会先扫描一次本地监听服务，后续按周期继续上报
-- 当前可上报的信息包括：
-  - 协议
-  - 监听地址
-  - 端口
-  - 进程名
-  - PID
-  - 推断服务类型
+- `agent.master_address`
+- `agent.suricata_log_path`
+- `agent.suricata_rule_path`
+- `agent.suricata_reload_command`
+- `agent.suricata_test_command`
+- `agent.monitor_ip`
 
-新增 Agent 配置项：
+Example Agent test command:
 
-- `master_http_address`
-- `agent_name`
-- `service_scan_interval`
+```yaml
+agent:
+  suricata_test_command: "suricata -T -c /etc/suricata/suricata.yaml -S {{RULE_FILE}} -l {{TMP_DIR}}"
+```
 
-### 2. 资产节点详情页
+## Web Console Pages
 
-- 在资产页点击节点状态后，可查看节点详情
-- 节点详情页可展示：
-  - 节点基础信息
-  - 最新服务清单
-  - 兜底服务信息
+- Dashboard
+- Assets
+- Alerts
+- Block Control
+- Strategies
+- Whitelist
+- Logs
+- AI Workflow
+- AI Settings
 
-### 3. 轻量资产指纹
+### AI Settings page
 
-- 服务发现结果会同步回写到资产相关记录
-- 当前可更新：
-  - `os_type`
-  - `service_type`
-  - 节点 `service_inventory`
-- Java 服务可进一步识别为：
-  - `tomcat`
-  - `jenkins`
-  - `nacos`
-  - `spring-boot`
-  - `elasticsearch`
-  - `kafka`
+The dedicated AI settings page supports editing:
 
-### 4. 告警评分更新
+- AI enable/disable
+- API key
+- model
+- base URL
+- rule-generation prompts
+- alert-analysis prompts
+- demo mode parameters
 
-基础分已调整为：
+## AI Rule Workflow
 
-- `critical = 80`
-- `high = 60`
-- `medium = 35`
-- `low = 15`
+Recommended workflow:
 
-当前评分模型：
+1. Open `AI Workflow`
+2. Submit `CVE`, `PoC`, or vulnerability description
+3. Generate candidate rule
+4. Review or manually edit the rule
+5. Test it on Master or Agent
+6. Deploy it after test passes
+
+If rule generation fails with:
 
 ```text
-final score = base score + target-service context score + time-series score
+no valid matchers generated for candidate rule
 ```
 
-其中目标服务上下文分为：
+it usually means the model returned no usable `matchers`, or used unsupported matcher types. Supported matcher types are only:
 
-- 与目标服务明显匹配：`+20`
-- 与目标服务明显不匹配：`-20`
-- 无法判断：`0`
+- `content`
+- `pcre`
 
-这意味着系统现在不仅看告警等级，也会结合目标主机真实暴露的服务来修正评分，从而减少误报并提高自动处置准确性。
+## Alert Troubleshooting
 
-## 说明
+If you send traffic but the Web console does not show a new alert, verify the chain in this order:
 
-- `configs/config.yaml` 中示例的 `master:50051` 仅适用于 Docker 内部网络
-- 非 Docker 或跨主机部署时，`configs/agent.yaml` 中的 `master_address` 必须改为 Master 的实际可达地址
-- 文档中的 IP、路径和端口均为示例，请以当前环境为准
+1. Traffic reaches the target host
+
+```bash
+sudo tcpdump -ni any host <src_ip> and host <dst_ip>
+```
+
+2. Suricata writes an `alert` event to `eve.json`
+
+```bash
+tail -f /var/log/suricata/eve.json | grep --line-buffered '"event_type":"alert"'
+```
+
+3. Agent reports the alert successfully
+
+Look for:
+
+```text
+Alert reported successfully, Master ID: ...
+```
+
+4. Web page filters are cleared
+
+The most common root cause is not the Web UI. It is usually:
+
+- no matching Suricata rule
+- Suricata rule load failure
+- `eve.json` path mismatch
+- Agent scope filtering
+
+For detailed Suricata troubleshooting, see [docs/SURICATA_RULES.md](/D:/file/DASRS/docs/SURICATA_RULES.md).
+
+## Documents
+
+- [Usage Guide](/D:/file/DASRS/docs/USAGE.md)
+- [Suricata Rule Guide](/D:/file/DASRS/docs/SURICATA_RULES.md)
+

@@ -127,6 +127,47 @@ Then verify:
 
 Only start exploit or replay validation after the configuration test passes cleanly.
 
+## Traffic arrived but DASRS shows no alert
+
+If you can see the attack traffic in `tcpdump` but the Web console still shows no new alert, isolate the problem in this order:
+
+1. Confirm the traffic really reaches the target host
+
+```bash
+sudo tcpdump -ni any host <src_ip> and host <dst_ip>
+```
+
+2. Confirm Suricata emits an `alert` event, not just `http` or `flow`
+
+```bash
+tail -f /var/log/suricata/eve.json | grep --line-buffered '"event_type":"alert"'
+```
+
+3. If there is no `alert`, the issue is in Suricata detection, not in DASRS UI
+
+Typical reasons:
+
+- the request did not match any loaded rule
+- the custom rule file was not included in `rule-files`
+- the rule syntax passed loosely but did not match the actual request shape
+- the test request looks malicious but still does not match the installed signatures
+
+4. If `alert` exists in `eve.json` but not in the Web page, then check:
+
+- Agent log for `Alert reported successfully, Master ID: ...`
+- Agent `suricata_log_path`
+- Agent `monitor_ip` scope
+- Web page filters
+
+### Scope filtering note
+
+Current DASRS Agent scope filtering keeps alerts when either side of the flow matches the monitored host:
+
+- `src_ip == monitor_ip` or `dest_ip == monitor_ip`
+- `src_ip == localIP` or `dest_ip == localIP`
+
+This is important for validating both inbound exploit traffic and outbound test traffic from the monitored node.
+
 ## Upgrade note
 
 If you plan to upgrade from Suricata 6.x to 7.x:
