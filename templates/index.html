@@ -465,6 +465,10 @@
                         <div class="clock" id="currentTime">--:--:--</div>
                     </div>
                     <div class="status-pill">
+                        <div class="status-left"><div class="status-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><div><div class="status-title">响应模式</div><div class="status-sub" id="currentActionModeSub">加载中...</div></div></div>
+                        <div class="status-value" id="currentActionMode">---</div>
+                    </div>
+                    <div class="status-pill">
                         <div class="status-left"><div class="status-icon"><div class="status-dot"></div></div><div><div class="status-title">主控节点</div><div class="status-sub">服务状态</div></div></div>
                         <div class="status-value good">运行稳定</div>
                     </div>
@@ -772,7 +776,7 @@
                             </div>
                             <div class="grid-2">
                                 <div><label for="aiSettingsDemoMode">Demo Mode</label><select id="aiSettingsDemoMode"><option value="false">关闭</option><option value="true">开启</option></select></div>
-                                <div><label for="aiSettingsDemoBonus">演示加分</label><input type="number" id="aiSettingsDemoBonus" min="0" placeholder="15"></div>
+                                <div><label for="aiSettingsActionMode">响应模式</label><select id="aiSettingsActionMode"><option value="block">自动封禁 (Block)</option><option value="alert">仅告警 (Alert)</option></select></div>
                             </div>
                             <div class="grid-2">
                                 <div><label for="aiSettingsDemoBlock">演示封禁阈值</label><input type="number" id="aiSettingsDemoBlock" min="1" placeholder="40"></div>
@@ -1010,6 +1014,17 @@
         }
 
         async function loadDashboard() {
+            const status = await fetchAPI('/api/ai/status');
+            if (status && status.data) {
+                const mode = status.data.action_mode || 'block';
+                const modeEl = document.getElementById('currentActionMode');
+                const subEl = document.getElementById('currentActionModeSub');
+                if (modeEl) {
+                    modeEl.textContent = mode === 'alert' ? '仅告警' : '自动封禁';
+                    modeEl.className = 'status-value ' + (mode === 'alert' ? 'warning' : 'good');
+                }
+                if (subEl) subEl.textContent = mode === 'alert' ? '已开启观察模式' : '防御策略生效中';
+            }
             await Promise.all([loadStats(), loadRecentAlerts(), loadTrends(), loadSeverityDist()]);
         }
         async function loadStats() {
@@ -1263,6 +1278,7 @@
             document.getElementById('aiAlertSystemPrompt').value = data.alert_analysis_system || '';
             document.getElementById('aiAlertUserPrompt').value = data.alert_analysis_user || '';
             document.getElementById('aiSettingsDemoMode').value = String(!!data.demo_mode);
+            document.getElementById('aiSettingsActionMode').value = data.action_mode || 'block';
             document.getElementById('aiSettingsDemoBlock').value = data.demo_block_threshold || 40;
             document.getElementById('aiSettingsDemoRepair').value = data.demo_repair_threshold || 65;
             document.getElementById('aiSettingsDemoBonus').value = data.demo_exploit_bonus || 15;

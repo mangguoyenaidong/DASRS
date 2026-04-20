@@ -35,6 +35,7 @@ type Config struct {
 			TimeWindow          int      `yaml:"time_window"`
 			MaxAlertsPerWindow  int      `yaml:"max_alerts_per_window"`
 			Whitelist           []string `yaml:"whitelist"`
+			ActionMode          string   `yaml:"action_mode"` // "alert" or "block"
 			DemoMode            bool     `yaml:"demo_mode"`
 			DemoBlockThreshold  int      `yaml:"demo_block_threshold"`
 			DemoRepairThreshold int      `yaml:"demo_repair_threshold"`

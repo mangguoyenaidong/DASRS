@@ -86,30 +86,39 @@ func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decisi
 
 	// 5. 根据阈值决定动作
 	blockThreshold, repairThreshold := e.getEffectiveThresholds()
+	rawAction := "ignore"
 	if finalScore >= repairThreshold {
-		decision.Action = "repair"
-		decision.Reason = combineReasons(
-			fmt.Sprintf("Score %d >= repair threshold %d", finalScore, repairThreshold),
-			contextReason,
-			e.demoReason(demoBonus),
-		)
+		rawAction = "repair"
 	} else if finalScore >= blockThreshold {
-		decision.Action = "block"
+		rawAction = "block"
+	}
+
+	// 5.1 处理告警模式 (Detection Only)
+	if e.cfg.Master.Intelligence.ActionMode == "alert" && rawAction != "ignore" {
+		decision.Action = "ignore"
 		decision.Reason = combineReasons(
-			fmt.Sprintf("Score %d >= block threshold %d", finalScore, blockThreshold),
+			fmt.Sprintf("[ALERT MODE] Would have been %s (Score %d)", rawAction, finalScore),
 			contextReason,
 			e.demoReason(demoBonus),
 		)
 	} else {
-		decision.Action = "ignore"
-		decision.Reason = combineReasons(
-			fmt.Sprintf("Score %d below block threshold %d", finalScore, blockThreshold),
-			contextReason,
-			e.demoReason(demoBonus),
-		)
+		decision.Action = rawAction
+		if rawAction != "ignore" {
+			decision.Reason = combineReasons(
+				fmt.Sprintf("Score %d >= %s threshold", finalScore, rawAction),
+				contextReason,
+				e.demoReason(demoBonus),
+			)
+		} else {
+			decision.Reason = combineReasons(
+				fmt.Sprintf("Score %d below block threshold %d", finalScore, blockThreshold),
+				contextReason,
+				e.demoReason(demoBonus),
+			)
+		}
 	}
 
-	e.logger.Info("Alert analyzed: %s -> Action: %s, Score: %d", alert.SID, decision.Action, finalScore)
+	e.logger.Info("Alert analyzed: %s -> Action: %s (Raw: %s), Score: %d", alert.SID, decision.Action, rawAction, finalScore)
 
 	return decision, nil
 }

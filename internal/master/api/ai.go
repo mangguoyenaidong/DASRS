@@ -26,6 +26,7 @@ type aiDependencies struct {
 	provider            string
 	enabled             bool
 	demoMode            bool
+	actionMode          string
 	blockThreshold      int
 	repairThreshold     int
 	demoBlockThreshold  int
@@ -50,6 +51,7 @@ func NewServerWithAI(
 		provider:            strings.TrimSpace(cfg.Master.AI.Provider),
 		enabled:             cfg.Master.AI.Enabled,
 		demoMode:            cfg.Master.Intelligence.DemoMode,
+		actionMode:          cfg.Master.Intelligence.ActionMode,
 		blockThreshold:      cfg.Master.Intelligence.BlockThreshold,
 		repairThreshold:     cfg.Master.Intelligence.RepairThreshold,
 		demoBlockThreshold:  cfg.Master.Intelligence.DemoBlockThreshold,
@@ -99,6 +101,7 @@ func (s *Server) refreshAIDependencies() error {
 		provider:            strings.TrimSpace(s.appCfg.Master.AI.Provider),
 		enabled:             s.appCfg.Master.AI.Enabled,
 		demoMode:            s.appCfg.Master.Intelligence.DemoMode,
+		actionMode:          s.appCfg.Master.Intelligence.ActionMode,
 		blockThreshold:      s.appCfg.Master.Intelligence.BlockThreshold,
 		repairThreshold:     s.appCfg.Master.Intelligence.RepairThreshold,
 		demoBlockThreshold:  s.appCfg.Master.Intelligence.DemoBlockThreshold,
@@ -146,6 +149,7 @@ func (s *Server) getAIStatus(c *gin.Context) {
 			"configuration_status":  aiConfigStatus(deps),
 			"testing_required":      true,
 			"demo_mode":             deps.demoMode,
+			"action_mode":           deps.actionMode,
 			"block_threshold":       deps.blockThreshold,
 			"repair_threshold":      deps.repairThreshold,
 			"demo_block_threshold":  deps.demoBlockThreshold,
@@ -173,6 +177,7 @@ func (s *Server) getAISettings(c *gin.Context) {
 			"alert_analysis_system":  s.appCfg.Master.AI.Prompts.AlertAnalysisSystem,
 			"alert_analysis_user":    s.appCfg.Master.AI.Prompts.AlertAnalysisUser,
 			"demo_mode":              s.appCfg.Master.Intelligence.DemoMode,
+			"action_mode":            s.appCfg.Master.Intelligence.ActionMode,
 			"demo_block_threshold":   s.appCfg.Master.Intelligence.DemoBlockThreshold,
 			"demo_repair_threshold":  s.appCfg.Master.Intelligence.DemoRepairThreshold,
 			"demo_exploit_bonus":     s.appCfg.Master.Intelligence.DemoExploitBonus,
@@ -199,6 +204,7 @@ func (s *Server) updateAISettings(c *gin.Context) {
 		AlertAnalysisSystem  string `json:"alert_analysis_system"`
 		AlertAnalysisUser    string `json:"alert_analysis_user"`
 		DemoMode             *bool  `json:"demo_mode"`
+		ActionMode           string `json:"action_mode"`
 		DemoBlockThreshold   int    `json:"demo_block_threshold"`
 		DemoRepairThreshold  int    `json:"demo_repair_threshold"`
 		DemoExploitBonus     int    `json:"demo_exploit_bonus"`
@@ -226,6 +232,9 @@ func (s *Server) updateAISettings(c *gin.Context) {
 	s.appCfg.Master.AI.Prompts.AlertAnalysisUser = req.AlertAnalysisUser
 	if req.DemoMode != nil {
 		s.appCfg.Master.Intelligence.DemoMode = *req.DemoMode
+	}
+	if strings.TrimSpace(req.ActionMode) != "" {
+		s.appCfg.Master.Intelligence.ActionMode = strings.TrimSpace(req.ActionMode)
 	}
 	if req.DemoBlockThreshold > 0 {
 		s.appCfg.Master.Intelligence.DemoBlockThreshold = req.DemoBlockThreshold

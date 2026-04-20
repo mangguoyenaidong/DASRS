@@ -26,6 +26,7 @@ master:
     block_threshold: 50
     time_window: 60
     max_alerts_per_window: 10
+    action_mode: "block" # "alert" (Detection only) or "block" (Auto prevention)
     demo_mode: false
     demo_block_threshold: 40
     demo_repair_threshold: 65
