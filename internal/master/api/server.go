@@ -138,6 +138,7 @@ func (s *Server) setupRoutes() {
 	}
 
 	// 手动封禁
+	s.router.GET("/api/blocked-ips", s.listBlockedIPs)
 	s.router.POST("/api/block", s.blockIP)
 	s.router.POST("/api/unblock", s.unblockIP)
 	s.router.POST("/api/batch-block", s.batchBlockIP)
@@ -518,14 +519,58 @@ func (s *Server) getStats(c *gin.Context) {
 		EnabledStrategies int64 `json:"enabled_strategies"`
 	}
 
-	s.db.Model(&model.Asset{}).Count(&stats.TotalAssets)
-	s.db.Model(&model.Asset{}).Where("status = ?", 1).Count(&stats.OnlineAssets)
+	s.db.Model(&model.AgentNode{}).Count(&stats.TotalAssets)
+	s.db.Model(&model.AgentNode{}).Where("status = ?", 1).Count(&stats.OnlineAssets)
 	s.db.Model(&model.AlertLog{}).Count(&stats.TotalAlerts)
 	s.db.Model(&model.AlertLog{}).Where("status = ?", 0).Count(&stats.PendingAlerts)
 	s.db.Model(&model.Strategy{}).Count(&stats.TotalStrategies)
 	s.db.Model(&model.Strategy{}).Where("enabled = ?", 1).Count(&stats.EnabledStrategies)
 
+	// 同时获取已封禁 IP 数 (从封禁 API 的逻辑获取)
+	var blockedCount int64
+	s.db.Raw(`
+		SELECT COUNT(DISTINCT target) 
+		FROM operation_logs 
+		WHERE command_type = 'block_ip' AND result = 1 
+		AND target NOT IN (SELECT target FROM operation_logs WHERE command_type = 'unblock_ip' AND result = 1)
+	`).Scan(&blockedCount)
+	stats.BlockedIPs = blockedCount
+
 	c.PureJSON(http.StatusOK, gin.H{"data": stats})
+}
+
+// listBlockedIPs 获取当前封禁中的 IP 列表 (基于操作日志)
+func (s *Server) listBlockedIPs(c *gin.Context) {
+	var results []struct {
+		Target    string    `json:"ip"`
+		CreatedAt time.Time `json:"blocked_at"`
+		Message   string    `json:"reason"`
+	}
+
+	// 查找最近 48 小时内成功的 block_ip 记录，且没有对应的 unblock 记录
+	// 这是一个简化的查询逻辑，实际生产中推荐维护一个独立的 BlockedIPs 表
+	query := `
+		SELECT target, MAX(created_at) as created_at, MAX(message) as message
+		FROM operation_logs
+		WHERE command_type = 'block_ip' AND result = 1
+		AND target NOT IN (
+			SELECT target FROM operation_logs 
+			WHERE command_type = 'unblock_ip' AND result = 1
+		)
+		GROUP BY target
+		ORDER BY created_at DESC
+		LIMIT 100
+	`
+
+	if err := s.db.Raw(query).Scan(&results).Error; err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    results,
+	})
 }
 
 // blockIP 手动封禁 IP

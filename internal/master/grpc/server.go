@@ -352,11 +352,16 @@ func (s *Server) SendHeartbeat(ctx context.Context, req *proto.HeartbeatRequest)
 func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest) (*proto.AlertReportResponse, error) {
 	s.logger.Info("ReportAlert received: SID=%s, SourceIP=%s, Severity=%s", req.GetSid(), req.GetSourceIp(), req.GetSeverity())
 
+	destIP := req.GetDestIp()
+	if destIP == "" {
+		destIP = extractDestIP(req.GetAssetInfo())
+	}
+
 	alert := &core.Alert{
 		SID:           req.GetSid(),
 		Payload:       req.GetPayload(),
 		SourceIP:      req.GetSourceIp(),
-		DestIP:        extractDestIP(req.GetAssetInfo()),
+		DestIP:        destIP,
 		AssetInfo:     req.GetAssetInfo(),
 		Timestamp:     req.GetTimestamp(),
 		Severity:      req.GetSeverity(),

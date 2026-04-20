@@ -1719,26 +1719,23 @@ ${item.operator_advice || '-'}`);
             refreshBlockedIps();
         }
         async function refreshBlockedIps() {
-            const res = await fetchAPI('/api/alerts?action=block&page_size=100');
+            const res = await fetchAPI('/api/blocked-ips');
             const tbody = document.getElementById('blockedIpsTable').querySelector('tbody');
             if (!tbody) return;
-            if (!res || !res.data || res.data.length === 0) {
+            if (!res || !res.success || !res.data || res.data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="empty">当前没有封禁记录</td></tr>';
                 loadStats();
                 return;
             }
-            const uniqueMap = {};
-            res.data.forEach(item => { if (item.source_ip && !uniqueMap[item.source_ip]) uniqueMap[item.source_ip] = item; });
-            const ips = Object.values(uniqueMap);
-            tbody.innerHTML = ips.length ? ips.map(item => `
+            tbody.innerHTML = res.data.map(item => `
                 <tr>
-                    <td><input type="checkbox" class="row-checkbox" value="${escapeHtml(item.source_ip || '')}"></td>
-                    <td class="mono" style="color:var(--danger);">${safeText(item.source_ip)}</td>
-                    <td>${formatDateTime(item.created_at)}</td>
-                    <td class="truncate">${safeText(item.signature_name)}</td>
-                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="unblockIP('${escapeHtml(item.source_ip || '')}')">立即解封</button></td>
+                    <td><input type="checkbox" class="row-checkbox" value="${escapeHtml(item.ip || '')}"></td>
+                    <td class="mono" style="color:var(--danger);">${safeText(item.ip)}</td>
+                    <td>${formatDateTime(item.blocked_at)}</td>
+                    <td class="truncate">${safeText(item.reason || '自动分析阻断')}</td>
+                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="unblockIP('${escapeHtml(item.ip || '')}')">立即解封</button></td>
                 </tr>
-            `).join('') : '<tr><td colspan="5" class="empty">当前没有封禁记录</td></tr>';
+            `).join('');
             loadStats();
         }
         function selectAll(tableId, checked) {
