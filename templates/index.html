@@ -845,6 +845,10 @@
                                 <div><label for="aiSettingsDemoBlock">演示封禁阈值</label><input type="number" id="aiSettingsDemoBlock" min="1" placeholder="40"></div>
                                 <div><label for="aiSettingsDemoRepair">演示修复阈值</label><input type="number" id="aiSettingsDemoRepair" min="1" placeholder="65"></div>
                             </div>
+                            <div class="grid-2">
+                                <div><label for="aiSettingsDemoBonus">风险加分阈值</label><input type="number" id="aiSettingsDemoBonus" min="0" placeholder="15"></div>
+                                <div style="display:none;"></div>
+                            </div>
                         </div>
                     </section>
 
@@ -1393,22 +1397,28 @@
             }
 
             const data = res.data;
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.value = String(val ?? '');
+            };
+
             aiSettingsApplying = true;
-            document.getElementById('aiSettingsEnabled').value = String(!!data.enabled);
-            document.getElementById('aiSettingsProvider').value = data.provider || 'deepseek';
-            document.getElementById('aiSettingsBaseURL').value = data.base_url || '';
-            document.getElementById('aiSettingsAPIKey').value = data.api_key || '';
-            document.getElementById('aiSettingsModel').value = data.model || '';
-            document.getElementById('aiSettingsTimeout').value = data.timeout_seconds || 30;
-            document.getElementById('aiRuleGenSystemPrompt').value = data.rule_generation_system || '';
-            document.getElementById('aiRuleGenUserPrompt').value = data.rule_generation_user || '';
-            document.getElementById('aiAlertSystemPrompt').value = data.alert_analysis_system || '';
-            document.getElementById('aiAlertUserPrompt').value = data.alert_analysis_user || '';
-            document.getElementById('aiSettingsDemoMode').value = String(!!data.demo_mode);
-            document.getElementById('aiSettingsActionMode').value = data.action_mode || 'block';
-            document.getElementById('aiSettingsDemoBlock').value = data.demo_block_threshold || 40;
-            document.getElementById('aiSettingsDemoRepair').value = data.demo_repair_threshold || 65;
-            document.getElementById('aiSettingsDemoBonus').value = data.demo_exploit_bonus || 15;
+            setVal('aiSettingsEnabled', !!data.enabled);
+            setVal('aiSettingsProvider', data.provider || 'deepseek');
+            setVal('aiSettingsBaseURL', data.base_url);
+            setVal('aiSettingsAPIKey', data.api_key);
+            setVal('aiSettingsModel', data.model);
+            setVal('aiSettingsTimeout', data.timeout_seconds || 30);
+            setVal('aiRuleGenSystemPrompt', data.rule_generation_system);
+            setVal('aiRuleGenUserPrompt', data.rule_generation_user);
+            setVal('aiAlertSystemPrompt', data.alert_analysis_system);
+            setVal('aiAlertUserPrompt', data.alert_analysis_user);
+            setVal('aiSettingsDemoMode', !!data.demo_mode);
+            setVal('aiSettingsActionMode', data.action_mode || 'block');
+            setVal('aiSettingsDemoBlock', data.demo_block_threshold || 40);
+            setVal('aiSettingsDemoRepair', data.demo_repair_threshold || 65);
+            setVal('aiSettingsDemoBonus', data.demo_exploit_bonus || 15);
+
             aiSettingsApplying = false;
             aiSettingsDirty = false;
             setText('aiSettingsStatus', `当前配置文件：${data.config_path || 'configs/config.yaml'} | Provider：${data.provider || '-'} | Demo Mode：${data.demo_mode ? '开启' : '关闭'}`);
