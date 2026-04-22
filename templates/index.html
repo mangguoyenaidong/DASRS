@@ -340,21 +340,57 @@
         .sub-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
 
         .modal {
-            display: none; position: fixed; inset: 0; z-index: 20; padding: 28px; background: rgba(7,20,36,0.4);
-            backdrop-filter: blur(18px); align-items: center; justify-content: center;
+            display: none; position: fixed; inset: 0; z-index: 20; padding: 28px;
+            background:
+                radial-gradient(circle at top, rgba(15,111,255,0.16), transparent 34%),
+                rgba(7,20,36,0.52);
+            backdrop-filter: blur(20px); align-items: center; justify-content: center;
         }
         .modal-content {
             width: min(1120px, 100%); max-height: 92vh; display: flex; flex-direction: column; overflow: hidden;
-            border-radius: 28px; background: rgba(248,251,255,0.96); border: 1px solid rgba(255,255,255,0.7);
-            box-shadow: 0 40px 80px rgba(8,21,40,0.2);
+            border-radius: 32px; background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(243,248,255,0.96));
+            border: 1px solid rgba(255,255,255,0.82);
+            box-shadow:
+                0 42px 90px rgba(8,21,40,0.26),
+                inset 0 1px 0 rgba(255,255,255,0.88);
+            animation: modalRise 0.22s ease;
+        }
+        @keyframes modalRise {
+            from { opacity: 0; transform: translateY(18px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
         .modal-header, .modal-footer {
             padding: 22px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
         }
-        .modal-header { border-bottom: 1px solid rgba(16,35,63,0.08); }
-        .modal-footer { border-top: 1px solid rgba(16,35,63,0.08); justify-content: flex-end; }
-        .modal-title { font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif; font-size: 20px; font-weight: 700; color: var(--ink); }
-        .modal-body { padding: 28px; overflow-y: auto; }
+        .modal-header {
+            border-bottom: 1px solid rgba(16,35,63,0.08);
+            background:
+                linear-gradient(135deg, rgba(15,111,255,0.08), rgba(255,255,255,0.8));
+        }
+        .modal-footer {
+            border-top: 1px solid rgba(16,35,63,0.08);
+            justify-content: flex-end;
+            background: rgba(255,255,255,0.7);
+        }
+        .modal-title {
+            font-family: 'Space Grotesk', 'Noto Sans SC', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: 0.02em;
+        }
+        .modal-body {
+            padding: 28px;
+            overflow-y: auto;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.44), rgba(240,246,255,0.68));
+        }
+        .modal-body > .empty {
+            border-radius: 20px;
+            background: rgba(255,255,255,0.72);
+            border: 1px dashed rgba(15,111,255,0.18);
+        }
         .terminal-box {
             position: relative; padding: 24px; border-radius: 22px; background: linear-gradient(180deg, #0b1830, #0f213f);
             color: #f4f8ff; border: 1px solid rgba(97,176,255,0.18); font-family: 'JetBrains Mono', monospace;
@@ -373,6 +409,33 @@
         .alert-note h4 { color: var(--danger); font-size: 16px; font-weight: 800; margin-bottom: 10px; }
         .alert-note p { color: var(--ink-soft); font-size: 14px; line-height: 1.8; margin-bottom: 16px; }
         .empty { padding: 26px 18px; text-align: center; color: var(--ink-faint); }
+        .toast-stack {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 40;
+            display: grid;
+            gap: 12px;
+            width: min(360px, calc(100vw - 32px));
+        }
+        .toast {
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.94);
+            box-shadow: 0 18px 40px rgba(12, 28, 53, 0.16);
+            color: var(--ink);
+            animation: toastSlideIn 0.18s ease;
+        }
+        .toast.success { border-color: rgba(15,159,116,0.18); background: linear-gradient(135deg, rgba(15,159,116,0.12), rgba(255,255,255,0.98)); }
+        .toast.error { border-color: rgba(210,61,87,0.18); background: linear-gradient(135deg, rgba(210,61,87,0.12), rgba(255,255,255,0.98)); }
+        .toast.info { border-color: rgba(15,111,255,0.18); background: linear-gradient(135deg, rgba(15,111,255,0.12), rgba(255,255,255,0.98)); }
+        .toast-title { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+        .toast-message { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(-8px) translateX(10px); }
+            to { opacity: 1; transform: translateY(0) translateX(0); }
+        }
 
         @media (max-width: 1240px) {
             .app-shell { grid-template-columns: 96px minmax(0, 1fr); }
@@ -647,8 +710,8 @@
                         <div class="panel-header"><div><div class="panel-title">当前封禁列表</div><div class="panel-subtitle">来源于告警动作视图的已封禁地址集合</div></div><button class="btn btn-outline" onclick="batchUnblock()">批量解封</button></div>
                         <div class="table-shell">
                             <table id="blockedIpsTable">
-                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('blockedIpsTable', this.checked)"></th><th>IP 地址</th><th>封禁时间</th><th>触发原因</th><th>操作</th></tr></thead>
-                                <tbody><tr><td colspan="5" class="empty">暂无封禁记录</td></tr></tbody>
+                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('blockedIpsTable', this.checked)"></th><th>IP 地址</th><th>状态</th><th>封禁时间</th><th>触发原因</th><th>操作</th></tr></thead>
+                                <tbody><tr><td colspan="6" class="empty">暂无封禁记录</td></tr></tbody>
                             </table>
                         </div>
                     </section>
@@ -754,7 +817,7 @@
                     <div class="page-header">
                         <div><h3>AI 配置</h3><p>在这里维护 DeepSeek API Key、模型地址和提示词模板。保存后会写回配置文件，并刷新当前 Master 的 AI 配置。</p></div>
                         <div class="toolbar">
-                            <button class="btn btn-outline" onclick="loadAISettings()">刷新配置</button>
+                            <button class="btn btn-outline" onclick="loadAISettings(true)">刷新配置</button>
                             <button class="btn btn-primary" onclick="saveAISettings()">保存配置</button>
                         </div>
                     </div>
@@ -813,6 +876,7 @@
             <footer class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">返回列表</button></footer>
         </div>
     </div>
+    <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
     <script>
         const API_BASE = '';
@@ -821,6 +885,8 @@
         let trendsChart = null;
         let severityChart = null;
         let lastGeneratedRuleTask = null;
+        let aiSettingsDirty = false;
+        let aiSettingsApplying = false;
 
         function updateClock() {
             const now = new Date();
@@ -829,6 +895,35 @@
         }
         setInterval(updateClock, 1000);
         updateClock();
+
+        function initAISettingsDirtyTracking() {
+            const ids = [
+                'aiSettingsEnabled',
+                'aiSettingsProvider',
+                'aiSettingsBaseURL',
+                'aiSettingsAPIKey',
+                'aiSettingsModel',
+                'aiSettingsTimeout',
+                'aiRuleGenSystemPrompt',
+                'aiRuleGenUserPrompt',
+                'aiAlertSystemPrompt',
+                'aiAlertUserPrompt',
+                'aiSettingsDemoMode',
+                'aiSettingsActionMode',
+                'aiSettingsDemoBlock',
+                'aiSettingsDemoRepair',
+                'aiSettingsDemoBonus'
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const markDirty = () => {
+                    if (!aiSettingsApplying) aiSettingsDirty = true;
+                };
+                el.addEventListener('input', markDirty);
+                el.addEventListener('change', markDirty);
+            });
+        }
 
         function showPage(pageId) {
             document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
@@ -850,7 +945,10 @@
                 case 'block': await refreshBlockedIps(); break;
                 case 'whitelist': await refreshWhitelist(); break;
                 case 'ai': await loadAIWorkbench(); break;
-                case 'ai-settings': await loadAISettings(); break;
+                case 'ai-settings':
+                    if (!aiSettingsDirty) await loadAISettings();
+                    else setText('aiSettingsStatus', '检测到未保存的 AI 配置修改，已暂停自动刷新覆盖当前输入。');
+                    break;
                 case 'logs': await refreshLogs(); break;
             }
         }
@@ -964,6 +1062,12 @@
             if (value === 'observe' || value === '') return '观察';
             return '未知';
         }
+        function formatBlockStatus(status) {
+            const value = String(status || '').toLowerCase();
+            if (value === 'active') return { text: '已生效', badge: 'danger' };
+            if (value === 'pending') return { text: '待执行', badge: 'warning' };
+            return { text: '未知', badge: 'info' };
+        }
         function getStatusBadge(status) {
             return status === 0 ? 'warning' : 'success';
         }
@@ -980,6 +1084,22 @@
         function setHtml(id, value) {
             const el = document.getElementById(id);
             if (el) el.innerHTML = value;
+        }
+        function notify(message, type = 'info', title = '') {
+            const stack = document.getElementById('toastStack');
+            if (!stack) return;
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <div class="toast-title">${escapeHtml(title || (type === 'success' ? '操作成功' : type === 'error' ? '操作失败' : '提示'))}</div>
+                <div class="toast-message">${escapeHtml(message || '')}</div>
+            `;
+            stack.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-6px)';
+                setTimeout(() => toast.remove(), 180);
+            }, 2800);
         }
         function setStrategyFormMode(mode) {
             const title = document.getElementById('strategyFormTitle');
@@ -1259,7 +1379,11 @@
             updateAIProgress(lastGeneratedRuleTask);
         }
 
-        async function loadAISettings() {
+        async function loadAISettings(force = false) {
+            if (aiSettingsDirty && !force) {
+                setText('aiSettingsStatus', '检测到未保存的 AI 配置修改，已暂停自动刷新覆盖当前输入。');
+                return;
+            }
             const res = await fetchAPI('/api/ai/settings');
             if (!res || !res.data) {
                 setText('aiSettingsStatus', '未能读取 AI 配置，请确认 Master API 正常运行。');
@@ -1267,6 +1391,7 @@
             }
 
             const data = res.data;
+            aiSettingsApplying = true;
             document.getElementById('aiSettingsEnabled').value = String(!!data.enabled);
             document.getElementById('aiSettingsProvider').value = data.provider || 'deepseek';
             document.getElementById('aiSettingsBaseURL').value = data.base_url || '';
@@ -1282,6 +1407,8 @@
             document.getElementById('aiSettingsDemoBlock').value = data.demo_block_threshold || 40;
             document.getElementById('aiSettingsDemoRepair').value = data.demo_repair_threshold || 65;
             document.getElementById('aiSettingsDemoBonus').value = data.demo_exploit_bonus || 15;
+            aiSettingsApplying = false;
+            aiSettingsDirty = false;
             setText('aiSettingsStatus', `当前配置文件：${data.config_path || 'configs/config.yaml'} | Provider：${data.provider || '-'} | Demo Mode：${data.demo_mode ? '开启' : '关闭'}`);
         }
 
@@ -1310,6 +1437,7 @@
                 return;
             }
 
+            aiSettingsDirty = false;
             setText('aiSettingsStatus', `保存成功：${result?.data?.config_path || 'configs/config.yaml'}，当前 Demo Mode：${result?.data?.demo_mode ? '开启' : '关闭'}。`);
             await loadAIWorkbench();
         }
@@ -1683,13 +1811,13 @@ ${item.operator_advice || '-'}`);
             let result;
             if (action === 'block') {
                 result = await postAPI('/api/block', { ip, reason: '人工审计确认攻击' });
-                if (isSuccess(result)) alert('已下发封禁指令。');
+                if (isSuccess(result)) notify(result?.message || '已下发封禁指令。', 'success', '封禁已提交');
             } else {
                 result = await postAPI('/api/whitelist', { ip, reason: '人工审计确认为误报' });
-                if (isSuccess(result)) alert('已加入白名单。');
+                if (isSuccess(result)) notify(result?.message || '已加入白名单。', 'success', '白名单已更新');
             }
             if (!isSuccess(result)) {
-                alert(`操作失败：${result?.message || '未知错误'}`);
+                notify(result?.message || '未知错误', 'error', '操作失败');
                 return;
             }
             closeModal();
@@ -1709,12 +1837,12 @@ ${item.operator_advice || '-'}`);
             const reason = document.getElementById('blockReason').value.trim();
             const result = await postAPI('/api/block', { ip, reason });
             if (!isSuccess(result)) {
-                alert(`封禁失败：${result?.message || '未知错误'}`);
+                notify(result?.message || '未知错误', 'error', '封禁失败');
                 return;
             }
             document.getElementById('blockIp').value = '';
             document.getElementById('blockReason').value = '';
-            alert('封禁指令已下发。');
+            notify(result?.message || '封禁指令已下发。', 'success', '封禁已提交');
             loadStats();
             refreshBlockedIps();
         }
@@ -1723,7 +1851,7 @@ ${item.operator_advice || '-'}`);
             const tbody = document.getElementById('blockedIpsTable').querySelector('tbody');
             if (!tbody) return;
             if (!res || !res.success || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty">当前没有封禁记录</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">当前没有封禁记录</td></tr>';
                 loadStats();
                 return;
             }
@@ -1731,6 +1859,7 @@ ${item.operator_advice || '-'}`);
                 <tr>
                     <td><input type="checkbox" class="row-checkbox" value="${escapeHtml(item.ip || '')}"></td>
                     <td class="mono" style="color:var(--danger);">${safeText(item.ip)}</td>
+                    <td><span class="badge ${formatBlockStatus(item.status).badge}">${formatBlockStatus(item.status).text}</span></td>
                     <td>${formatDateTime(item.blocked_at)}</td>
                     <td class="truncate">${safeText(item.reason || '自动分析阻断')}</td>
                     <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="unblockIP('${escapeHtml(item.ip || '')}')">立即解封</button></td>
@@ -1746,28 +1875,28 @@ ${item.operator_advice || '-'}`);
         }
         async function batchBlock() {
             const ips = getSelectedIps('alertsMainTable');
-            if (ips.length === 0) return alert('请先勾选需要封禁的 IP。');
+            if (ips.length === 0) return notify('请先勾选需要封禁的 IP。', 'info', '未选择目标');
             if (!confirm(`确定要批量封禁这 ${ips.length} 个 IP 吗？`)) return;
             const result = await postAPI('/api/batch-block', { ips, reason: '批量手动封禁' });
-            if (!isSuccess(result)) return alert(`批量封禁失败：${result?.message || '未知错误'}`);
-            alert('批量封禁指令已下发。');
+            if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量封禁失败');
+            notify(result?.message || '批量封禁指令已下发。', 'success', '批量封禁已提交');
             refreshAlerts();
             loadStats();
         }
         async function batchUnblock() {
             const ips = getSelectedIps('blockedIpsTable');
-            if (ips.length === 0) return alert('请先勾选需要解封的 IP。');
+            if (ips.length === 0) return notify('请先勾选需要解封的 IP。', 'info', '未选择目标');
             if (!confirm(`确定要批量解封这 ${ips.length} 个 IP 吗？`)) return;
             const result = await postAPI('/api/batch-unblock', { ips, reason: '批量手动解封' });
-            if (!isSuccess(result)) return alert(`批量解封失败：${result?.message || '未知错误'}`);
-            alert('批量解封指令已下发。');
+            if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量解封失败');
+            notify(result?.message || '批量解封指令已下发。', 'success', '批量解封已提交');
             refreshBlockedIps();
         }
         async function unblockIP(ip) {
             if (!confirm(`确定要解除对 IP ${ip} 的封禁吗？`)) return;
             const result = await postAPI('/api/unblock', { ip, reason: '人工手动解封' });
-            if (!isSuccess(result)) return alert(`解封失败：${result?.message || '未知错误'}`);
-            alert('解封指令已下发。');
+            if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '解封失败');
+            notify(result?.message || '解封指令已下发。', 'success', '解封已提交');
             refreshBlockedIps();
         }
         async function refreshWhitelist() {
@@ -1927,6 +2056,7 @@ ${item.operator_advice || '-'}`);
         window.onclick = event => {
             if (event.target.classList.contains('modal')) closeModal();
         };
+        initAISettingsDirtyTracking();
         showPage('dashboard');
     </script>
 </body>

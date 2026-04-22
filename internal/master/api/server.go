@@ -545,20 +545,37 @@ func (s *Server) listBlockedIPs(c *gin.Context) {
 		Target    string    `json:"ip"`
 		CreatedAt time.Time `json:"blocked_at"`
 		Message   string    `json:"reason"`
+		Status    string    `json:"status"`
 	}
 
-	// 查找最近 48 小时内成功的 block_ip 记录，且没有对应的 unblock 记录
-	// 这是一个简化的查询逻辑，实际生产中推荐维护一个独立的 BlockedIPs 表
+	// 优先展示当前仍处于封禁或待执行状态的最新 block 记录。
+	// 结果说明：
+	// - active: Agent 已回执封禁成功
+	// - pending: 封禁命令已下发，但尚未收到 Agent 执行回执
 	query := `
-		SELECT target, MAX(created_at) as created_at, MAX(message) as message
-		FROM operation_logs
-		WHERE command_type = 'block_ip' AND result = 1
-		AND target NOT IN (
-			SELECT target FROM operation_logs 
+		SELECT b.target, b.created_at, b.message,
+		       CASE
+		           WHEN b.result = 1 THEN 'active'
+		           WHEN b.result = 0 AND COALESCE(b.execution_time_ms, 0) = 0 THEN 'pending'
+		           ELSE 'inactive'
+		       END AS status
+		FROM operation_logs b
+		INNER JOIN (
+			SELECT target, MAX(created_at) AS latest_created_at
+			FROM operation_logs
+			WHERE command_type = 'block_ip'
+			GROUP BY target
+		) latest ON latest.target = b.target AND latest.latest_created_at = b.created_at
+		WHERE b.command_type = 'block_ip'
+		AND (
+			b.result = 1
+			OR (b.result = 0 AND COALESCE(b.execution_time_ms, 0) = 0)
+		)
+		AND b.target NOT IN (
+			SELECT target FROM operation_logs
 			WHERE command_type = 'unblock_ip' AND result = 1
 		)
-		GROUP BY target
-		ORDER BY created_at DESC
+		ORDER BY b.created_at DESC
 		LIMIT 100
 	`
 
@@ -571,6 +588,46 @@ func (s *Server) listBlockedIPs(c *gin.Context) {
 		"success": true,
 		"data":    results,
 	})
+}
+
+func (s *Server) getBlockState(ip string) string {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return ""
+	}
+
+	var latest struct {
+		CommandType string
+		Result      int
+	}
+
+	err := s.db.Raw(`
+		SELECT command_type, result
+		FROM operation_logs
+		WHERE target = ?
+		AND command_type IN ('block_ip', 'unblock_ip')
+		ORDER BY created_at DESC, id DESC
+		LIMIT 1
+	`, ip).Scan(&latest).Error
+	if err != nil || strings.TrimSpace(latest.CommandType) == "" {
+		return ""
+	}
+
+	switch latest.CommandType {
+	case "block_ip":
+		if latest.Result == 1 {
+			return "active"
+		}
+		if latest.Result == 0 {
+			return "pending"
+		}
+	case "unblock_ip":
+		if latest.Result == 0 {
+			return "unblock_pending"
+		}
+	}
+
+	return ""
 }
 
 // blockIP 手动封禁 IP
@@ -594,14 +651,47 @@ func (s *Server) blockIP(c *gin.Context) {
 		return
 	}
 
+	switch s.getBlockState(req.IP) {
+	case "active":
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("IP %s is already blocked", req.IP),
+		})
+		return
+	case "pending":
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": fmt.Sprintf("IP %s already has a pending block command", req.IP),
+		})
+		return
+	}
+
+	commandID := fmt.Sprintf("man-block-%d", time.Now().Unix())
 	cmd := &proto.CommandMessage{
-		CommandId: fmt.Sprintf("man-block-%d", time.Now().Unix()),
+		CommandId: commandID,
 		Type:      proto.CommandType_BLOCK_IP,
 		TargetIp:  req.IP,
 	}
 
-	// 下发给所有在线 Agent
 	agents := s.grpcServer.GetConnectedAgents()
+	if len(agents) == 0 {
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": "no connected agents available to execute block command",
+		})
+		return
+	}
+
+	// 预先记录操作日志
+	s.db.Create(&model.OperationLog{
+		CommandID:   commandID,
+		CommandType: "block_ip",
+		Target:      req.IP,
+		Result:      0, // 初始为进行中
+		Message:     fmt.Sprintf("Manual block: %s", req.Reason),
+		CreatedAt:   time.Now(),
+	})
+
 	for _, agent := range agents {
 		s.grpcServer.QueueCommand(agent.AgentID, cmd)
 	}
@@ -626,13 +716,32 @@ func (s *Server) unblockIP(c *gin.Context) {
 		return
 	}
 
+	commandID := fmt.Sprintf("man-unblock-%d", time.Now().Unix())
 	cmd := &proto.CommandMessage{
-		CommandId: fmt.Sprintf("man-unblock-%d", time.Now().Unix()),
+		CommandId: commandID,
 		Type:      proto.CommandType_UNBLOCK_IP,
 		TargetIp:  req.IP,
 	}
 
 	agents := s.grpcServer.GetConnectedAgents()
+	if len(agents) == 0 {
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": "no connected agents available to execute unblock command",
+		})
+		return
+	}
+
+	// 预记录解封日志
+	s.db.Create(&model.OperationLog{
+		CommandID:   commandID,
+		CommandType: "unblock_ip",
+		Target:      req.IP,
+		Result:      0,
+		Message:     fmt.Sprintf("Manual unblock: %s", req.Reason),
+		CreatedAt:   time.Now(),
+	})
+
 	for _, agent := range agents {
 		s.grpcServer.QueueCommand(agent.AgentID, cmd)
 	}
@@ -666,12 +775,23 @@ func (s *Server) batchBlockIP(c *gin.Context) {
 	}
 
 	agents := s.grpcServer.GetConnectedAgents()
+	if len(agents) == 0 {
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": "no connected agents available to execute batch block command",
+		})
+		return
+	}
 	count := 0
 	realBlocked := 0
 	for _, ip := range req.IPs {
 		// 跳过白名单
 		if s.engine.IsWhitelisted(ip) {
 			s.logger.Warn("Skip batch block for whitelisted IP: %s", ip)
+			continue
+		}
+		if state := s.getBlockState(ip); state == "active" || state == "pending" {
+			s.logger.Info("Skip batch block for IP %s due to existing state: %s", ip, state)
 			continue
 		}
 
@@ -706,6 +826,13 @@ func (s *Server) batchUnblockIP(c *gin.Context) {
 	}
 
 	agents := s.grpcServer.GetConnectedAgents()
+	if len(agents) == 0 {
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": "no connected agents available to execute batch unblock command",
+		})
+		return
+	}
 	count := 0
 	for _, ip := range req.IPs {
 		cmd := &proto.CommandMessage{

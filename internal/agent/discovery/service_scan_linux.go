@@ -175,8 +175,47 @@ func inferServiceName(port int, process, cmdline string) string {
 		return "redis"
 	case strings.Contains(process, "postgres"):
 		return "postgresql"
+	case strings.Contains(process, "mongod"):
+		return "mongodb"
+	case strings.Contains(process, "rabbitmq"):
+		return "rabbitmq"
+	case strings.Contains(process, "consul"):
+		return "consul"
+	case strings.Contains(process, "etcd"):
+		return "etcd"
+	case strings.Contains(process, "zookeeper"):
+		return "zookeeper"
+	case strings.Contains(process, "minio"):
+		return "minio"
+	case strings.Contains(process, "prometheus"):
+		return "prometheus"
+	case strings.Contains(process, "grafana"):
+		return "grafana"
 	case strings.Contains(process, "sshd"):
 		return "ssh"
+	}
+
+	switch {
+	case strings.Contains(cmdline, "rabbitmq-server"):
+		return "rabbitmq"
+	case strings.Contains(cmdline, "mongod"):
+		return "mongodb"
+	case strings.Contains(cmdline, "consul agent"), strings.Contains(cmdline, "/consul"):
+		return "consul"
+	case strings.Contains(cmdline, "etcd"):
+		return "etcd"
+	case strings.Contains(cmdline, "zookeeper"):
+		return "zookeeper"
+	case strings.Contains(cmdline, "minio server"):
+		return "minio"
+	case strings.Contains(cmdline, "prometheus"):
+		return "prometheus"
+	case strings.Contains(cmdline, "grafana-server"):
+		return "grafana"
+	case strings.Contains(cmdline, "kibana"):
+		return "kibana"
+	case strings.Contains(cmdline, "logstash"):
+		return "logstash"
 	}
 
 	switch port {
@@ -188,12 +227,30 @@ func inferServiceName(port int, process, cmdline string) string {
 		return "https"
 	case 3306:
 		return "mysql"
+	case 2181:
+		return "zookeeper"
+	case 2379, 2380:
+		return "etcd"
+	case 27017:
+		return "mongodb"
+	case 3000:
+		return "grafana"
+	case 5672, 15672:
+		return "rabbitmq"
+	case 8500:
+		return "consul"
 	case 5432:
 		return "postgresql"
 	case 6379:
 		return "redis"
+	case 9000, 9001:
+		return "minio"
 	case 9200:
 		return "elasticsearch"
+	case 9090:
+		return "prometheus"
+	case 9092:
+		return "kafka"
 	default:
 		return process
 	}
@@ -221,6 +278,13 @@ func inferJavaService(port int, process, cmdline string) string {
 	case strings.Contains(cmdline, "kafka.kafka"),
 		strings.Contains(cmdline, "kafka-server-start"):
 		return "kafka"
+	case strings.Contains(cmdline, "rocketmq"),
+		strings.Contains(cmdline, "mqnamesrv"),
+		strings.Contains(cmdline, "mqbroker"):
+		return "rocketmq"
+	case strings.Contains(cmdline, "org.apache.zookeeper.server.quorum.quorummain"),
+		strings.Contains(cmdline, "zookeeper"):
+		return "zookeeper"
 	case strings.Contains(cmdline, "org.springframework.boot.loader"),
 		strings.Contains(cmdline, "jarlauncher"),
 		strings.Contains(cmdline, "propertieslauncher"):
@@ -228,7 +292,44 @@ func inferJavaService(port int, process, cmdline string) string {
 			return "spring-boot"
 		}
 		return "java-service"
+	case strings.Contains(cmdline, ".jar"):
+		if fingerprinted := inferJavaJarService(cmdline); fingerprinted != "" {
+			return fingerprinted
+		}
+		if port == 8080 || port == 8443 || port == 8090 {
+			return "spring-boot"
+		}
+		return "java-service"
 	default:
 		return "java-service"
+	}
+}
+
+func inferJavaJarService(cmdline string) string {
+	switch {
+	case strings.Contains(cmdline, "jenkins.war"),
+		strings.Contains(cmdline, "hudson.war"):
+		return "jenkins"
+	case strings.Contains(cmdline, "nacos"),
+		strings.Contains(cmdline, "nacos-server"):
+		return "nacos"
+	case strings.Contains(cmdline, "rocketmq"):
+		return "rocketmq"
+	case strings.Contains(cmdline, "sentinel"):
+		return "sentinel"
+	case strings.Contains(cmdline, "dubbo-admin"):
+		return "dubbo-admin"
+	case strings.Contains(cmdline, "xxl-job"):
+		return "xxl-job"
+	case strings.Contains(cmdline, "apollo-configservice"),
+		strings.Contains(cmdline, "apollo-adminservice"),
+		strings.Contains(cmdline, "apollo-portal"):
+		return "apollo"
+	case strings.Contains(cmdline, "elasticsearch"):
+		return "elasticsearch"
+	case strings.Contains(cmdline, "kafka"):
+		return "kafka"
+	default:
+		return ""
 	}
 }
