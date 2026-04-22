@@ -22,6 +22,7 @@ type SuricataCollector struct {
 	monitorIP  string
 	offsetFile string
 	tail       *tail.Tail
+	trafficCtx TrafficContextProvider
 	ctx        context.Context
 	cancel     context.CancelFunc
 	alertCount int64
@@ -44,6 +45,10 @@ func NewSuricataCollector(filePath, localIP, monitorIP string) *SuricataCollecto
 
 func (c *SuricataCollector) GetAlertCount() int64 {
 	return atomic.LoadInt64(&c.alertCount)
+}
+
+func (c *SuricataCollector) SetTrafficContextProvider(provider TrafficContextProvider) {
+	c.trafficCtx = provider
 }
 
 func (c *SuricataCollector) Start(reportFunc func(*pb.AlertReportRequest)) error {
@@ -129,6 +134,9 @@ func (c *SuricataCollector) saveOffset() {
 }
 
 func (c *SuricataCollector) Stop() {
+	if c.trafficCtx != nil {
+		c.trafficCtx.Stop()
+	}
 	c.cancel()
 }
 
@@ -200,6 +208,11 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 
 	if req.Payload == "" {
 		log.Printf("Alert payload missing in eve.json: sid=%s src=%s dest=%s", req.Sid, req.SourceIp, eve.DestIP)
+	}
+	if c.trafficCtx != nil {
+		if contextSummary := c.trafficCtx.DescribeAround(eve.SrcIP, eve.DestIP, t.Add(0)); contextSummary != "" {
+			req.AssetInfo = req.AssetInfo + "\nTraffic Context:\n" + contextSummary
+		}
 	}
 
 	atomic.AddInt64(&c.alertCount, 1)

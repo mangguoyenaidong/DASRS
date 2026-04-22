@@ -5,6 +5,7 @@ go 1.25.4
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/google/gopacket v1.1.19
 	github.com/google/uuid v1.6.0
 	github.com/hpcloud/tail v1.0.0
 	google.golang.org/grpc v1.78.0

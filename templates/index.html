@@ -496,7 +496,7 @@
                 <button class="nav-item" data-page="alerts" onclick="showPage('alerts')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3m0 4h.01M10.29 3.86l-7.5 13A2 2 0 004.53 20h14.94a2 2 0 001.74-3.14l-7.5-13a2 2 0 00-3.42 0z"/></svg></span><span class="nav-copy"><strong>告警中心</strong><span>筛选与审计详情</span></span></button>
                 <button class="nav-item" data-page="block" onclick="showPage('block')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="1.8"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.5 8.5l7 7"/></svg></span><span class="nav-copy"><strong>封禁控制</strong><span>手动与批量操作</span></span></button>
                 <button class="nav-item" data-page="whitelist" onclick="showPage('whitelist')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4"/></svg></span><span class="nav-copy"><strong>白名单</strong><span>可信地址管理</span></span></button>
-                <button class="nav-item" data-page="ai" onclick="showPage('ai')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v3m0 12v3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12M3 12h3m12 0h3M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12"/><circle cx="12" cy="12" r="4" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 联动</strong><span>生成规则与语义分析</span></span></button>
+                <button class="nav-item" data-page="ai" onclick="showPage('ai')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v3m0 12v3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12M3 12h3m12 0h3M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12"/><circle cx="12" cy="12" r="4" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 研判</strong><span>语义分析与辅助封禁</span></span></button>
                 <button class="nav-item" data-page="ai-settings" onclick="showPage('ai-settings')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.33 4.32l1.24-1.96a1 1 0 011.7 0l1.24 1.96a1 1 0 00.76.46l2.24.3a1 1 0 01.57 1.72l-1.55 1.53a1 1 0 00-.28.88l.38 2.19a1 1 0 01-1.45 1.05L12.9 11.3a1 1 0 00-.93 0l-2.03 1.15a1 1 0 01-1.45-1.05l.38-2.19a1 1 0 00-.28-.88L7.04 6.8a1 1 0 01.57-1.72l2.24-.3a1 1 0 00.48-.46z"/><circle cx="12" cy="16" r="3" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 配置</strong><span>Key 与提示词管理</span></span></button>
                 <button class="nav-item" data-page="logs" onclick="showPage('logs')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8M8 12h8m-8 5h5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg></span><span class="nav-copy"><strong>操作日志</strong><span>处置结果回放</span></span></button>
             </nav>
@@ -744,73 +744,35 @@
 
                 <section class="page" id="ai">
                     <div class="page-header">
-                        <div><h3>AI 联动工作台</h3><p>从漏洞描述生成候选 Suricata 规则，支持人工审阅、节点测试和部署落地，并可对已入库告警补充 AI 语义分析。</p></div>
+                        <div><h3>AI 研判工作台</h3><p>这里只保留告警语义分析和 AI 辅助封禁，帮助值守人员更快完成判断与处置。</p></div>
                     </div>
 
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">流程进度</div><div class="panel-subtitle">推荐先生成候选规则，再人工修改、测试通过后下发到 Agent</div></div></div>
-                        <div class="ai-progress">
-                            <div class="ai-step active" id="aiStepGenerate"><strong>1. 生成候选规则</strong><span id="aiStepGenerateText">等待输入漏洞信息</span></div>
-                            <div class="ai-step" id="aiStepReview"><strong>2. 人工审阅修改</strong><span id="aiStepReviewText">生成后可直接编辑候选规则</span></div>
-                            <div class="ai-step" id="aiStepTest"><strong>3. 测试规则</strong><span id="aiStepTestText">支持 Master 静态校验或 Agent 动态测试</span></div>
-                            <div class="ai-step" id="aiStepDeploy"><strong>4. 下发部署</strong><span id="aiStepDeployText">测试通过后再部署到目标 Agent</span></div>
+                        <div class="panel-header"><div><div class="panel-title">当前状态</div><div class="panel-subtitle">展示 AI 可用性、自动处置模式与当前阈值</div></div></div>
+                        <div class="ai-meta">
+                            <div id="aiWorkbenchStatus" class="hint-block ai-status-box">这里会显示 AI 服务状态和当前配置摘要。</div>
+                            <div id="aiAssistStatus" class="hint-block ai-status-box">这里会显示 AI 辅助封禁当前是否启用，以及建议的人工操作方式。</div>
                         </div>
                     </section>
 
-                    <div class="grid-2">
-                        <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">AI 规则生成</div><div class="panel-subtitle">输入 CVE、PoC 或漏洞描述，生成候选 Suricata 检测规则</div></div></div>
-                            <div class="ai-stack">
-                                <div class="form-grid">
-                                    <div><label for="aiSourceType">输入类型</label><select id="aiSourceType"><option value="cve">CVE</option><option value="poc">PoC</option><option value="description">漏洞描述</option></select></div>
-                                    <div><label for="aiProtocolHint">协议提示</label><select id="aiProtocolHint"><option value="http">HTTP</option><option value="tcp">TCP</option><option value="dns">DNS</option></select></div>
-                                    <div><label for="aiTargetService">目标服务</label><input type="text" id="aiTargetService" placeholder="nginx / tomcat / spring-boot"></div>
-                                    <div><label for="aiSourceContent">漏洞内容</label><textarea id="aiSourceContent" placeholder="输入 CVE 编号、PoC 代码或漏洞描述，建议提供尽量明确的 HTTP/TCP 语义特征"></textarea></div>
-                                </div>
-                                <div class="sub-actions">
-                                    <button class="btn btn-primary" onclick="generateAIRule()">生成候选规则</button>
-                                    <button class="btn btn-outline" onclick="fillAIDemoInput()">填充演示样例</button>
-                                </div>
-                                <div id="aiRuleSummary" class="hint-block">建议优先输入 HTTP 场景的 PoC 或漏洞描述，这样更容易生成可验证、可演示的候选规则。</div>
-                                <div id="aiRuleOutput" class="ai-result ai-rule-box">等待 AI 生成候选规则...</div>
-                                <div>
-                                    <label for="aiRuleEditor">人工修订候选规则</label>
-                                    <textarea id="aiRuleEditor" class="ai-rule-editor" placeholder="如果 AI 生成的规则不够稳，可以先在这里人工修改，再重新测试"></textarea>
-                                </div>
-                                <div class="sub-actions">
-                                    <button class="btn btn-outline" onclick="saveAIRuleEdits()">保存人工修改</button>
-                                    <button class="btn btn-outline" onclick="resetAIRuleEditor()">恢复生成结果</button>
-                                </div>
+                    <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">AI 告警研判</div><div class="panel-subtitle">输入告警数据库 ID，查看 AI 对该条告警的解释、风险原因和处置建议</div></div></div>
+                        <div class="ai-stack">
+                            <div class="form-grid">
+                                <div><label for="aiAlertDbId">告警数据库 ID</label><input type="text" id="aiAlertDbId" placeholder="输入告警详情中的数据库 ID，可快速做 AI 告警分析"></div>
                             </div>
-                        </section>
+                            <div class="sub-actions">
+                                <button class="btn btn-primary" onclick="analyzeAlertFromWorkbench()">分析告警</button>
+                                <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench(true)">重新研判</button>
+                            </div>
+                            <div id="aiAlertOutput" class="ai-result">等待 AI 告警分析结果...</div>
+                        </div>
+                    </section>
 
-                        <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">测试与部署</div><div class="panel-subtitle">载入任务、查看测试状态，并在确认可用后下发到目标 Agent</div></div></div>
-                            <div class="ai-stack">
-                                <div class="form-grid">
-                                    <div><label for="aiTaskId">规则任务 ID</label><input type="text" id="aiTaskId" placeholder="生成后会自动填入，也支持手动输入后加载" onkeydown="handleAITaskInput(event)"></div>
-                                    <div><label for="aiDeployPath">规则文件路径</label><input type="text" id="aiDeployPath" placeholder="/etc/suricata/rules/dasrs_ai.rules"></div>
-                                    <div><label for="aiAgentIds">目标 Agent ID</label><input type="text" id="aiAgentIds" placeholder="多个 Agent 用逗号分隔，例如 agent-01,agent-02"></div>
-                                    <div><label for="aiTestMode">测试模式</label><select id="aiTestMode"><option value="agent">Agent 动态测试</option><option value="master">Master 静态校验</option></select></div>
-                                    <div><label for="aiAlertDbId">告警数据库 ID</label><input type="text" id="aiAlertDbId" placeholder="输入告警详情中的数据库 ID，可快速做 AI 告警分析"></div>
-                                </div>
-                                <div class="sub-actions">
-                                    <button class="btn btn-outline" onclick="loadAIRuleTaskFromInput()">载入任务</button>
-                                    <button class="btn btn-primary" onclick="testAIRule()">测试规则</button>
-                                    <button class="btn btn-primary" onclick="deployAIRule()">确认下发</button>
-                                    <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench()">分析告警</button>
-                                    <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench(true)">重新研判</button>
-                                </div>
-                                <div class="ai-meta">
-                                    <div id="aiDeployStatus" class="hint-block ai-status-box">这里会显示 AI 服务状态、部署结果和 Agent 回执摘要。</div>
-                                    <div id="aiAgentsStatus" class="hint-block">这里会显示当前在线 Agent，方便选择测试节点和部署目标。</div>
-                                </div>
-                                <div id="aiTestStatus" class="hint-block ai-status-box">这里会显示规则测试结果，包括静态校验信息或 Agent 回传的测试报告。</div>
-                                <div id="aiTaskSnapshot" class="hint-block ai-status-box">这里会显示当前任务的摘要、测试状态和部署进度。</div>
-                                <div id="aiAlertOutput" class="ai-result">等待 AI 告警分析结果...</div>
-                            </div>
-                        </section>
-                    </div>
+                    <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">辅助封禁说明</div><div class="panel-subtitle">保留 AI 建议，不自动替代人工确认</div></div></div>
+                        <div class="hint-block">建议仍以“告警中心”的审计弹窗为主视图。先看原始 payload 和 AI 研判结果，再由值守人员决定是否封禁或加入白名单，这样更适合实际值守场景，也能避免误封。</div>
+                    </section>
                 </section>
 
                 <section class="page" id="ai-settings">
@@ -853,10 +815,8 @@
                     </section>
 
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">提示词模板</div><div class="panel-subtitle">可分别约束规则生成与告警分析的 system/user prompt</div></div></div>
+                        <div class="panel-header"><div><div class="panel-title">提示词模板</div><div class="panel-subtitle">这里只保留告警分析相关的 system/user prompt</div></div></div>
                         <div class="form-grid">
-                            <div><label for="aiRuleGenSystemPrompt">规则生成 System Prompt</label><textarea id="aiRuleGenSystemPrompt" placeholder="限制 AI 只输出结构化 JSON、只允许 content/pcre 等"></textarea></div>
-                            <div><label for="aiRuleGenUserPrompt">规则生成 User Prompt</label><textarea id="aiRuleGenUserPrompt" placeholder="可使用 SOURCE_TYPE / PROTOCOL_HINT / TARGET_SERVICE / SOURCE_CONTENT 这些模板变量"></textarea></div>
                             <div><label for="aiAlertSystemPrompt">告警分析 System Prompt</label><textarea id="aiAlertSystemPrompt" placeholder="约束 AI 输出摘要、证据、影响范围、建议动作等"></textarea></div>
                             <div><label for="aiAlertUserPrompt">告警分析 User Prompt</label><textarea id="aiAlertUserPrompt" placeholder="可使用 ALERT_ID、PAYLOAD、RECENT_ALERTS、EXTRACTED_SIGNALS 等模板变量"></textarea></div>
                         </div>
@@ -891,6 +851,7 @@
         let lastGeneratedRuleTask = null;
         let aiSettingsDirty = false;
         let aiSettingsApplying = false;
+        let activeAlertModalRequest = 0;
 
         function updateClock() {
             const now = new Date();
@@ -908,8 +869,6 @@
                 'aiSettingsAPIKey',
                 'aiSettingsModel',
                 'aiSettingsTimeout',
-                'aiRuleGenSystemPrompt',
-                'aiRuleGenUserPrompt',
                 'aiAlertSystemPrompt',
                 'aiAlertUserPrompt',
                 'aiSettingsDemoMode',
@@ -1080,6 +1039,55 @@
             const num = Number(value);
             if (Number.isNaN(num)) return safeText(value);
             return `${Math.round(num * 100)}%`;
+        }
+        function renderAlertAIInsight(aiInsight) {
+            if (!aiInsight) {
+                return '<div class="hint-block">当前还没有可用的 AI 分析结果。请确认 AI 已启用并配置了 DeepSeek Key。</div>';
+            }
+            return `
+                <div class="ai-insight-grid">
+                    <div><strong>摘要：</strong>${safeText(aiInsight.summary)}</div>
+                    <div><strong>攻击类型：</strong>${safeText(aiInsight.attack_type)}</div>
+                    <div><strong>建议动作：</strong><span class="badge info">${formatActionText(aiInsight.recommended_action)}</span></div>
+                    <div><strong>置信度：</strong>${formatConfidence(aiInsight.confidence)}</div>
+                    <div class="hint-block" style="grid-column:1 / -1;"><strong>风险原因：</strong><br>${safeText(aiInsight.risk_reason)}</div>
+                    <div class="hint-block" style="grid-column:1 / -1;"><strong>影响范围：</strong><br>${safeText(aiInsight.impact_scope)}</div>
+                    <div class="hint-block" style="grid-column:1 / -1;"><strong>研判证据：</strong><br>${safeText(aiInsight.evidence_points)}</div>
+                    <div><strong>可疑路径：</strong>${safeText(aiInsight.suspicious_path)}</div>
+                    <div><strong>可疑参数：</strong>${safeText(aiInsight.suspicious_params)}</div>
+                    <div class="hint-block" style="grid-column:1 / -1;"><strong>命令片段：</strong><br>${safeText(aiInsight.command_fragments)}</div>
+                    <div class="hint-block" style="grid-column:1 / -1;"><strong>运维建议：</strong><br>${safeText(aiInsight.operator_advice)}</div>
+                </div>
+            `;
+        }
+        function renderAlertDetails(alert, rawText, highlightedText) {
+            return `
+                <div class="grid-2 mb-30">
+                    <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">攻击上下文</div><div class="panel-subtitle">来源、目标与风险分数</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>来源 IP：</strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>目标 IP：</strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>特征 SID：</strong>${safeText(alert.sid)}</div><div><strong>风险评分：</strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
+                    <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">事件摘要</div><div class="panel-subtitle">签名、等级与系统动作</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>告警签名：</strong>${safeText(alert.signature_name)}</div><div><strong>严重等级：</strong><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></div><div><strong>发生时间：</strong>${formatDateTime(alert.created_at)}</div><div><strong>系统动作：</strong><span class="badge info">${formatActionText(alert.action)}</span></div></div></div>
+                </div>
+                <div class="glass-panel" style="margin-bottom:20px;">
+                    <div class="panel-title">关联上下文</div>
+                    <div class="panel-subtitle">来自 Agent 的短时流量回溯摘要，用于辅助判断这次告警是否为真实攻击</div>
+                    <div class="hint-block" style="white-space:pre-wrap;">${safeText(alert.asset_info, '当前还没有可用的攻击上下文摘要。')}</div>
+                </div>
+                <div class="glass-panel" style="margin-bottom:20px;">
+                    <div class="panel-title">AI 告警分析</div>
+                    <div class="panel-subtitle">AI 结果异步加载中，不影响先查看原始载荷与上下文</div>
+                    <div id="alertAiInsight" class="hint-block">正在加载 AI 分析...</div>
+                </div>
+                <div class="terminal-box"><div style="white-space:pre-wrap;word-break:break-word;">${highlightedText}</div><div class="payload-hex">${escapeHtml(toHexDump(rawText))}</div></div>
+                <div class="alert-note"><h4>人工决策建议</h4><p>请结合原始载荷、来源地址和业务上下文进行判断。如果确认是恶意攻击，建议立即封禁；如果确认为误报，建议加入白名单以减少后续噪音。</p><div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn-danger" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'block')">确认攻击并封禁</button><button class="btn btn-outline" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'whitelist')">判定误报并加入白名单</button></div></div>
+            `;
+        }
+        async function loadAlertAIInsight(alertID, requestId, force = false) {
+            const container = document.getElementById('alertAiInsight');
+            if (!container || !alertID) return;
+            container.innerHTML = '<div class="hint-block">正在加载 AI 分析...</div>';
+            const aiRes = await fetchAPI(`/api/alerts/${encodeURIComponent(alertID)}/ai-analysis${force ? '?force=true' : ''}`);
+            if (requestId !== activeAlertModalRequest) return;
+            if (!container.isConnected) return;
+            container.innerHTML = renderAlertAIInsight(aiRes && aiRes.data ? aiRes.data : null);
         }
         function setText(id, value) {
             const el = document.getElementById(id);
@@ -1357,32 +1365,22 @@
         async function loadAIWorkbench() {
             const statusRes = await fetchAPI('/api/ai/status');
             if (!statusRes || !statusRes.data) {
-                setText('aiDeployStatus', '无法读取 AI 状态，请先确认 Master API 是否正常启动。');
+                setText('aiWorkbenchStatus', '无法读取 AI 状态，请先确认 Master API 是否正常启动。');
+                setText('aiAssistStatus', '暂时无法确认 AI 辅助封禁状态。');
             } else {
                 const status = statusRes.data;
-                const summary = `AI 配置：${status.configuration_status || '-'} | Provider：${status.provider || '-'} | 规则生成：${status.rule_generation ? '可用' : '不可用'} | 告警分析：${status.alert_analysis ? '可用' : '不可用'} | Demo Mode：${status.demo_mode ? '开启' : '关闭'}`;
-                setText('aiDeployStatus', summary);
+                const summary = `AI 配置：${status.configuration_status || '-'} | Provider：${status.provider || '-'} | 告警分析：${status.alert_analysis ? '可用' : '不可用'} | Demo Mode：${status.demo_mode ? '开启' : '关闭'}`;
+                setText('aiWorkbenchStatus', summary);
                 if (!status.enabled) {
-                    setText('aiRuleSummary', 'AI 尚未启用，请检查 configs/config.yaml 中的 master.ai.enabled 与 DeepSeek 配置。');
+                    setText('aiAssistStatus', 'AI 尚未启用，当前不会提供研判结果，也不会触发 AI 辅助封禁。');
                 } else if (status.init_error) {
-                    setText('aiRuleSummary', `AI 已启用但初始化失败：${status.init_error}`);
+                    setText('aiAssistStatus', `AI 已启用但初始化失败：${status.init_error}`);
                 } else if (status.demo_mode) {
-                    setText('aiRuleSummary', `当前处于 Demo Mode，自动处置阈值已放宽：block=${status.demo_block_threshold || status.block_threshold}, repair=${status.demo_repair_threshold || status.repair_threshold}。`);
+                    setText('aiAssistStatus', `当前处于 Demo Mode。响应模式：${status.action_mode || 'block'}，演示封禁阈值=${status.demo_block_threshold || status.block_threshold}。建议仍以人工确认后再封禁为主。`);
+                } else {
+                    setText('aiAssistStatus', `当前响应模式：${status.action_mode || 'block'}，封禁阈值=${status.block_threshold || '-'}。建议将 AI 结论作为辅助判断，而不是直接替代人工审计。`);
                 }
             }
-
-            const agentsRes = await fetchAPI('/api/agents?page=1&page_size=100');
-            if (!agentsRes || !agentsRes.data || agentsRes.data.length === 0) {
-                setText('aiAgentsStatus', '当前没有可用 Agent。若要执行动态测试，请先接入至少一个在线 Agent。');
-            } else {
-                const onlineAgents = agentsRes.data.filter(agent => agent.status === 1);
-                const text = onlineAgents.length
-                    ? `在线 Agent：${onlineAgents.map(agent => `${agent.agent_id} (${agent.ip || '-'})`).join('，')}`
-                    : '当前没有在线 Agent，可先使用 Master 静态校验。';
-                setText('aiAgentsStatus', text);
-            }
-
-            updateAIProgress(lastGeneratedRuleTask);
         }
 
         async function loadAISettings(force = false) {
@@ -1409,8 +1407,6 @@
             setVal('aiSettingsAPIKey', data.api_key);
             setVal('aiSettingsModel', data.model);
             setVal('aiSettingsTimeout', data.timeout_seconds || 30);
-            setVal('aiRuleGenSystemPrompt', data.rule_generation_system);
-            setVal('aiRuleGenUserPrompt', data.rule_generation_user);
             setVal('aiAlertSystemPrompt', data.alert_analysis_system);
             setVal('aiAlertUserPrompt', data.alert_analysis_user);
             setVal('aiSettingsDemoMode', !!data.demo_mode);
@@ -1432,8 +1428,8 @@
                 api_key: document.getElementById('aiSettingsAPIKey').value.trim(),
                 model: document.getElementById('aiSettingsModel').value.trim(),
                 timeout_seconds: Number(document.getElementById('aiSettingsTimeout').value || 30),
-                rule_generation_system: document.getElementById('aiRuleGenSystemPrompt').value,
-                rule_generation_user: document.getElementById('aiRuleGenUserPrompt').value,
+                rule_generation_system: '',
+                rule_generation_user: '',
                 alert_analysis_system: document.getElementById('aiAlertSystemPrompt').value,
                 alert_analysis_user: document.getElementById('aiAlertUserPrompt').value,
                 demo_mode: document.getElementById('aiSettingsDemoMode').value === 'true',
@@ -1823,6 +1819,49 @@ ${item.operator_advice || '-'}`);
             }
         }
 
+        window.showAlertDetails = async function(id) {
+            const modal = document.getElementById('alertModal');
+            const modalBody = document.getElementById('modalBody');
+            const requestId = ++activeAlertModalRequest;
+            modalBody.innerHTML = '<div class="empty">正在拉取告警详情与载荷内容...</div>';
+            modal.style.display = 'flex';
+            try {
+                const res = await fetchAPI(`/api/alerts/${id}`);
+                if (!res || !res.data) {
+                    if (requestId !== activeAlertModalRequest) return;
+                    modalBody.innerHTML = '<div class="empty">未能获取告警详情。</div>';
+                    return;
+                }
+                const alert = res.data;
+                let rawText = '';
+                if (alert.payload) {
+                    try { rawText = atob(alert.payload); }
+                    catch (error) { rawText = `[无法解析的 Base64 负载] ${alert.payload}`; }
+                } else {
+                    rawText = '当前没有原始 payload。请确认 Suricata 是否启用了 payload 输出。';
+                }
+                const keywords = ['union select', 'select', 'insert into', 'drop table', 'script', 'alert(', '/etc/passwd', 'eval(', 'base64_decode', 'cmd.exe', '/bin/bash', '..%2f'];
+                let highlightedText = escapeHtml(rawText);
+                keywords.forEach(keyword => {
+                    const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    highlightedText = highlightedText.replace(new RegExp(escapedKeyword, 'gi'), match => `<span class="highlight-red">${match}</span>`);
+                });
+                if (requestId !== activeAlertModalRequest) return;
+                modalBody.innerHTML = renderAlertDetails(alert, rawText, highlightedText);
+                if (alert.alert_id) {
+                    loadAlertAIInsight(alert.alert_id, requestId);
+                } else {
+                    const container = document.getElementById('alertAiInsight');
+                    if (container) {
+                        container.innerHTML = '<div class="hint-block">当前告警缺少 alert_id，暂时无法获取 AI 分析结果。</div>';
+                    }
+                }
+            } catch (error) {
+                if (requestId !== activeAlertModalRequest) return;
+                modalBody.innerHTML = `<div class="empty">读取详情失败：${escapeHtml(error.message)}</div>`;
+            }
+        };
+
         async function manualAction(ip, action, agentId = '') {
             let result;
             if (action === 'block') {
@@ -1844,6 +1883,11 @@ ${item.operator_advice || '-'}`);
         function closeModal() {
             document.getElementById('alertModal').style.display = 'none';
         }
+        const originalCloseModal = closeModal;
+        closeModal = function() {
+            activeAlertModalRequest++;
+            return originalCloseModal();
+        };
         function blockIPFromAlert(ip) {
             document.getElementById('blockIp').value = ip;
             showPage('block');
