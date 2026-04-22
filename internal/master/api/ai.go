@@ -25,6 +25,7 @@ type aiDependencies struct {
 	alert               *service.AIAlertService
 	provider            string
 	enabled             bool
+	initError           string
 	demoMode            bool
 	actionMode          string
 	blockThreshold      int
@@ -86,18 +87,7 @@ func (s *Server) getAIDependencies() aiDependencies {
 }
 
 func (s *Server) refreshAIDependencies() error {
-	var aiProvider ai.Provider
-	var err error
-	if s.appCfg != nil && s.appCfg.Master.AI.Enabled {
-		aiProvider, err = ai.NewProviderFromConfig(s.appCfg)
-		if err != nil {
-			return err
-		}
-	}
-
 	deps := aiDependencies{
-		rule:                service.NewAIRuleService(s.db, aiProvider, s.appCfg),
-		alert:               service.NewAIAlertService(s.db, aiProvider),
 		provider:            strings.TrimSpace(s.appCfg.Master.AI.Provider),
 		enabled:             s.appCfg.Master.AI.Enabled,
 		demoMode:            s.appCfg.Master.Intelligence.DemoMode,
@@ -107,6 +97,22 @@ func (s *Server) refreshAIDependencies() error {
 		demoBlockThreshold:  s.appCfg.Master.Intelligence.DemoBlockThreshold,
 		demoRepairThreshold: s.appCfg.Master.Intelligence.DemoRepairThreshold,
 	}
+
+	var aiProvider ai.Provider
+	var err error
+	if s.appCfg != nil && s.appCfg.Master.AI.Enabled {
+		aiProvider, err = ai.NewProviderFromConfig(s.appCfg)
+		if err != nil {
+			deps.initError = err.Error()
+			deps.rule = service.NewAIRuleService(s.db, nil, s.appCfg)
+			deps.alert = service.NewAIAlertService(s.db, nil)
+			serverAI.Store(s, deps)
+			return err
+		}
+	}
+
+	deps.rule = service.NewAIRuleService(s.db, aiProvider, s.appCfg)
+	deps.alert = service.NewAIAlertService(s.db, aiProvider)
 	serverAI.Store(s, deps)
 	return nil
 }
@@ -147,6 +153,7 @@ func (s *Server) getAIStatus(c *gin.Context) {
 			"rule_generation":       deps.rule != nil && deps.rule.Enabled(),
 			"alert_analysis":        deps.alert != nil && deps.alert.Enabled(),
 			"configuration_status":  aiConfigStatus(deps),
+			"init_error":            deps.initError,
 			"testing_required":      true,
 			"demo_mode":             deps.demoMode,
 			"action_mode":           deps.actionMode,
@@ -255,10 +262,20 @@ func (s *Server) updateAISettings(c *gin.Context) {
 		return
 	}
 
+	if s.engine != nil {
+		s.engine.UpdateConfig(s.appCfg)
+	}
+
 	if err := s.refreshAIDependencies(); err != nil {
-		c.PureJSON(http.StatusUnprocessableEntity, gin.H{
-			"error":   err.Error(),
-			"message": "config saved, but AI provider refresh failed; please check the API settings",
+		c.PureJSON(http.StatusOK, gin.H{
+			"message": "ai settings saved, but AI provider refresh failed",
+			"data": gin.H{
+				"enabled":     s.appCfg.Master.AI.Enabled,
+				"provider":    emptyAIProvider(s.appCfg.Master.AI.Provider),
+				"demo_mode":   s.appCfg.Master.Intelligence.DemoMode,
+				"config_path": configPath,
+				"init_error":  err.Error(),
+			},
 		})
 		return
 	}
@@ -270,6 +287,7 @@ func (s *Server) updateAISettings(c *gin.Context) {
 			"provider":    emptyAIProvider(s.appCfg.Master.AI.Provider),
 			"demo_mode":   s.appCfg.Master.Intelligence.DemoMode,
 			"config_path": configPath,
+			"init_error":  "",
 		},
 	})
 }
@@ -599,6 +617,8 @@ func aiConfigStatus(deps aiDependencies) string {
 	switch {
 	case !deps.enabled:
 		return "disabled"
+	case strings.TrimSpace(deps.initError) != "":
+		return "invalid_config"
 	case deps.rule != nil && deps.alert != nil:
 		return "ready"
 	default:

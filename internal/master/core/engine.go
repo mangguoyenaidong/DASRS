@@ -46,6 +46,14 @@ func NewIntelligenceEngine(db *gorm.DB, redis *redis.Client, cfg *model.Config) 
 	}
 }
 
+// UpdateConfig 动态更新引擎配置
+func (e *IntelligenceEngine) UpdateConfig(cfg *model.Config) {
+	if cfg != nil {
+		e.cfg = cfg
+		e.logger.Info("Intelligence engine configuration updated (Mode: %s)", cfg.Master.Intelligence.ActionMode)
+	}
+}
+
 // Analyze 分析告警并返回决策
 func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decision, error) {
 	decision := &Decision{
