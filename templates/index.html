@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -397,7 +397,7 @@
             font-size: 13px; line-height: 1.75; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
         }
         .terminal-box::before {
-            content: "原始载荷"; position: absolute; top: 16px; right: 18px; color: rgba(173,205,255,0.64);
+            content: "鍘熷杞借嵎"; position: absolute; top: 16px; right: 18px; color: rgba(173,205,255,0.64);
             font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
         }
         .payload-hex { margin-top: 18px; padding-top: 18px; border-top: 1px dashed rgba(173,205,255,0.22); color: #9db1d1; white-space: pre-wrap; }
@@ -479,30 +479,30 @@
                     </div>
                 </div>
                 <div class="sidebar-meta">
-                    <span>分布式情报驱动响应中枢</span>
-                    <span>统一查看告警、封禁、白名单与执行日志</span>
+                    <span>鍒嗗竷寮忔儏鎶ラ┍鍔ㄥ搷搴斾腑鏋?/span>
+                    <span>缁熶竴鏌ョ湅鍛婅銆佸皝绂併€佺櫧鍚嶅崟涓庢墽琛屾棩蹇?/span>
                 </div>
             </div>
 
             <div class="ops-card">
-                <h2>值守说明</h2>
-                <p>把实时告警、处置动作和节点状态放在同一个视图里，让值守人员能更快完成判断、封禁和回溯。</p>
+                <h2>鍊煎畧璇存槑</h2>
+                <p>鎶婂疄鏃跺憡璀︺€佸缃姩浣滃拰鑺傜偣鐘舵€佹斁鍦ㄥ悓涓€涓鍥鹃噷锛岃鍊煎畧浜哄憳鑳芥洿蹇畬鎴愬垽鏂€佸皝绂佸拰鍥炴函銆?/p>
             </div>
 
             <nav class="nav-group">
-                <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v8a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3z"/></svg></span><span class="nav-copy"><strong>态势总览</strong><span>关键指标与趋势</span></span></button>
-                <button class="nav-item" data-page="agents" onclick="showPage('agents')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M3 9h2m14 0h2M3 15h2m14 0h2M7 7h10v10H7V7z"/></svg></span><span class="nav-copy"><strong>资产节点</strong><span>在线状态与主机信息</span></span></button>
-                <button class="nav-item" data-page="strategies" onclick="showPage('strategies')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="nav-copy"><strong>响应策略</strong><span>自动修复规则</span></span></button>
-                <button class="nav-item" data-page="alerts" onclick="showPage('alerts')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3m0 4h.01M10.29 3.86l-7.5 13A2 2 0 004.53 20h14.94a2 2 0 001.74-3.14l-7.5-13a2 2 0 00-3.42 0z"/></svg></span><span class="nav-copy"><strong>告警中心</strong><span>筛选与审计详情</span></span></button>
-                <button class="nav-item" data-page="block" onclick="showPage('block')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="1.8"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.5 8.5l7 7"/></svg></span><span class="nav-copy"><strong>封禁控制</strong><span>手动与批量操作</span></span></button>
-                <button class="nav-item" data-page="whitelist" onclick="showPage('whitelist')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4"/></svg></span><span class="nav-copy"><strong>白名单</strong><span>可信地址管理</span></span></button>
-                <button class="nav-item" data-page="ai" onclick="showPage('ai')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v3m0 12v3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12M3 12h3m12 0h3M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12"/><circle cx="12" cy="12" r="4" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 联动</strong><span>生成规则与语义分析</span></span></button>
-                <button class="nav-item" data-page="ai-settings" onclick="showPage('ai-settings')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.33 4.32l1.24-1.96a1 1 0 011.7 0l1.24 1.96a1 1 0 00.76.46l2.24.3a1 1 0 01.57 1.72l-1.55 1.53a1 1 0 00-.28.88l.38 2.19a1 1 0 01-1.45 1.05L12.9 11.3a1 1 0 00-.93 0l-2.03 1.15a1 1 0 01-1.45-1.05l.38-2.19a1 1 0 00-.28-.88L7.04 6.8a1 1 0 01.57-1.72l2.24-.3a1 1 0 00.48-.46z"/><circle cx="12" cy="16" r="3" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 配置</strong><span>Key 与提示词管理</span></span></button>
-                <button class="nav-item" data-page="logs" onclick="showPage('logs')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8M8 12h8m-8 5h5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg></span><span class="nav-copy"><strong>操作日志</strong><span>处置结果回放</span></span></button>
+                <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v8a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3z"/></svg></span><span class="nav-copy"><strong>鎬佸娍鎬昏</strong><span>鍏抽敭鎸囨爣涓庤秼鍔?/span></span></button>
+                <button class="nav-item" data-page="agents" onclick="showPage('agents')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 3v2m6-2v2M9 19v2m6-2v2M3 9h2m14 0h2M3 15h2m14 0h2M7 7h10v10H7V7z"/></svg></span><span class="nav-copy"><strong>璧勪骇鑺傜偣</strong><span>鍦ㄧ嚎鐘舵€佷笌涓绘満淇℃伅</span></span></button>
+                <button class="nav-item" data-page="strategies" onclick="showPage('strategies')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span><span class="nav-copy"><strong>鍝嶅簲绛栫暐</strong><span>鑷姩淇瑙勫垯</span></span></button>
+                <button class="nav-item" data-page="alerts" onclick="showPage('alerts')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 9v3m0 4h.01M10.29 3.86l-7.5 13A2 2 0 004.53 20h14.94a2 2 0 001.74-3.14l-7.5-13a2 2 0 00-3.42 0z"/></svg></span><span class="nav-copy"><strong>鍛婅涓績</strong><span>绛涢€変笌瀹¤璇︽儏</span></span></button>
+                <button class="nav-item" data-page="block" onclick="showPage('block')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-width="1.8"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.5 8.5l7 7"/></svg></span><span class="nav-copy"><strong>灏佺鎺у埗</strong><span>鎵嬪姩涓庢壒閲忔搷浣?/span></span></button>
+                <button class="nav-item" data-page="whitelist" onclick="showPage('whitelist')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4"/></svg></span><span class="nav-copy"><strong>鐧藉悕鍗?/strong><span>鍙俊鍦板潃绠＄悊</span></span></button>
+                <button class="nav-item" data-page="ai" onclick="showPage('ai')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v3m0 12v3M4.93 4.93l2.12 2.12m9.9 9.9 2.12 2.12M3 12h3m12 0h3M4.93 19.07l2.12-2.12m9.9-9.9 2.12-2.12"/><circle cx="12" cy="12" r="4" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 鑱斿姩</strong><span>鐢熸垚瑙勫垯涓庤涔夊垎鏋?/span></span></button>
+                <button class="nav-item" data-page="ai-settings" onclick="showPage('ai-settings')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M10.33 4.32l1.24-1.96a1 1 0 011.7 0l1.24 1.96a1 1 0 00.76.46l2.24.3a1 1 0 01.57 1.72l-1.55 1.53a1 1 0 00-.28.88l.38 2.19a1 1 0 01-1.45 1.05L12.9 11.3a1 1 0 00-.93 0l-2.03 1.15a1 1 0 01-1.45-1.05l.38-2.19a1 1 0 00-.28-.88L7.04 6.8a1 1 0 01.57-1.72l2.24-.3a1 1 0 00.48-.46z"/><circle cx="12" cy="16" r="3" stroke-width="1.8"/></svg></span><span class="nav-copy"><strong>AI 閰嶇疆</strong><span>Key 涓庢彁绀鸿瘝绠＄悊</span></span></button>
+                <button class="nav-item" data-page="logs" onclick="showPage('logs')"><span class="nav-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 7h8M8 12h8m-8 5h5"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 3h12a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2z"/></svg></span><span class="nav-copy"><strong>鎿嶄綔鏃ュ織</strong><span>澶勭疆缁撴灉鍥炴斁</span></span></button>
             </nav>
 
             <div class="sidebar-foot">
-                <span>DASRS 控制台</span>
+                <span>DASRS 鎺у埗鍙?/span>
                 <span>v1.2.0</span>
             </div>
         </aside>
@@ -511,38 +511,38 @@
             <header class="top-bar">
                 <div class="hero-card">
                     <div class="hero-copy">
-                        <h2>让告警判断、批量处置与节点联动更清晰</h2>
-                        <p>这里保留最常用的指标、告警和处置入口，方便值守时快速查看、判断和操作。</p>
+                        <h2>璁╁憡璀﹀垽鏂€佹壒閲忓缃笌鑺傜偣鑱斿姩鏇存竻鏅?/h2>
+                        <p>杩欓噷淇濈暀鏈€甯哥敤鐨勬寚鏍囥€佸憡璀﹀拰澶勭疆鍏ュ彛锛屾柟渚垮€煎畧鏃跺揩閫熸煡鐪嬨€佸垽鏂拰鎿嶄綔銆?/p>
                     </div>
                     <div class="hero-pulse">
-                        <div class="hero-pulse-label">在线资产</div>
+                        <div class="hero-pulse-label">鍦ㄧ嚎璧勪骇</div>
                         <div class="hero-pulse-value" id="topOnlineCount">0</div>
                         <div class="pulse-track"></div>
-                        <div class="hero-pulse-label">当前可联动节点数</div>
+                        <div class="hero-pulse-label">褰撳墠鍙仈鍔ㄨ妭鐐规暟</div>
                     </div>
                 </div>
 
                 <div class="status-stack">
                     <div class="status-pill">
-                        <div class="status-left"><div class="status-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><div class="status-title">系统时间</div><div class="status-sub">本地面板时钟</div></div></div>
+                        <div class="status-left"><div class="status-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><div><div class="status-title">绯荤粺鏃堕棿</div><div class="status-sub">鏈湴闈㈡澘鏃堕挓</div></div></div>
                         <div class="clock" id="currentTime">--:--:--</div>
                     </div>
                     <div class="status-pill">
-                        <div class="status-left"><div class="status-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><div><div class="status-title">响应模式</div><div class="status-sub" id="currentActionModeSub">加载中...</div></div></div>
+                        <div class="status-left"><div class="status-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div><div><div class="status-title">鍝嶅簲妯″紡</div><div class="status-sub" id="currentActionModeSub">鍔犺浇涓?..</div></div></div>
                         <div class="status-value" id="currentActionMode">---</div>
                     </div>
                     <div class="status-pill">
-                        <div class="status-left"><div class="status-icon"><div class="status-dot"></div></div><div><div class="status-title">主控节点</div><div class="status-sub">服务状态</div></div></div>
-                        <div class="status-value good">运行稳定</div>
+                        <div class="status-left"><div class="status-icon"><div class="status-dot"></div></div><div><div class="status-title">涓绘帶鑺傜偣</div><div class="status-sub">鏈嶅姟鐘舵€?/div></div></div>
+                        <div class="status-value good">杩愯绋冲畾</div>
                     </div>
                     <div class="status-pill">
-                        <div class="status-left"><div class="status-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 12h14M12 5l7 7-7 7"/></svg></div><div><div class="status-title">自动刷新</div><div class="status-sub">动态同步当前页面</div></div></div>
+                        <div class="status-left"><div class="status-icon"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M5 12h14M12 5l7 7-7 7"/></svg></div><div><div class="status-title">鑷姩鍒锋柊</div><div class="status-sub">鍔ㄦ€佸悓姝ュ綋鍓嶉〉闈?/div></div></div>
                         <div class="refresh-group">
-                            <label class="toggle"><input type="checkbox" id="autoRefreshCheck" checked onchange="toggleAutoRefresh()"><span>开启</span></label>
+                            <label class="toggle"><input type="checkbox" id="autoRefreshCheck" checked onchange="toggleAutoRefresh()"><span>寮€鍚?/span></label>
                             <select id="refreshInterval" onchange="updateRefreshInterval()">
-                                <option value="5000">5 秒</option>
-                                <option value="30000" selected>30 秒</option>
-                                <option value="60000">1 分钟</option>
+                                <option value="5000">5 绉?/option>
+                                <option value="30000" selected>30 绉?/option>
+                                <option value="60000">1 鍒嗛挓</option>
                             </select>
                         </div>
                     </div>
@@ -553,54 +553,54 @@
                 <section class="page active" id="dashboard">
                     <div class="page-header">
                         <div>
-                            <h3>态势总览</h3>
-                            <p>这里聚合核心指标、近七日趋势和最新高风险事件，适合快速感知当前攻击压力与响应负载。</p>
+                            <h3>鎬佸娍鎬昏</h3>
+                            <p>杩欓噷鑱氬悎鏍稿績鎸囨爣銆佽繎涓冩棩瓒嬪娍鍜屾渶鏂伴珮椋庨櫓浜嬩欢锛岄€傚悎蹇€熸劅鐭ュ綋鍓嶆敾鍑诲帇鍔涗笌鍝嶅簲璐熻浇銆?/p>
                         </div>
                     </div>
 
                     <div class="stats-grid">
                         <article class="stat-card">
-                            <div class="stat-top"><span class="stat-label">资产总数</span><span class="badge info">资产</span></div>
+                            <div class="stat-top"><span class="stat-label">璧勪骇鎬绘暟</span><span class="badge info">璧勪骇</span></div>
                             <div class="stat-value" id="totalAssets">0</div>
-                            <p class="stat-note">已纳入管理视图的受保护资产数量。</p>
+                            <p class="stat-note">宸茬撼鍏ョ鐞嗚鍥剧殑鍙椾繚鎶よ祫浜ф暟閲忋€?/p>
                         </article>
                         <article class="stat-card">
-                            <div class="stat-top"><span class="stat-label">告警总数</span><span class="badge info">告警</span></div>
+                            <div class="stat-top"><span class="stat-label">鍛婅鎬绘暟</span><span class="badge info">鍛婅</span></div>
                             <div class="stat-value" id="totalAlerts">0</div>
-                            <p class="stat-note">累计接收并入库的事件总量。</p>
+                            <p class="stat-note">绱鎺ユ敹骞跺叆搴撶殑浜嬩欢鎬婚噺銆?/p>
                         </article>
                         <article class="stat-card warning">
-                            <div class="stat-top"><span class="stat-label">待处理告警</span><span class="badge warning">待办</span></div>
+                            <div class="stat-top"><span class="stat-label">寰呭鐞嗗憡璀?/span><span class="badge warning">寰呭姙</span></div>
                             <div class="stat-value" id="pendingAlerts">0</div>
-                            <p class="stat-note">尚未完成人工确认或处置的告警事件。</p>
+                            <p class="stat-note">灏氭湭瀹屾垚浜哄伐纭鎴栧缃殑鍛婅浜嬩欢銆?/p>
                         </article>
                         <article class="stat-card danger">
-                            <div class="stat-top"><span class="stat-label">已封禁 IP</span><span class="badge danger">封禁</span></div>
+                            <div class="stat-top"><span class="stat-label">宸插皝绂?IP</span><span class="badge danger">灏佺</span></div>
                             <div class="stat-value" id="blockedIps">0</div>
-                            <p class="stat-note">系统当前视角下处于封禁状态的来源地址数量。</p>
+                            <p class="stat-note">绯荤粺褰撳墠瑙嗚涓嬪浜庡皝绂佺姸鎬佺殑鏉ユ簮鍦板潃鏁伴噺銆?/p>
                         </article>
                     </div>
 
                     <div class="grid-2 mb-30">
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">近 7 日攻击趋势</div><div class="panel-subtitle">按天汇总的告警数量变化</div></div></div>
+                            <div class="panel-header"><div><div class="panel-title">杩?7 鏃ユ敾鍑昏秼鍔?/div><div class="panel-subtitle">鎸夊ぉ姹囨€荤殑鍛婅鏁伴噺鍙樺寲</div></div></div>
                             <div class="chart-wrap"><canvas id="trendsChart"></canvas></div>
                         </section>
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">严重等级分布</div><div class="panel-subtitle">观察当前事件风险构成</div></div></div>
+                            <div class="panel-header"><div><div class="panel-title">涓ラ噸绛夌骇鍒嗗竷</div><div class="panel-subtitle">瑙傚療褰撳墠浜嬩欢椋庨櫓鏋勬垚</div></div></div>
                             <div class="chart-wrap"><canvas id="severityChart"></canvas></div>
                         </section>
                     </div>
 
                     <section class="glass-panel">
                         <div class="panel-header">
-                            <div><div class="panel-title">最新高风险事件</div><div class="panel-subtitle">快速查看最新进入视野的告警样本</div></div>
-                            <button class="btn btn-outline" onclick="showPage('alerts')">查看全部告警</button>
+                            <div><div class="panel-title">鏈€鏂伴珮椋庨櫓浜嬩欢</div><div class="panel-subtitle">蹇€熸煡鐪嬫渶鏂拌繘鍏ヨ閲庣殑鍛婅鏍锋湰</div></div>
+                            <button class="btn btn-outline" onclick="showPage('alerts')">鏌ョ湅鍏ㄩ儴鍛婅</button>
                         </div>
                         <div class="table-shell">
                             <table>
-                                <thead><tr><th>发生时间</th><th>来源 IP</th><th>严重等级</th><th>告警签名</th><th>动作</th></tr></thead>
-                                <tbody id="recentAlertsTable"><tr><td colspan="5" class="empty">正在拉取最新告警...</td></tr></tbody>
+                                <thead><tr><th>鍙戠敓鏃堕棿</th><th>鏉ユ簮 IP</th><th>涓ラ噸绛夌骇</th><th>鍛婅绛惧悕</th><th>鍔ㄤ綔</th></tr></thead>
+                                <tbody id="recentAlertsTable"><tr><td colspan="5" class="empty">姝ｅ湪鎷夊彇鏈€鏂板憡璀?..</td></tr></tbody>
                             </table>
                         </div>
                     </section>
@@ -608,13 +608,13 @@
 
                 <section class="page" id="agents">
                     <div class="page-header">
-                        <div><h3>资产节点</h3><p>查看已注册 Agent 的在线情况、IP 地址与最近心跳，便于确认受保护面是否稳定接入。</p></div>
-                        <div class="toolbar"><button class="btn btn-primary" onclick="refreshAgents()">刷新节点状态</button></div>
+                        <div><h3>璧勪骇鑺傜偣</h3><p>鏌ョ湅宸叉敞鍐?Agent 鐨勫湪绾挎儏鍐点€両P 鍦板潃涓庢渶杩戝績璺筹紝渚夸簬纭鍙椾繚鎶ら潰鏄惁绋冲畾鎺ュ叆銆?/p></div>
+                        <div class="toolbar"><button class="btn btn-primary" onclick="refreshAgents()">鍒锋柊鑺傜偣鐘舵€?/button></div>
                     </div>
                     <section class="glass-panel">
                         <div class="table-shell">
                             <table>
-                                <thead><tr><th>状态</th><th>资产 IP</th><th>主机名</th><th>节点 ID</th><th>节点名称</th><th>最后心跳</th></tr></thead>
+                                <thead><tr><th>鐘舵€?/th><th>璧勪骇 IP</th><th>涓绘満鍚?/th><th>鑺傜偣 ID</th><th>鑺傜偣鍚嶇О</th><th>鏈€鍚庡績璺?/th></tr></thead>
                                 <tbody id="agentsTable"></tbody>
                             </table>
                         </div>
@@ -623,14 +623,14 @@
 
                 <section class="page" id="strategies">
                     <div class="page-header">
-                        <div><h3>响应策略</h3><p>统一管理配置修复与自动处置策略。右侧可快速新增一个目标文件替换规则并下发到节点。</p></div>
+                        <div><h3>鍝嶅簲绛栫暐</h3><p>缁熶竴绠＄悊閰嶇疆淇涓庤嚜鍔ㄥ缃瓥鐣ャ€傚彸渚у彲蹇€熸柊澧炰竴涓洰鏍囨枃浠舵浛鎹㈣鍒欏苟涓嬪彂鍒拌妭鐐广€?/p></div>
                     </div>
                     <div class="grid-2">
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">已配置策略</div><div class="panel-subtitle">当前数据库中的修复与替换规则</div></div></div>
+                            <div class="panel-header"><div><div class="panel-title">宸查厤缃瓥鐣?/div><div class="panel-subtitle">褰撳墠鏁版嵁搴撲腑鐨勪慨澶嶄笌鏇挎崲瑙勫垯</div></div></div>
                             <div class="table-shell">
                                 <table>
-                                    <thead><tr><th>状态</th><th>SID</th><th>目标文件</th><th>说明</th><th>操作</th></tr></thead>
+                                    <thead><tr><th>鐘舵€?/th><th>SID</th><th>鐩爣鏂囦欢</th><th>璇存槑</th><th>鎿嶄綔</th></tr></thead>
                                     <tbody id="strategiesTable"></tbody>
                                 </table>
                             </div>
@@ -638,21 +638,21 @@
                         <section class="glass-panel">
                             <div class="panel-header">
                                 <div>
-                                    <div class="panel-title" id="strategyFormTitle">新增策略</div>
-                                    <div class="panel-subtitle" id="strategyFormSubtitle">快速录入一条补丁或修复规则</div>
+                                    <div class="panel-title" id="strategyFormTitle">鏂板绛栫暐</div>
+                                    <div class="panel-subtitle" id="strategyFormSubtitle">蹇€熷綍鍏ヤ竴鏉¤ˉ涓佹垨淇瑙勫垯</div>
                                 </div>
-                                <button class="btn btn-outline" type="button" id="strategyCancelBtn" onclick="resetStrategyForm()" style="display:none;">取消编辑</button>
+                                <button class="btn btn-outline" type="button" id="strategyCancelBtn" onclick="resetStrategyForm()" style="display:none;">鍙栨秷缂栬緫</button>
                             </div>
                             <form id="addStrategyForm" onsubmit="addStrategy(event)">
                                 <div class="form-grid">
                                     <input type="hidden" id="strategyId">
-                                    <div><label for="strategySid">关联 SID</label><input type="text" id="strategySid" placeholder="例如 100001，不填则为通用策略"></div>
-                                    <div><label for="strategyFile">目标配置文件</label><input type="text" id="strategyFile" placeholder="/etc/nginx/sites-available/default" required></div>
-                                    <div><label for="strategyMatch">匹配正则</label><input type="text" id="strategyMatch" placeholder="location /admin" required></div>
-                                    <div><label for="strategyReplace">替换内容</label><textarea id="strategyReplace" placeholder="deny all;" required></textarea></div>
-                                    <div><label for="strategyDesc">策略描述</label><input type="text" id="strategyDesc" placeholder="限制敏感路径访问"></div>
-                                    <div class="hint-block">建议将描述写成便于审计的动作说明，例如“关闭 admin 路径外部访问”。这样在回看日志时更容易理解策略意图。</div>
-                                    <button type="submit" class="btn btn-primary" id="strategySubmitBtn">创建策略</button>
+                                    <div><label for="strategySid">鍏宠仈 SID</label><input type="text" id="strategySid" placeholder="渚嬪 100001锛屼笉濉垯涓洪€氱敤绛栫暐"></div>
+                                    <div><label for="strategyFile">鐩爣閰嶇疆鏂囦欢</label><input type="text" id="strategyFile" placeholder="/etc/nginx/sites-available/default" required></div>
+                                    <div><label for="strategyMatch">鍖归厤姝ｅ垯</label><input type="text" id="strategyMatch" placeholder="location /admin" required></div>
+                                    <div><label for="strategyReplace">鏇挎崲鍐呭</label><textarea id="strategyReplace" placeholder="deny all;" required></textarea></div>
+                                    <div><label for="strategyDesc">绛栫暐鎻忚堪</label><input type="text" id="strategyDesc" placeholder="闄愬埗鏁忔劅璺緞璁块棶"></div>
+                                    <div class="hint-block">寤鸿灏嗘弿杩板啓鎴愪究浜庡璁＄殑鍔ㄤ綔璇存槑锛屼緥濡傗€滃叧闂?admin 璺緞澶栭儴璁块棶鈥濄€傝繖鏍峰湪鍥炵湅鏃ュ織鏃舵洿瀹规槗鐞嗚В绛栫暐鎰忓浘銆?/div>
+                                    <button type="submit" class="btn btn-primary" id="strategySubmitBtn">鍒涘缓绛栫暐</button>
                                 </div>
                             </form>
                         </section>
@@ -661,35 +661,35 @@
 
                 <section class="page" id="alerts">
                     <div class="page-header">
-                        <div><h3>告警中心</h3><p>支持按时间、IP、严重等级和动作过滤。可以直接批量封禁，或者进入详情页审计原始负载后再做人工判断。</p></div>
+                        <div><h3>鍛婅涓績</h3><p>鏀寔鎸夋椂闂淬€両P銆佷弗閲嶇瓑绾у拰鍔ㄤ綔杩囨护銆傚彲浠ョ洿鎺ユ壒閲忓皝绂侊紝鎴栬€呰繘鍏ヨ鎯呴〉瀹¤鍘熷璐熻浇鍚庡啀鍋氫汉宸ュ垽鏂€?/p></div>
                         <div class="toolbar">
-                            <button class="btn btn-outline" onclick="toggleFilter()">切换筛选</button>
-                            <button class="btn btn-danger" onclick="batchBlock()">批量封禁</button>
-                            <button class="btn btn-primary" onclick="refreshAlerts()">刷新告警</button>
+                            <button class="btn btn-outline" onclick="toggleFilter()">鍒囨崲绛涢€?/button>
+                            <button class="btn btn-danger" onclick="batchBlock()">鎵归噺灏佺</button>
+                            <button class="btn btn-primary" onclick="refreshAlerts()">鍒锋柊鍛婅</button>
                         </div>
                     </div>
 
                     <section class="glass-panel" id="filterBar" style="display: none;">
                         <div class="filter-grid">
-                            <input type="date" id="filterStartTime" placeholder="开始日期">
-                            <input type="date" id="filterEndTime" placeholder="结束日期">
-                            <input type="text" id="filterSourceIP" placeholder="来源 IP 地址">
-                            <input type="text" id="filterDestIP" placeholder="目标 IP 地址">
-                            <input type="text" id="filterSigName" placeholder="告警签名">
-                            <select id="filterSeverity"><option value="">全部严重等级</option><option value="critical">CRITICAL</option><option value="high">HIGH</option><option value="medium">MEDIUM</option><option value="low">LOW</option></select>
-                            <select id="filterAction"><option value="">全部动作</option><option value="block">封禁</option><option value="patch">修复</option><option value="ignore">忽略</option><option value="unblock">解封</option></select>
-                            <label class="toggle" style="padding-left: 4px;"><input type="checkbox" id="filterWhitelistOnly"><span>仅显示白名单来源</span></label>
+                            <input type="date" id="filterStartTime" placeholder="寮€濮嬫棩鏈?>
+                            <input type="date" id="filterEndTime" placeholder="缁撴潫鏃ユ湡">
+                            <input type="text" id="filterSourceIP" placeholder="鏉ユ簮 IP 鍦板潃">
+                            <input type="text" id="filterDestIP" placeholder="鐩爣 IP 鍦板潃">
+                            <input type="text" id="filterSigName" placeholder="鍛婅绛惧悕">
+                            <select id="filterSeverity"><option value="">鍏ㄩ儴涓ラ噸绛夌骇</option><option value="critical">CRITICAL</option><option value="high">HIGH</option><option value="medium">MEDIUM</option><option value="low">LOW</option></select>
+                            <select id="filterAction"><option value="">鍏ㄩ儴鍔ㄤ綔</option><option value="block">灏佺</option><option value="patch">淇</option><option value="ignore">蹇界暐</option><option value="unblock">瑙ｅ皝</option></select>
+                            <label class="toggle" style="padding-left: 4px;"><input type="checkbox" id="filterWhitelistOnly"><span>浠呮樉绀虹櫧鍚嶅崟鏉ユ簮</span></label>
                         </div>
                         <div class="filter-actions">
-                            <button class="btn btn-outline" onclick="resetFilters()">重置</button>
-                            <button class="btn btn-primary" onclick="refreshAlerts()">应用筛选</button>
+                            <button class="btn btn-outline" onclick="resetFilters()">閲嶇疆</button>
+                            <button class="btn btn-primary" onclick="refreshAlerts()">搴旂敤绛涢€?/button>
                         </div>
                     </section>
 
                     <section class="glass-panel">
                         <div class="table-shell">
                             <table id="alertsMainTable">
-                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('alertsMainTable', this.checked)"></th><th>状态</th><th>SID</th><th>发生时间</th><th>来源 IP</th><th>目标 IP</th><th>严重等级</th><th>告警签名</th><th>操作</th></tr></thead>
+                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('alertsMainTable', this.checked)"></th><th>鐘舵€?/th><th>SID</th><th>鍙戠敓鏃堕棿</th><th>鏉ユ簮 IP</th><th>鐩爣 IP</th><th>涓ラ噸绛夌骇</th><th>鍛婅绛惧悕</th><th>鎿嶄綔</th></tr></thead>
                                 <tbody id="alertsTable"></tbody>
                             </table>
                         </div>
@@ -697,40 +697,41 @@
                 </section>
 
                 <section class="page" id="block">
-                    <div class="page-header"><div><h3>封禁控制</h3><p>可以手动下发单个 IP 封禁，也可以在下方对当前封禁列表做批量解封。</p></div></div>
+                    <div class="page-header"><div><h3>灏佺鎺у埗</h3><p>鍙互鎵嬪姩涓嬪彂鍗曚釜 IP 灏佺锛屼篃鍙互鍦ㄤ笅鏂瑰褰撳墠灏佺鍒楄〃鍋氭壒閲忚В灏併€?/p></div></div>
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">手动封禁</div><div class="panel-subtitle">将高风险地址快速加入全局封禁动作</div></div></div>
+                        <div class="panel-header"><div><div class="panel-title">鎵嬪姩灏佺</div><div class="panel-subtitle">灏嗛珮椋庨櫓鍦板潃蹇€熷姞鍏ュ叏灞€灏佺鍔ㄤ綔</div></div></div>
                         <div class="inline-form">
-                            <input type="text" id="blockIp" placeholder="目标 IPv4 / IPv6 地址">
-                            <input type="text" id="blockReason" placeholder="封禁原因备注">
-                            <button class="btn btn-danger" onclick="blockIP()">立即封禁</button>
+                            <input type="text" id="blockIp" placeholder="鐩爣 IPv4 / IPv6 鍦板潃">
+                            <input type="hidden" id="blockAgentId">
+                            <input type="text" id="blockReason" placeholder="灏佺鍘熷洜澶囨敞">
+                            <button class="btn btn-danger" onclick="blockIP()">绔嬪嵆灏佺</button>
                         </div>
                     </section>
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">当前封禁列表</div><div class="panel-subtitle">来源于告警动作视图的已封禁地址集合</div></div><button class="btn btn-outline" onclick="batchUnblock()">批量解封</button></div>
+                        <div class="panel-header"><div><div class="panel-title">褰撳墠灏佺鍒楄〃</div><div class="panel-subtitle">鏉ユ簮浜庡憡璀﹀姩浣滆鍥剧殑宸插皝绂佸湴鍧€闆嗗悎</div></div><button class="btn btn-outline" onclick="batchUnblock()">鎵归噺瑙ｅ皝</button></div>
                         <div class="table-shell">
                             <table id="blockedIpsTable">
-                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('blockedIpsTable', this.checked)"></th><th>IP 地址</th><th>状态</th><th>封禁时间</th><th>触发原因</th><th>操作</th></tr></thead>
-                                <tbody><tr><td colspan="6" class="empty">暂无封禁记录</td></tr></tbody>
+                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('blockedIpsTable', this.checked)"></th><th>IP 鍦板潃</th><th>鐘舵€?/th><th>灏佺鏃堕棿</th><th>瑙﹀彂鍘熷洜</th><th>鎿嶄綔</th></tr></thead>
+                                <tbody><tr><td colspan="6" class="empty">鏆傛棤灏佺璁板綍</td></tr></tbody>
                             </table>
                         </div>
                     </section>
                 </section>
 
                 <section class="page" id="whitelist">
-                    <div class="page-header"><div><h3>白名单</h3><p>维护可信地址。命中白名单的 IP 在批量封禁时会被跳过，适合排除误报来源。</p></div></div>
+                    <div class="page-header"><div><h3>鐧藉悕鍗?/h3><p>缁存姢鍙俊鍦板潃銆傚懡涓櫧鍚嶅崟鐨?IP 鍦ㄦ壒閲忓皝绂佹椂浼氳璺宠繃锛岄€傚悎鎺掗櫎璇姤鏉ユ簮銆?/p></div></div>
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">新增可信地址</div><div class="panel-subtitle">为误报、联调或已确认安全的来源建立信任规则</div></div></div>
+                        <div class="panel-header"><div><div class="panel-title">鏂板鍙俊鍦板潃</div><div class="panel-subtitle">涓鸿鎶ャ€佽仈璋冩垨宸茬‘璁ゅ畨鍏ㄧ殑鏉ユ簮寤虹珛淇′换瑙勫垯</div></div></div>
                         <div class="inline-form">
-                            <input type="text" id="whitelistIp" placeholder="可信 IP 地址">
-                            <input type="text" id="whitelistReason" placeholder="备注说明">
-                            <button class="btn btn-primary" onclick="addWhitelistEntry()">加入白名单</button>
+                            <input type="text" id="whitelistIp" placeholder="鍙俊 IP 鍦板潃">
+                            <input type="text" id="whitelistReason" placeholder="澶囨敞璇存槑">
+                            <button class="btn btn-primary" onclick="addWhitelistEntry()">鍔犲叆鐧藉悕鍗?/button>
                         </div>
                     </section>
                     <section class="glass-panel">
                         <div class="table-shell">
                             <table id="whitelistTable">
-                                <thead><tr><th>IP 地址</th><th>备注</th><th>添加时间</th><th>操作</th></tr></thead>
+                                <thead><tr><th>IP 鍦板潃</th><th>澶囨敞</th><th>娣诲姞鏃堕棿</th><th>鎿嶄綔</th></tr></thead>
                                 <tbody></tbody>
                             </table>
                         </div>
@@ -738,76 +739,76 @@
                 </section>
 
                 <section class="page" id="logs">
-                    <div class="page-header"><div><h3>操作日志</h3><p>按时间倒序查看封禁、解封和补丁执行结果，适合排查动作落地情况。</p></div></div>
+                    <div class="page-header"><div><h3>鎿嶄綔鏃ュ織</h3><p>鎸夋椂闂村€掑簭鏌ョ湅灏佺銆佽В灏佸拰琛ヤ竵鎵ц缁撴灉锛岄€傚悎鎺掓煡鍔ㄤ綔钀藉湴鎯呭喌銆?/p></div></div>
                     <section class="glass-panel"><div class="logs-stack" id="logsList"></div></section>
                 </section>
 
                 <section class="page" id="ai">
                     <div class="page-header">
-                        <div><h3>AI 联动工作台</h3><p>从漏洞描述生成候选 Suricata 规则，支持人工审阅、节点测试和部署落地，并可对已入库告警补充 AI 语义分析。</p></div>
+                        <div><h3>AI 鑱斿姩宸ヤ綔鍙?/h3><p>浠庢紡娲炴弿杩扮敓鎴愬€欓€?Suricata 瑙勫垯锛屾敮鎸佷汉宸ュ闃呫€佽妭鐐规祴璇曞拰閮ㄧ讲钀藉湴锛屽苟鍙宸插叆搴撳憡璀﹁ˉ鍏?AI 璇箟鍒嗘瀽銆?/p></div>
                     </div>
 
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">流程进度</div><div class="panel-subtitle">推荐先生成候选规则，再人工修改、测试通过后下发到 Agent</div></div></div>
+                        <div class="panel-header"><div><div class="panel-title">娴佺▼杩涘害</div><div class="panel-subtitle">鎺ㄨ崘鍏堢敓鎴愬€欓€夎鍒欙紝鍐嶄汉宸ヤ慨鏀广€佹祴璇曢€氳繃鍚庝笅鍙戝埌 Agent</div></div></div>
                         <div class="ai-progress">
-                            <div class="ai-step active" id="aiStepGenerate"><strong>1. 生成候选规则</strong><span id="aiStepGenerateText">等待输入漏洞信息</span></div>
-                            <div class="ai-step" id="aiStepReview"><strong>2. 人工审阅修改</strong><span id="aiStepReviewText">生成后可直接编辑候选规则</span></div>
-                            <div class="ai-step" id="aiStepTest"><strong>3. 测试规则</strong><span id="aiStepTestText">支持 Master 静态校验或 Agent 动态测试</span></div>
-                            <div class="ai-step" id="aiStepDeploy"><strong>4. 下发部署</strong><span id="aiStepDeployText">测试通过后再部署到目标 Agent</span></div>
+                            <div class="ai-step active" id="aiStepGenerate"><strong>1. 鐢熸垚鍊欓€夎鍒?/strong><span id="aiStepGenerateText">绛夊緟杈撳叆婕忔礊淇℃伅</span></div>
+                            <div class="ai-step" id="aiStepReview"><strong>2. 浜哄伐瀹￠槄淇敼</strong><span id="aiStepReviewText">鐢熸垚鍚庡彲鐩存帴缂栬緫鍊欓€夎鍒?/span></div>
+                            <div class="ai-step" id="aiStepTest"><strong>3. 娴嬭瘯瑙勫垯</strong><span id="aiStepTestText">鏀寔 Master 闈欐€佹牎楠屾垨 Agent 鍔ㄦ€佹祴璇?/span></div>
+                            <div class="ai-step" id="aiStepDeploy"><strong>4. 涓嬪彂閮ㄧ讲</strong><span id="aiStepDeployText">娴嬭瘯閫氳繃鍚庡啀閮ㄧ讲鍒扮洰鏍?Agent</span></div>
                         </div>
                     </section>
 
                     <div class="grid-2">
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">AI 规则生成</div><div class="panel-subtitle">输入 CVE、PoC 或漏洞描述，生成候选 Suricata 检测规则</div></div></div>
+                            <div class="panel-header"><div><div class="panel-title">AI 瑙勫垯鐢熸垚</div><div class="panel-subtitle">杈撳叆 CVE銆丳oC 鎴栨紡娲炴弿杩帮紝鐢熸垚鍊欓€?Suricata 妫€娴嬭鍒?/div></div></div>
                             <div class="ai-stack">
                                 <div class="form-grid">
-                                    <div><label for="aiSourceType">输入类型</label><select id="aiSourceType"><option value="cve">CVE</option><option value="poc">PoC</option><option value="description">漏洞描述</option></select></div>
-                                    <div><label for="aiProtocolHint">协议提示</label><select id="aiProtocolHint"><option value="http">HTTP</option><option value="tcp">TCP</option><option value="dns">DNS</option></select></div>
-                                    <div><label for="aiTargetService">目标服务</label><input type="text" id="aiTargetService" placeholder="nginx / tomcat / spring-boot"></div>
-                                    <div><label for="aiSourceContent">漏洞内容</label><textarea id="aiSourceContent" placeholder="输入 CVE 编号、PoC 代码或漏洞描述，建议提供尽量明确的 HTTP/TCP 语义特征"></textarea></div>
+                                    <div><label for="aiSourceType">杈撳叆绫诲瀷</label><select id="aiSourceType"><option value="cve">CVE</option><option value="poc">PoC</option><option value="description">婕忔礊鎻忚堪</option></select></div>
+                                    <div><label for="aiProtocolHint">鍗忚鎻愮ず</label><select id="aiProtocolHint"><option value="http">HTTP</option><option value="tcp">TCP</option><option value="dns">DNS</option></select></div>
+                                    <div><label for="aiTargetService">鐩爣鏈嶅姟</label><input type="text" id="aiTargetService" placeholder="nginx / tomcat / spring-boot"></div>
+                                    <div><label for="aiSourceContent">婕忔礊鍐呭</label><textarea id="aiSourceContent" placeholder="杈撳叆 CVE 缂栧彿銆丳oC 浠ｇ爜鎴栨紡娲炴弿杩帮紝寤鸿鎻愪緵灏介噺鏄庣‘鐨?HTTP/TCP 璇箟鐗瑰緛"></textarea></div>
                                 </div>
                                 <div class="sub-actions">
-                                    <button class="btn btn-primary" onclick="generateAIRule()">生成候选规则</button>
-                                    <button class="btn btn-outline" onclick="fillAIDemoInput()">填充演示样例</button>
+                                    <button class="btn btn-primary" onclick="generateAIRule()">鐢熸垚鍊欓€夎鍒?/button>
+                                    <button class="btn btn-outline" onclick="fillAIDemoInput()">濉厖婕旂ず鏍蜂緥</button>
                                 </div>
-                                <div id="aiRuleSummary" class="hint-block">建议优先输入 HTTP 场景的 PoC 或漏洞描述，这样更容易生成可验证、可演示的候选规则。</div>
-                                <div id="aiRuleOutput" class="ai-result ai-rule-box">等待 AI 生成候选规则...</div>
+                                <div id="aiRuleSummary" class="hint-block">寤鸿浼樺厛杈撳叆 HTTP 鍦烘櫙鐨?PoC 鎴栨紡娲炴弿杩帮紝杩欐牱鏇村鏄撶敓鎴愬彲楠岃瘉銆佸彲婕旂ず鐨勫€欓€夎鍒欍€?/div>
+                                <div id="aiRuleOutput" class="ai-result ai-rule-box">绛夊緟 AI 鐢熸垚鍊欓€夎鍒?..</div>
                                 <div>
-                                    <label for="aiRuleEditor">人工修订候选规则</label>
-                                    <textarea id="aiRuleEditor" class="ai-rule-editor" placeholder="如果 AI 生成的规则不够稳，可以先在这里人工修改，再重新测试"></textarea>
+                                    <label for="aiRuleEditor">浜哄伐淇鍊欓€夎鍒?/label>
+                                    <textarea id="aiRuleEditor" class="ai-rule-editor" placeholder="濡傛灉 AI 鐢熸垚鐨勮鍒欎笉澶熺ǔ锛屽彲浠ュ厛鍦ㄨ繖閲屼汉宸ヤ慨鏀癸紝鍐嶉噸鏂版祴璇?></textarea>
                                 </div>
                                 <div class="sub-actions">
-                                    <button class="btn btn-outline" onclick="saveAIRuleEdits()">保存人工修改</button>
-                                    <button class="btn btn-outline" onclick="resetAIRuleEditor()">恢复生成结果</button>
+                                    <button class="btn btn-outline" onclick="saveAIRuleEdits()">淇濆瓨浜哄伐淇敼</button>
+                                    <button class="btn btn-outline" onclick="resetAIRuleEditor()">鎭㈠鐢熸垚缁撴灉</button>
                                 </div>
                             </div>
                         </section>
 
                         <section class="glass-panel">
-                            <div class="panel-header"><div><div class="panel-title">测试与部署</div><div class="panel-subtitle">载入任务、查看测试状态，并在确认可用后下发到目标 Agent</div></div></div>
+                            <div class="panel-header"><div><div class="panel-title">娴嬭瘯涓庨儴缃?/div><div class="panel-subtitle">杞藉叆浠诲姟銆佹煡鐪嬫祴璇曠姸鎬侊紝骞跺湪纭鍙敤鍚庝笅鍙戝埌鐩爣 Agent</div></div></div>
                             <div class="ai-stack">
                                 <div class="form-grid">
-                                    <div><label for="aiTaskId">规则任务 ID</label><input type="text" id="aiTaskId" placeholder="生成后会自动填入，也支持手动输入后加载" onkeydown="handleAITaskInput(event)"></div>
-                                    <div><label for="aiDeployPath">规则文件路径</label><input type="text" id="aiDeployPath" placeholder="/etc/suricata/rules/dasrs_ai.rules"></div>
-                                    <div><label for="aiAgentIds">目标 Agent ID</label><input type="text" id="aiAgentIds" placeholder="多个 Agent 用逗号分隔，例如 agent-01,agent-02"></div>
-                                    <div><label for="aiTestMode">测试模式</label><select id="aiTestMode"><option value="agent">Agent 动态测试</option><option value="master">Master 静态校验</option></select></div>
-                                    <div><label for="aiAlertDbId">告警数据库 ID</label><input type="text" id="aiAlertDbId" placeholder="输入告警详情中的数据库 ID，可快速做 AI 告警分析"></div>
+                                    <div><label for="aiTaskId">瑙勫垯浠诲姟 ID</label><input type="text" id="aiTaskId" placeholder="鐢熸垚鍚庝細鑷姩濉叆锛屼篃鏀寔鎵嬪姩杈撳叆鍚庡姞杞? onkeydown="handleAITaskInput(event)"></div>
+                                    <div><label for="aiDeployPath">瑙勫垯鏂囦欢璺緞</label><input type="text" id="aiDeployPath" placeholder="/etc/suricata/rules/dasrs_ai.rules"></div>
+                                    <div><label for="aiAgentIds">鐩爣 Agent ID</label><input type="text" id="aiAgentIds" placeholder="澶氫釜 Agent 鐢ㄩ€楀彿鍒嗛殧锛屼緥濡?agent-01,agent-02"></div>
+                                    <div><label for="aiTestMode">娴嬭瘯妯″紡</label><select id="aiTestMode"><option value="agent">Agent 鍔ㄦ€佹祴璇?/option><option value="master">Master 闈欐€佹牎楠?/option></select></div>
+                                    <div><label for="aiAlertDbId">鍛婅鏁版嵁搴?ID</label><input type="text" id="aiAlertDbId" placeholder="杈撳叆鍛婅璇︽儏涓殑鏁版嵁搴?ID锛屽彲蹇€熷仛 AI 鍛婅鍒嗘瀽"></div>
                                 </div>
                                 <div class="sub-actions">
-                                    <button class="btn btn-outline" onclick="loadAIRuleTaskFromInput()">载入任务</button>
-                                    <button class="btn btn-primary" onclick="testAIRule()">测试规则</button>
-                                    <button class="btn btn-primary" onclick="deployAIRule()">确认下发</button>
-                                    <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench()">分析告警</button>
-                                    <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench(true)">重新研判</button>
+                                    <button class="btn btn-outline" onclick="loadAIRuleTaskFromInput()">杞藉叆浠诲姟</button>
+                                    <button class="btn btn-primary" onclick="testAIRule()">娴嬭瘯瑙勫垯</button>
+                                    <button class="btn btn-primary" onclick="deployAIRule()">纭涓嬪彂</button>
+                                    <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench()">鍒嗘瀽鍛婅</button>
+                                    <button class="btn btn-outline" onclick="analyzeAlertFromWorkbench(true)">閲嶆柊鐮斿垽</button>
                                 </div>
                                 <div class="ai-meta">
-                                    <div id="aiDeployStatus" class="hint-block ai-status-box">这里会显示 AI 服务状态、部署结果和 Agent 回执摘要。</div>
-                                    <div id="aiAgentsStatus" class="hint-block">这里会显示当前在线 Agent，方便选择测试节点和部署目标。</div>
+                                    <div id="aiDeployStatus" class="hint-block ai-status-box">杩欓噷浼氭樉绀?AI 鏈嶅姟鐘舵€併€侀儴缃茬粨鏋滃拰 Agent 鍥炴墽鎽樿銆?/div>
+                                    <div id="aiAgentsStatus" class="hint-block">杩欓噷浼氭樉绀哄綋鍓嶅湪绾?Agent锛屾柟渚块€夋嫨娴嬭瘯鑺傜偣鍜岄儴缃茬洰鏍囥€?/div>
                                 </div>
-                                <div id="aiTestStatus" class="hint-block ai-status-box">这里会显示规则测试结果，包括静态校验信息或 Agent 回传的测试报告。</div>
-                                <div id="aiTaskSnapshot" class="hint-block ai-status-box">这里会显示当前任务的摘要、测试状态和部署进度。</div>
-                                <div id="aiAlertOutput" class="ai-result">等待 AI 告警分析结果...</div>
+                                <div id="aiTestStatus" class="hint-block ai-status-box">杩欓噷浼氭樉绀鸿鍒欐祴璇曠粨鏋滐紝鍖呮嫭闈欐€佹牎楠屼俊鎭垨 Agent 鍥炰紶鐨勬祴璇曟姤鍛娿€?/div>
+                                <div id="aiTaskSnapshot" class="hint-block ai-status-box">杩欓噷浼氭樉绀哄綋鍓嶄换鍔＄殑鎽樿銆佹祴璇曠姸鎬佸拰閮ㄧ讲杩涘害銆?/div>
+                                <div id="aiAlertOutput" class="ai-result">绛夊緟 AI 鍛婅鍒嗘瀽缁撴灉...</div>
                             </div>
                         </section>
                     </div>
@@ -815,51 +816,51 @@
 
                 <section class="page" id="ai-settings">
                     <div class="page-header">
-                        <div><h3>AI 配置</h3><p>在这里维护 DeepSeek API Key、模型地址和提示词模板。保存后会写回配置文件，并刷新当前 Master 的 AI 配置。</p></div>
+                        <div><h3>AI 閰嶇疆</h3><p>鍦ㄨ繖閲岀淮鎶?DeepSeek API Key銆佹ā鍨嬪湴鍧€鍜屾彁绀鸿瘝妯℃澘銆備繚瀛樺悗浼氬啓鍥為厤缃枃浠讹紝骞跺埛鏂板綋鍓?Master 鐨?AI 閰嶇疆銆?/p></div>
                         <div class="toolbar">
-                            <button class="btn btn-outline" onclick="loadAISettings(true)">刷新配置</button>
-                            <button class="btn btn-primary" onclick="saveAISettings()">保存配置</button>
+                            <button class="btn btn-outline" onclick="loadAISettings(true)">鍒锋柊閰嶇疆</button>
+                            <button class="btn btn-primary" onclick="saveAISettings()">淇濆瓨閰嶇疆</button>
                         </div>
                     </div>
 
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">运行参数</div><div class="panel-subtitle">用于配置 AI Provider、API Key 和演示模式阈值</div></div></div>
+                        <div class="panel-header"><div><div class="panel-title">杩愯鍙傛暟</div><div class="panel-subtitle">鐢ㄤ簬閰嶇疆 AI Provider銆丄PI Key 鍜屾紨绀烘ā寮忛槇鍊?/div></div></div>
                         <div class="form-grid">
                             <div class="grid-2">
-                                <div><label for="aiSettingsEnabled">启用 AI</label><select id="aiSettingsEnabled"><option value="true">启用</option><option value="false">禁用</option></select></div>
+                                <div><label for="aiSettingsEnabled">鍚敤 AI</label><select id="aiSettingsEnabled"><option value="true">鍚敤</option><option value="false">绂佺敤</option></select></div>
                                 <div><label for="aiSettingsProvider">Provider</label><input type="text" id="aiSettingsProvider" placeholder="deepseek"></div>
                             </div>
                             <div class="grid-2">
                                 <div><label for="aiSettingsBaseURL">Base URL</label><input type="text" id="aiSettingsBaseURL" placeholder="https://api.deepseek.com"></div>
-                                <div><label for="aiSettingsModel">模型名</label><input type="text" id="aiSettingsModel" placeholder="deepseek-chat"></div>
+                                <div><label for="aiSettingsModel">妯″瀷鍚?/label><input type="text" id="aiSettingsModel" placeholder="deepseek-chat"></div>
                             </div>
                             <div class="grid-2">
                                 <div><label for="aiSettingsAPIKey">API Key</label><input type="password" id="aiSettingsAPIKey" placeholder="sk-..."></div>
-                                <div><label for="aiSettingsTimeout">超时秒数</label><input type="number" id="aiSettingsTimeout" min="1" placeholder="30"></div>
+                                <div><label for="aiSettingsTimeout">瓒呮椂绉掓暟</label><input type="number" id="aiSettingsTimeout" min="1" placeholder="30"></div>
                             </div>
                             <div class="grid-2">
-                                <div><label for="aiSettingsDemoMode">Demo Mode</label><select id="aiSettingsDemoMode"><option value="false">关闭</option><option value="true">开启</option></select></div>
-                                <div><label for="aiSettingsActionMode">响应模式</label><select id="aiSettingsActionMode"><option value="block">自动封禁 (Block)</option><option value="alert">仅告警 (Alert)</option></select></div>
+                                <div><label for="aiSettingsDemoMode">Demo Mode</label><select id="aiSettingsDemoMode"><option value="false">鍏抽棴</option><option value="true">寮€鍚?/option></select></div>
+                                <div><label for="aiSettingsActionMode">鍝嶅簲妯″紡</label><select id="aiSettingsActionMode"><option value="block">鑷姩灏佺 (Block)</option><option value="alert">浠呭憡璀?(Alert)</option></select></div>
                             </div>
                             <div class="grid-2">
-                                <div><label for="aiSettingsDemoBlock">演示封禁阈值</label><input type="number" id="aiSettingsDemoBlock" min="1" placeholder="40"></div>
-                                <div><label for="aiSettingsDemoRepair">演示修复阈值</label><input type="number" id="aiSettingsDemoRepair" min="1" placeholder="65"></div>
+                                <div><label for="aiSettingsDemoBlock">婕旂ず灏佺闃堝€?/label><input type="number" id="aiSettingsDemoBlock" min="1" placeholder="40"></div>
+                                <div><label for="aiSettingsDemoRepair">婕旂ず淇闃堝€?/label><input type="number" id="aiSettingsDemoRepair" min="1" placeholder="65"></div>
                             </div>
                         </div>
                     </section>
 
                     <section class="glass-panel">
-                        <div class="panel-header"><div><div class="panel-title">提示词模板</div><div class="panel-subtitle">可分别约束规则生成与告警分析的 system/user prompt</div></div></div>
+                        <div class="panel-header"><div><div class="panel-title">鎻愮ず璇嶆ā鏉?/div><div class="panel-subtitle">鍙垎鍒害鏉熻鍒欑敓鎴愪笌鍛婅鍒嗘瀽鐨?system/user prompt</div></div></div>
                         <div class="form-grid">
-                            <div><label for="aiRuleGenSystemPrompt">规则生成 System Prompt</label><textarea id="aiRuleGenSystemPrompt" placeholder="限制 AI 只输出结构化 JSON、只允许 content/pcre 等"></textarea></div>
-                            <div><label for="aiRuleGenUserPrompt">规则生成 User Prompt</label><textarea id="aiRuleGenUserPrompt" placeholder="可使用 SOURCE_TYPE / PROTOCOL_HINT / TARGET_SERVICE / SOURCE_CONTENT 这些模板变量"></textarea></div>
-                            <div><label for="aiAlertSystemPrompt">告警分析 System Prompt</label><textarea id="aiAlertSystemPrompt" placeholder="约束 AI 输出摘要、证据、影响范围、建议动作等"></textarea></div>
-                            <div><label for="aiAlertUserPrompt">告警分析 User Prompt</label><textarea id="aiAlertUserPrompt" placeholder="可使用 ALERT_ID、PAYLOAD、RECENT_ALERTS、EXTRACTED_SIGNALS 等模板变量"></textarea></div>
+                            <div><label for="aiRuleGenSystemPrompt">瑙勫垯鐢熸垚 System Prompt</label><textarea id="aiRuleGenSystemPrompt" placeholder="闄愬埗 AI 鍙緭鍑虹粨鏋勫寲 JSON銆佸彧鍏佽 content/pcre 绛?></textarea></div>
+                            <div><label for="aiRuleGenUserPrompt">瑙勫垯鐢熸垚 User Prompt</label><textarea id="aiRuleGenUserPrompt" placeholder="鍙娇鐢?SOURCE_TYPE / PROTOCOL_HINT / TARGET_SERVICE / SOURCE_CONTENT 杩欎簺妯℃澘鍙橀噺"></textarea></div>
+                            <div><label for="aiAlertSystemPrompt">鍛婅鍒嗘瀽 System Prompt</label><textarea id="aiAlertSystemPrompt" placeholder="绾︽潫 AI 杈撳嚭鎽樿銆佽瘉鎹€佸奖鍝嶈寖鍥淬€佸缓璁姩浣滅瓑"></textarea></div>
+                            <div><label for="aiAlertUserPrompt">鍛婅鍒嗘瀽 User Prompt</label><textarea id="aiAlertUserPrompt" placeholder="鍙娇鐢?ALERT_ID銆丳AYLOAD銆丷ECENT_ALERTS銆丒XTRACTED_SIGNALS 绛夋ā鏉垮彉閲?></textarea></div>
                         </div>
                         <div class="sub-actions">
-                            <button class="btn btn-primary" onclick="saveAISettings()">保存配置</button>
+                            <button class="btn btn-primary" onclick="saveAISettings()">淇濆瓨閰嶇疆</button>
                         </div>
-                        <div id="aiSettingsStatus" class="hint-block">这里会显示配置文件保存结果和当前 AI 配置状态。</div>
+                        <div id="aiSettingsStatus" class="hint-block">杩欓噷浼氭樉绀洪厤缃枃浠朵繚瀛樼粨鏋滃拰褰撳墠 AI 閰嶇疆鐘舵€併€?/div>
                     </section>
                 </section>
             </main>
@@ -869,11 +870,11 @@
     <div id="alertModal" class="modal">
         <div class="modal-content">
             <header class="modal-header">
-                <div><div class="modal-title">告警审计详情</div><div class="panel-subtitle">查看事件内容、原始载荷和处置建议</div></div>
-                <button class="btn btn-outline" onclick="closeModal()">关闭</button>
+                <div><div class="modal-title">鍛婅瀹¤璇︽儏</div><div class="panel-subtitle">鏌ョ湅浜嬩欢鍐呭銆佸師濮嬭浇鑽峰拰澶勭疆寤鸿</div></div>
+                <button class="btn btn-outline" onclick="closeModal()">鍏抽棴</button>
             </header>
             <div class="modal-body" id="modalBody"></div>
-            <footer class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">返回列表</button></footer>
+            <footer class="modal-footer"><button class="btn btn-outline" onclick="closeModal()">杩斿洖鍒楄〃</button></footer>
         </div>
     </div>
     <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
@@ -887,6 +888,7 @@
         let lastGeneratedRuleTask = null;
         let aiSettingsDirty = false;
         let aiSettingsApplying = false;
+        const AI_SETTINGS_DRAFT_KEY = 'dasrs.ai.settings.draft';
 
         function updateClock() {
             const now = new Date();
@@ -918,11 +920,86 @@
                 const el = document.getElementById(id);
                 if (!el) return;
                 const markDirty = () => {
-                    if (!aiSettingsApplying) aiSettingsDirty = true;
+                    if (!aiSettingsApplying) {
+                        aiSettingsDirty = true;
+                        persistAISettingsDraft();
+                    }
                 };
                 el.addEventListener('input', markDirty);
                 el.addEventListener('change', markDirty);
             });
+        }
+
+        function collectAISettingsDraft() {
+            return {
+                enabled: document.getElementById('aiSettingsEnabled')?.value || 'false',
+                provider: document.getElementById('aiSettingsProvider')?.value || '',
+                base_url: document.getElementById('aiSettingsBaseURL')?.value || '',
+                api_key: document.getElementById('aiSettingsAPIKey')?.value || '',
+                model: document.getElementById('aiSettingsModel')?.value || '',
+                timeout_seconds: document.getElementById('aiSettingsTimeout')?.value || '30',
+                rule_generation_system: document.getElementById('aiRuleGenSystemPrompt')?.value || '',
+                rule_generation_user: document.getElementById('aiRuleGenUserPrompt')?.value || '',
+                alert_analysis_system: document.getElementById('aiAlertSystemPrompt')?.value || '',
+                alert_analysis_user: document.getElementById('aiAlertUserPrompt')?.value || '',
+                demo_mode: document.getElementById('aiSettingsDemoMode')?.value || 'false',
+                action_mode: document.getElementById('aiSettingsActionMode')?.value || 'block',
+                demo_block_threshold: document.getElementById('aiSettingsDemoBlock')?.value || '40',
+                demo_repair_threshold: document.getElementById('aiSettingsDemoRepair')?.value || '65',
+                demo_exploit_bonus: document.getElementById('aiSettingsDemoBonus')?.value || '15'
+            };
+        }
+
+        function applyAISettingsDraft(data) {
+            if (!data) return;
+            aiSettingsApplying = true;
+            document.getElementById('aiSettingsEnabled').value = String(data.enabled ?? 'false');
+            document.getElementById('aiSettingsProvider').value = data.provider || 'deepseek';
+            document.getElementById('aiSettingsBaseURL').value = data.base_url || '';
+            document.getElementById('aiSettingsAPIKey').value = data.api_key || '';
+            document.getElementById('aiSettingsModel').value = data.model || '';
+            document.getElementById('aiSettingsTimeout').value = data.timeout_seconds || 30;
+            document.getElementById('aiRuleGenSystemPrompt').value = data.rule_generation_system || '';
+            document.getElementById('aiRuleGenUserPrompt').value = data.rule_generation_user || '';
+            document.getElementById('aiAlertSystemPrompt').value = data.alert_analysis_system || '';
+            document.getElementById('aiAlertUserPrompt').value = data.alert_analysis_user || '';
+            document.getElementById('aiSettingsDemoMode').value = String(data.demo_mode ?? 'false');
+            document.getElementById('aiSettingsActionMode').value = data.action_mode || 'block';
+            document.getElementById('aiSettingsDemoBlock').value = data.demo_block_threshold || 40;
+            document.getElementById('aiSettingsDemoRepair').value = data.demo_repair_threshold || 65;
+            document.getElementById('aiSettingsDemoBonus').value = data.demo_exploit_bonus || 15;
+            aiSettingsApplying = false;
+        }
+
+        function persistAISettingsDraft() {
+            try {
+                localStorage.setItem(AI_SETTINGS_DRAFT_KEY, JSON.stringify(collectAISettingsDraft()));
+            } catch (error) {
+                console.warn('Failed to persist AI settings draft', error);
+            }
+        }
+
+        function loadAISettingsDraft() {
+            try {
+                const raw = localStorage.getItem(AI_SETTINGS_DRAFT_KEY);
+                if (!raw) return null;
+                return JSON.parse(raw);
+            } catch (error) {
+                console.warn('Failed to load AI settings draft', error);
+                return null;
+            }
+        }
+
+        function clearAISettingsDraft() {
+            try {
+                localStorage.removeItem(AI_SETTINGS_DRAFT_KEY);
+            } catch (error) {
+                console.warn('Failed to clear AI settings draft', error);
+            }
+        }
+
+        if (loadAISettingsDraft()) {
+            aiSettingsDirty = true;
         }
 
         function showPage(pageId) {
@@ -947,7 +1024,7 @@
                 case 'ai': await loadAIWorkbench(); break;
                 case 'ai-settings':
                     if (!aiSettingsDirty) await loadAISettings();
-                    else setText('aiSettingsStatus', '检测到未保存的 AI 配置修改，已暂停自动刷新覆盖当前输入。');
+                    else setText('aiSettingsStatus', 'Detected unsaved AI settings changes. Auto refresh will not overwrite your draft.');
                     break;
                 case 'logs': await refreshLogs(); break;
             }
@@ -991,7 +1068,7 @@
                 return result;
             } catch (error) {
                 console.error('API Error:', error);
-                return { success: false, message: '网络连接异常或服务不可达' };
+                return { success: false, message: '缃戠粶杩炴帴寮傚父鎴栨湇鍔′笉鍙揪' };
             }
         }
         async function sendJSON(url, method, data) {
@@ -1014,7 +1091,7 @@
                 return Object.keys(result).length ? result : { success: true };
             } catch (error) {
                 console.error('API Error:', error);
-                return { success: false, message: '网络连接异常或服务不可达' };
+                return { success: false, message: '缃戠粶杩炴帴寮傚父鎴栨湇鍔′笉鍙揪' };
             }
         }
 
@@ -1047,26 +1124,26 @@
         }
         function formatSeverityText(level) {
             const value = String(level || '').toLowerCase();
-            if (value === 'critical') return '严重';
-            if (value === 'high') return '高危';
-            if (value === 'medium') return '中危';
-            if (value === 'low') return '低危';
-            return '未知';
+            if (value === 'critical') return '涓ラ噸';
+            if (value === 'high') return '楂樺嵄';
+            if (value === 'medium') return '涓嵄';
+            if (value === 'low') return '浣庡嵄';
+            return '鏈煡';
         }
         function formatActionText(action) {
             const value = String(action || '').toLowerCase();
-            if (value === 'block') return '封禁';
-            if (value === 'unblock') return '解封';
-            if (value === 'patch') return '修复';
-            if (value === 'ignore') return '忽略';
-            if (value === 'observe' || value === '') return '观察';
-            return '未知';
+            if (value === 'block') return '灏佺';
+            if (value === 'unblock') return '瑙ｅ皝';
+            if (value === 'patch') return '淇';
+            if (value === 'ignore') return '蹇界暐';
+            if (value === 'observe' || value === '') return '瑙傚療';
+            return '鏈煡';
         }
         function formatBlockStatus(status) {
             const value = String(status || '').toLowerCase();
-            if (value === 'active') return { text: '已生效', badge: 'danger' };
-            if (value === 'pending') return { text: '待执行', badge: 'warning' };
-            return { text: '未知', badge: 'info' };
+            if (value === 'active') return { text: 'Active', badge: 'danger' };
+            if (value === 'pending') return { text: 'Pending', badge: 'warning' };
+            return { text: 'Unknown', badge: 'info' };
         }
         function getStatusBadge(status) {
             return status === 0 ? 'warning' : 'success';
@@ -1091,7 +1168,7 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <div class="toast-title">${escapeHtml(title || (type === 'success' ? '操作成功' : type === 'error' ? '操作失败' : '提示'))}</div>
+                <div class="toast-title">${escapeHtml(title || (type === 'success' ? '鎿嶄綔鎴愬姛' : type === 'error' ? '鎿嶄綔澶辫触' : '鎻愮ず'))}</div>
                 <div class="toast-message">${escapeHtml(message || '')}</div>
             `;
             stack.appendChild(toast);
@@ -1107,15 +1184,15 @@
             const submit = document.getElementById('strategySubmitBtn');
             const cancel = document.getElementById('strategyCancelBtn');
             if (mode === 'edit') {
-                title.textContent = '编辑策略';
-                subtitle.textContent = '修改已有策略的匹配规则和描述';
-                submit.textContent = '保存修改';
+                title.textContent = '缂栬緫绛栫暐';
+                subtitle.textContent = '淇敼宸叉湁绛栫暐鐨勫尮閰嶈鍒欏拰鎻忚堪';
+                submit.textContent = '淇濆瓨淇敼';
                 cancel.style.display = 'inline-flex';
                 return;
             }
-            title.textContent = '新增策略';
-            subtitle.textContent = '快速录入一条补丁或修复规则';
-            submit.textContent = '创建策略';
+            title.textContent = '鏂板绛栫暐';
+            subtitle.textContent = '蹇€熷綍鍏ヤ竴鏉¤ˉ涓佹垨淇瑙勫垯';
+            submit.textContent = '鍒涘缓绛栫暐';
             cancel.style.display = 'none';
         }
         function resetStrategyForm() {
@@ -1140,10 +1217,10 @@
                 const modeEl = document.getElementById('currentActionMode');
                 const subEl = document.getElementById('currentActionModeSub');
                 if (modeEl) {
-                    modeEl.textContent = mode === 'alert' ? '仅告警' : '自动封禁';
+                    modeEl.textContent = mode === 'alert' ? 'Alert Only' : 'Auto Block';
                     modeEl.className = 'status-value ' + (mode === 'alert' ? 'warning' : 'good');
                 }
-                if (subEl) subEl.textContent = mode === 'alert' ? '已开启观察模式' : '防御策略生效中';
+                if (subEl) subEl.textContent = mode === 'alert' ? 'Observation mode enabled' : 'Blocking policy is active';
             }
             await Promise.all([loadStats(), loadRecentAlerts(), loadTrends(), loadSeverityDist()]);
         }
@@ -1161,7 +1238,7 @@
             const tbody = document.getElementById('recentAlertsTable');
             if (!tbody) return;
             if (!alerts || !alerts.data || alerts.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty">当前没有可展示的高风险事件</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">褰撳墠娌℃湁鍙睍绀虹殑楂橀闄╀簨浠?/td></tr>';
                 return;
             }
             tbody.innerHTML = alerts.data.map(a => `
@@ -1183,7 +1260,7 @@
             if (trendsChart) trendsChart.destroy();
             trendsChart = new Chart(ctx, {
                 type: 'line',
-                data: { labels: dates, datasets: [{ label: '告警数量', data: counts, borderColor: '#0f6fff', backgroundColor: 'rgba(15,111,255,0.14)', fill: true, tension: 0.38, borderWidth: 3, pointBackgroundColor: '#0f6fff', pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
+                data: { labels: dates, datasets: [{ label: '鍛婅鏁伴噺', data: counts, borderColor: '#0f6fff', backgroundColor: 'rgba(15,111,255,0.14)', fill: true, tension: 0.38, borderWidth: 3, pointBackgroundColor: '#0f6fff', pointBorderColor: '#ffffff', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(16,35,63,0.08)' }, ticks: { color: '#8090aa' } }, x: { grid: { display: false }, ticks: { color: '#8090aa' } } } }
             });
         }
@@ -1204,12 +1281,12 @@
             const tbody = document.getElementById('agentsTable');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="empty">当前没有已注册的 Agent 节点</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">褰撳墠娌℃湁宸叉敞鍐岀殑 Agent 鑺傜偣</td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(agent => `
                 <tr>
-                    <td><div style="display:flex;align-items:center;gap:10px;"><span class="status-dot" style="background:${agent.status === 1 ? 'var(--success)' : '#94a3b8'};box-shadow:0 0 0 5px ${agent.status === 1 ? 'rgba(15,159,116,0.12)' : 'rgba(128,144,170,0.15)'};"></span><span>${agent.status === 1 ? '在线' : '离线'}</span></div></td>
+                    <td><div style="display:flex;align-items:center;gap:10px;"><span class="status-dot" style="background:${agent.status === 1 ? 'var(--success)' : '#94a3b8'};box-shadow:0 0 0 5px ${agent.status === 1 ? 'rgba(15,159,116,0.12)' : 'rgba(128,144,170,0.15)'};"></span><span>${agent.status === 1 ? '鍦ㄧ嚎' : '绂荤嚎'}</span></div></td>
                     <td class="mono">${safeText(agent.ip)}</td>
                     <td>${safeText(agent.hostname)}</td>
                     <td class="mono">${safeText(agent.agent_id)}</td>
@@ -1224,19 +1301,19 @@
             const tbody = document.getElementById('strategiesTable');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="empty">当前没有可用策略</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">褰撳墠娌℃湁鍙敤绛栫暐</td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(strategy => `
                 <tr>
-                    <td><span class="badge ${Number(strategy.enabled) === 1 ? 'success' : 'warning'}">${Number(strategy.enabled) === 1 ? '启用' : '停用'}</span></td>
-                    <td>${safeText(strategy.sid || '通用')}</td>
+                    <td><span class="badge ${Number(strategy.enabled) === 1 ? 'success' : 'warning'}">${Number(strategy.enabled) === 1 ? '鍚敤' : '鍋滅敤'}</span></td>
+                    <td>${safeText(strategy.sid || '閫氱敤')}</td>
                     <td class="mono truncate">${safeText(strategy.target_file)}</td>
-                    <td>${safeText(strategy.description, '未填写描述')}</td>
+                    <td>${safeText(strategy.description, 'No description')}</td>
                     <td>
                         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                            <button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="editStrategy('${strategy.id}')">编辑</button>
-                            <button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="deleteStrategy('${strategy.id}')">删除</button>
+                            <button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="editStrategy('${strategy.id}')">缂栬緫</button>
+                            <button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="deleteStrategy('${strategy.id}')">鍒犻櫎</button>
                         </div>
                     </td>
                 </tr>
@@ -1257,17 +1334,17 @@
                 ? await sendJSON(`/api/strategies/${strategyId}`, 'PUT', payload)
                 : await postAPI('/api/strategies', payload);
             if (!isSuccess(result)) {
-                alert(`${strategyId ? '策略保存' : '策略创建'}失败：${result?.message || '未知错误'}`);
+                alert(`${strategyId ? 'Save strategy' : 'Create strategy'} failed: ${result?.message || 'Unknown error'}`);
                 return;
             }
             resetStrategyForm();
             refreshStrategies();
-            alert(strategyId ? '策略已更新。' : '策略已创建。');
+            alert(strategyId ? 'Strategy updated.' : 'Strategy created.');
         }
         async function editStrategy(id) {
             const res = await fetchAPI(`/api/strategies/${id}`);
             if (!res || !res.data) {
-                alert('未能读取策略详情。');
+                alert('Failed to load strategy details.');
                 return;
             }
             const strategy = res.data;
@@ -1281,16 +1358,16 @@
             document.getElementById('strategyFile').scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         async function deleteStrategy(id) {
-            if (!confirm('确定要删除这条策略吗？')) return;
+            if (!confirm('Delete this strategy?')) return;
             const result = await sendJSON(`/api/strategies/${id}`, 'DELETE');
             if (!isSuccess(result)) {
-                alert(`删除策略失败：${result?.message || '未知错误'}`);
+                alert(`鍒犻櫎绛栫暐澶辫触锛?{result?.message || '鏈煡閿欒'}`);
                 return;
             }
             if (document.getElementById('strategyId').value === String(id)) {
                 resetStrategyForm();
             }
-            alert('策略已删除。');
+            alert('Strategy deleted.');
             refreshStrategies();
         }
 
@@ -1332,20 +1409,20 @@
             const tbody = document.getElementById('alertsTable');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty">没有符合当前筛选条件的告警</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="empty">娌℃湁绗﹀悎褰撳墠绛涢€夋潯浠剁殑鍛婅</td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(alert => `
                 <tr>
                     <td><input type="checkbox" class="row-checkbox" value="${escapeHtml(alert.source_ip || '')}"></td>
-                    <td><span class="badge ${getStatusBadge(alert.status)}">${alert.status === 0 ? '待处理' : '已处置'}</span></td>
+                    <td><span class="badge ${getStatusBadge(alert.status)}">${alert.status === 0 ? 'Pending' : 'Handled'}</span></td>
                     <td>${safeText(alert.sid)}</td>
                     <td>${formatDateTime(alert.created_at)}</td>
                     <td class="mono">${safeText(alert.source_ip)}</td>
                     <td class="mono">${safeText(alert.dest_ip)}</td>
                     <td><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></td>
                     <td class="truncate">${safeText(alert.signature_name)}</td>
-                    <td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAlertDetails('${alert.id}')">审计</button><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="openAIAlertAnalysis('${alert.id}')">AI 分析</button><button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="blockIPFromAlert('${escapeHtml(alert.source_ip || '')}')">封禁</button></div></td>
+                    <td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAlertDetails('${alert.id}')">瀹¤</button><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="openAIAlertAnalysis('${alert.id}')">AI 鍒嗘瀽</button><button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="blockIPFromAlert('${escapeHtml(alert.source_ip || '')}', '${escapeHtml(alert.agent_id || '')}')">灏佺</button></div></td>
                 </tr>
             `).join('');
         }
@@ -1353,28 +1430,28 @@
         async function loadAIWorkbench() {
             const statusRes = await fetchAPI('/api/ai/status');
             if (!statusRes || !statusRes.data) {
-                setText('aiDeployStatus', '无法读取 AI 状态，请先确认 Master API 是否正常启动。');
+                setText('aiDeployStatus', 'Failed to read AI status. Please confirm the Master API is running.');
             } else {
                 const status = statusRes.data;
-                const summary = `AI 配置：${status.configuration_status || '-'} | Provider：${status.provider || '-'} | 规则生成：${status.rule_generation ? '可用' : '不可用'} | 告警分析：${status.alert_analysis ? '可用' : '不可用'} | Demo Mode：${status.demo_mode ? '开启' : '关闭'}`;
+                const summary = `AI config: ${status.configuration_status || '-'} | Provider: ${status.provider || '-'} | Rule generation: ${status.rule_generation ? 'available' : 'unavailable'} | Alert analysis: ${status.alert_analysis ? 'available' : 'unavailable'} | Demo Mode: ${status.demo_mode ? 'on' : 'off'}`;
                 setText('aiDeployStatus', summary);
                 if (!status.enabled) {
-                    setText('aiRuleSummary', 'AI 尚未启用，请检查 configs/config.yaml 中的 master.ai.enabled 与 DeepSeek 配置。');
+                    setText('aiRuleSummary', 'AI is not enabled yet. Please verify master.ai.enabled and the provider settings.');
                 } else if (status.init_error) {
-                    setText('aiRuleSummary', `AI 已启用但初始化失败：${status.init_error}`);
+                    setText('aiRuleSummary', `AI 宸插惎鐢ㄤ絾鍒濆鍖栧け璐ワ細${status.init_error}`);
                 } else if (status.demo_mode) {
-                    setText('aiRuleSummary', `当前处于 Demo Mode，自动处置阈值已放宽：block=${status.demo_block_threshold || status.block_threshold}, repair=${status.demo_repair_threshold || status.repair_threshold}。`);
+                    setText('aiRuleSummary', `Demo mode is enabled. Current thresholds: block=${status.demo_block_threshold || status.block_threshold}, repair=${status.demo_repair_threshold || status.repair_threshold}.`);
                 }
             }
 
             const agentsRes = await fetchAPI('/api/agents?page=1&page_size=100');
             if (!agentsRes || !agentsRes.data || agentsRes.data.length === 0) {
-                setText('aiAgentsStatus', '当前没有可用 Agent。若要执行动态测试，请先接入至少一个在线 Agent。');
+                setText('aiAgentsStatus', 'No available agents. Connect at least one online agent before running dynamic tests.');
             } else {
                 const onlineAgents = agentsRes.data.filter(agent => agent.status === 1);
                 const text = onlineAgents.length
-                    ? `在线 Agent：${onlineAgents.map(agent => `${agent.agent_id} (${agent.ip || '-'})`).join('，')}`
-                    : '当前没有在线 Agent，可先使用 Master 静态校验。';
+                    ? `Online agents: ${onlineAgents.map(agent => `${agent.agent_id} (${agent.ip || '-'})`).join(', ')}`
+                    : 'No online agents right now. You can still use static validation on the Master side.';
                 setText('aiAgentsStatus', text);
             }
 
@@ -1382,38 +1459,40 @@
         }
 
         async function loadAISettings(force = false) {
-            if (aiSettingsDirty && !force) {
-                setText('aiSettingsStatus', '检测到未保存的 AI 配置修改，已暂停自动刷新覆盖当前输入。');
+            const draft = loadAISettingsDraft();
+            if (!force && (aiSettingsDirty || draft)) {
+                if (draft) applyAISettingsDraft(draft);
+                aiSettingsDirty = true;
+                setText('aiSettingsStatus', 'Detected unsaved AI settings changes. Auto refresh will not overwrite your draft.');
                 return;
             }
             const res = await fetchAPI('/api/ai/settings');
             if (!res || !res.data) {
-                setText('aiSettingsStatus', '未能读取 AI 配置，请确认 Master API 正常运行。');
+                setText('aiSettingsStatus', 'Failed to load AI settings. Please confirm the Master API is running.');
                 return;
             }
-
             const data = res.data;
-            aiSettingsApplying = true;
-            document.getElementById('aiSettingsEnabled').value = String(!!data.enabled);
-            document.getElementById('aiSettingsProvider').value = data.provider || 'deepseek';
-            document.getElementById('aiSettingsBaseURL').value = data.base_url || '';
-            document.getElementById('aiSettingsAPIKey').value = data.api_key || '';
-            document.getElementById('aiSettingsModel').value = data.model || '';
-            document.getElementById('aiSettingsTimeout').value = data.timeout_seconds || 30;
-            document.getElementById('aiRuleGenSystemPrompt').value = data.rule_generation_system || '';
-            document.getElementById('aiRuleGenUserPrompt').value = data.rule_generation_user || '';
-            document.getElementById('aiAlertSystemPrompt').value = data.alert_analysis_system || '';
-            document.getElementById('aiAlertUserPrompt').value = data.alert_analysis_user || '';
-            document.getElementById('aiSettingsDemoMode').value = String(!!data.demo_mode);
-            document.getElementById('aiSettingsActionMode').value = data.action_mode || 'block';
-            document.getElementById('aiSettingsDemoBlock').value = data.demo_block_threshold || 40;
-            document.getElementById('aiSettingsDemoRepair').value = data.demo_repair_threshold || 65;
-            document.getElementById('aiSettingsDemoBonus').value = data.demo_exploit_bonus || 15;
-            aiSettingsApplying = false;
+            applyAISettingsDraft({
+                enabled: String(!!data.enabled),
+                provider: data.provider || 'deepseek',
+                base_url: data.base_url || '',
+                api_key: data.api_key || '',
+                model: data.model || '',
+                timeout_seconds: data.timeout_seconds || 30,
+                rule_generation_system: data.rule_generation_system || '',
+                rule_generation_user: data.rule_generation_user || '',
+                alert_analysis_system: data.alert_analysis_system || '',
+                alert_analysis_user: data.alert_analysis_user || '',
+                demo_mode: String(!!data.demo_mode),
+                action_mode: data.action_mode || 'block',
+                demo_block_threshold: data.demo_block_threshold || 40,
+                demo_repair_threshold: data.demo_repair_threshold || 65,
+                demo_exploit_bonus: data.demo_exploit_bonus || 15
+            });
             aiSettingsDirty = false;
-            setText('aiSettingsStatus', `当前配置文件：${data.config_path || 'configs/config.yaml'} | Provider：${data.provider || '-'} | Demo Mode：${data.demo_mode ? '开启' : '关闭'}`);
+            clearAISettingsDraft();
+            setText('aiSettingsStatus', `Config file: ${data.config_path || 'configs/config.yaml'} | Provider: ${data.provider || '-'} | Demo Mode: ${data.demo_mode ? 'on' : 'off'}`);
         }
-
         async function saveAISettings() {
             const payload = {
                 enabled: document.getElementById('aiSettingsEnabled').value === 'true',
@@ -1432,18 +1511,19 @@
                 demo_exploit_bonus: Number(document.getElementById('aiSettingsDemoBonus').value || 0)
             };
 
-            setText('aiSettingsStatus', '正在保存 AI 配置...');
+            setText('aiSettingsStatus', '姝ｅ湪淇濆瓨 AI 閰嶇疆...');
             const result = await sendJSON('/api/ai/settings', 'PUT', payload);
             if (!isSuccess(result)) {
-                setText('aiSettingsStatus', `保存失败：${result?.message || '未知错误'}`);
+                setText('aiSettingsStatus', `淇濆瓨澶辫触锛?{result?.message || '鏈煡閿欒'}`);
                 return;
             }
 
             aiSettingsDirty = false;
+            clearAISettingsDraft();
             if (result?.data?.init_error) {
-                setText('aiSettingsStatus', `配置已保存：${result?.data?.config_path || 'configs/config.yaml'}，但 AI 初始化失败：${result.data.init_error}`);
+                setText('aiSettingsStatus', `閰嶇疆宸蹭繚瀛橈細${result?.data?.config_path || 'configs/config.yaml'}锛屼絾 AI 鍒濆鍖栧け璐ワ細${result.data.init_error}`);
             } else {
-                setText('aiSettingsStatus', `保存成功：${result?.data?.config_path || 'configs/config.yaml'}，当前 Demo Mode：${result?.data?.demo_mode ? '开启' : '关闭'}。`);
+                setText('aiSettingsStatus', `Saved successfully: ${result?.data?.config_path || 'configs/config.yaml'} | Demo Mode: ${result?.data?.demo_mode ? 'on' : 'off'}`);
             }
             await loadAIWorkbench();
         }
@@ -1474,20 +1554,20 @@ Content-Type: application/json
                 case 'deployed':
                 case 'tested':
                 case 'ready':
-                    return '已完成';
+                return 'completed';
                 case 'failed':
                 case 'invalid':
                 case 'partial_failed':
-                    return '失败';
+                    return '澶辫触';
                 case 'queued':
                 case 'running':
                 case 'in_progress':
                 case 'partial':
-                    return '进行中';
+                return 'in_progress';
                 case 'pending':
-                    return '待处理';
+                return 'pending';
                 default:
-                    return status || '未开始';
+            return status || 'not_started';
             }
         }
 
@@ -1498,10 +1578,10 @@ Content-Type: application/json
                 if (el) el.className = 'ai-step';
             });
 
-            setText('aiStepGenerateText', task ? `任务 #${task.id || '-'} | 生成状态：${task.status || '-'}` : '等待输入漏洞信息');
-            setText('aiStepReviewText', task ? '可在下方文本框中人工修订候选规则并保存' : '生成后可直接编辑候选规则');
-            setText('aiStepTestText', task ? `测试状态：${formatAIRuleStatus(task.test_status)}${task.test_message ? ` | ${task.test_message}` : ''}` : '支持 Master 静态校验或 Agent 动态测试');
-            setText('aiStepDeployText', task ? `部署状态：${formatAIRuleStatus(task.deploy_status)}` : '测试通过后再部署到目标 Agent');
+            setText('aiStepGenerateText', task ? `浠诲姟 #${task.id || '-'} | 鐢熸垚鐘舵€侊細${task.status || '-'}` : '绛夊緟杈撳叆婕忔礊淇℃伅');
+            setText('aiStepReviewText', task ? 'Review and edit the candidate rule below before saving.' : 'You can edit the generated candidate rule here.');
+            setText('aiStepTestText', task ? `Test status: ${formatAIRuleStatus(task.test_status)}${task.test_message ? ` | ${task.test_message}` : ''}` : 'Supports static Master-side validation or dynamic Agent-side testing.');
+            setText('aiStepDeployText', task ? `閮ㄧ讲鐘舵€侊細${formatAIRuleStatus(task.deploy_status)}` : '娴嬭瘯閫氳繃鍚庡啀閮ㄧ讲鍒扮洰鏍?Agent');
 
             const generate = document.getElementById('aiStepGenerate');
             const review = document.getElementById('aiStepReview');
@@ -1535,16 +1615,16 @@ Content-Type: application/json
 
         function renderAITaskSnapshot(task) {
             if (!task) {
-                setText('aiTaskSnapshot', '当前还没有载入规则任务。生成或输入任务 ID 后，这里会显示任务摘要。');
+                setText('aiTaskSnapshot', 'No rule task is loaded yet. Generate one or enter a task ID to view the snapshot here.');
                 return;
             }
 
             setText('aiTaskSnapshot', [
-                `任务 #${task.id || '-'}`,
-                `摘要：${task.normalized_summary || '未生成摘要'}`,
-                `生成状态：${task.status || '-'}`,
-                `测试状态：${formatAIRuleStatus(task.test_status)}${task.test_message ? ` | ${task.test_message}` : ''}`,
-                `部署状态：${formatAIRuleStatus(task.deploy_status)} | 成功 ${task.success_agent_count || 0}/${task.target_agent_count || 0} | 失败 ${task.failed_agent_count || 0}`
+                `浠诲姟 #${task.id || '-'}`,
+                `鎽樿锛?{task.normalized_summary || '鏈敓鎴愭憳瑕?}`,
+                `鐢熸垚鐘舵€侊細${task.status || '-'}`,
+                `娴嬭瘯鐘舵€侊細${formatAIRuleStatus(task.test_status)}${task.test_message ? ` | ${task.test_message}` : ''}`,
+                `閮ㄧ讲鐘舵€侊細${formatAIRuleStatus(task.deploy_status)} | 鎴愬姛 ${task.success_agent_count || 0}/${task.target_agent_count || 0} | 澶辫触 ${task.failed_agent_count || 0}`
             ].join('\n'));
         }
 
@@ -1555,11 +1635,11 @@ Content-Type: application/json
             const task = res.data;
             lastGeneratedRuleTask = task;
             document.getElementById('aiTaskId').value = task.id || '';
-            setText('aiRuleSummary', `任务 #${task.id} | 生成状态：${task.status || '-'} | 摘要：${task.normalized_summary || '未生成摘要'}`);
-            setText('aiRuleOutput', task.generated_rule || '当前没有候选规则。');
+            setText('aiRuleSummary', `Task #${task.id} | Status: ${task.status || '-'} | Summary: ${task.normalized_summary || 'No summary yet'}`);
+            setText('aiRuleOutput', task.generated_rule || 'No candidate rule is available yet.');
             setAIEditor(task.generated_rule || '');
-            setText('aiTestStatus', `测试状态：${formatAIRuleStatus(task.test_status)}${task.test_message ? `\n${task.test_message}` : ''}${task.test_report ? `\n\n测试报告：\n${task.test_report}` : ''}`);
-            setText('aiDeployStatus', `部署状态：${formatAIRuleStatus(task.deploy_status)} | 成功 ${task.success_agent_count || 0}/${task.target_agent_count || 0} | 失败 ${task.failed_agent_count || 0}${task.deploy_message ? `\n\n部署回执：\n${task.deploy_message}` : ''}`);
+            setText('aiTestStatus', `Test status: ${formatAIRuleStatus(task.test_status)}${task.test_message ? `\n${task.test_message}` : ''}${task.test_report ? `\n\nTest report:\n${task.test_report}` : ''}`);
+            setText('aiDeployStatus', `Deploy status: ${formatAIRuleStatus(task.deploy_status)} | Success ${task.success_agent_count || 0}/${task.target_agent_count || 0} | Failed ${task.failed_agent_count || 0}${task.deploy_message ? `\n\nDeploy feedback:\n${task.deploy_message}` : ''}`);
             renderAITaskSnapshot(task);
             updateAIProgress(task);
             return task;
@@ -1568,12 +1648,12 @@ Content-Type: application/json
         async function loadAIRuleTaskFromInput() {
             const taskId = document.getElementById('aiTaskId').value.trim();
             if (!taskId) {
-                alert('请输入规则任务 ID。');
+            alert('Please enter a rule task ID.');
                 return;
             }
             const task = await loadAIRuleTask(taskId);
             if (!task) {
-                setText('aiTaskSnapshot', `未找到任务 #${taskId}。`);
+                setText('aiTaskSnapshot', `Task #${taskId} was not found.`);
             }
         }
 
@@ -1592,16 +1672,16 @@ Content-Type: application/json
                 source_content: document.getElementById('aiSourceContent').value.trim()
             };
             if (!payload.source_content) {
-                alert('请输入漏洞描述、PoC 或 CVE 信息。');
+                alert('Please enter the vulnerability description, PoC, or CVE information.');
                 return;
             }
 
-            setText('aiRuleSummary', '正在调用 DeepSeek 生成候选规则...');
-            setText('aiRuleOutput', '生成中...');
+            setText('aiRuleSummary', '姝ｅ湪璋冪敤 DeepSeek 鐢熸垚鍊欓€夎鍒?..');
+            setText('aiRuleOutput', '鐢熸垚涓?..');
             const result = await postAPI('/api/ai/rules/generate', payload);
             if (!isSuccess(result) || !result.data) {
-                setText('aiRuleSummary', `规则生成失败：${result?.message || '未知错误'}`);
-                setText('aiRuleOutput', '未能生成候选规则。');
+            setText('aiRuleSummary', `Rule generation failed: ${result?.message || 'Unknown error'}`);
+                setText('aiRuleOutput', 'Failed to generate a candidate rule.');
                 renderAITaskSnapshot(null);
                 updateAIProgress(null);
                 return;
@@ -1613,12 +1693,12 @@ Content-Type: application/json
         async function saveAIRuleEdits() {
             const taskId = document.getElementById('aiTaskId').value.trim();
             if (!taskId) {
-                alert('请先载入或生成规则任务 ID。');
+                alert('Please load or generate a rule task ID first.');
                 return;
             }
             const generatedRule = document.getElementById('aiRuleEditor').value.trim();
             if (!generatedRule) {
-                alert('候选规则不能为空。');
+            alert('The candidate rule cannot be empty.');
                 return;
             }
 
@@ -1629,36 +1709,36 @@ Content-Type: application/json
             });
             const result = await res.json().catch(() => ({}));
             if (!res.ok || !result.data) {
-                setText('aiRuleSummary', `保存人工修改失败：${result?.error || '未知错误'}`);
+            setText('aiRuleSummary', `Failed to save manual edits: ${result?.error || 'Unknown error'}`);
                 return;
             }
 
             await loadAIRuleTask(taskId);
-            setText('aiRuleSummary', `任务 #${taskId} 已保存人工修改，请重新测试后再下发。`);
+            setText('aiRuleSummary', `Task #${taskId} has saved manual edits. Please retest before deployment.`);
         }
 
         async function testAIRule() {
             const taskId = document.getElementById('aiTaskId').value.trim();
             if (!taskId) {
-                alert('请先载入或生成规则任务 ID。');
+                alert('Please load or generate a rule task ID first.');
                 return;
             }
 
             const mode = document.getElementById('aiTestMode').value;
             const agentIds = document.getElementById('aiAgentIds').value.split(',').map(value => value.trim()).filter(Boolean);
-            setText('aiTestStatus', mode === 'agent' ? '正在提交 Agent 动态测试...' : '正在执行 Master 静态校验...');
+            setText('aiTestStatus', mode === 'agent' ? '姝ｅ湪鎻愪氦 Agent 鍔ㄦ€佹祴璇?..' : '姝ｅ湪鎵ц Master 闈欐€佹牎楠?..');
             const result = await postAPI(`/api/ai/rules/${encodeURIComponent(taskId)}/test`, {
                 mode,
                 agent_ids: agentIds
             });
 
             if (!isSuccess(result) || !result.data) {
-                setText('aiTestStatus', `规则测试失败：${result?.message || '未知错误'}`);
+            setText('aiTestStatus', `Rule test failed: ${result?.message || 'Unknown error'}`);
                 return;
             }
 
             if (mode === 'agent') {
-                setText('aiTestStatus', `已提交到 Agent ${result.agent_id || '-'}，正在等待测试回执...`);
+                setText('aiTestStatus', `宸叉彁浜ゅ埌 Agent ${result.agent_id || '-'}锛屾鍦ㄧ瓑寰呮祴璇曞洖鎵?..`);
                 pollAIRuleTask(taskId);
                 return;
             }
@@ -1669,7 +1749,7 @@ Content-Type: application/json
         async function deployAIRule() {
             const taskId = document.getElementById('aiTaskId').value.trim();
             if (!taskId) {
-                alert('请先载入或生成规则任务 ID。');
+                alert('Please load or generate a rule task ID first.');
                 return;
             }
 
@@ -1677,62 +1757,62 @@ Content-Type: application/json
                 config_path: document.getElementById('aiDeployPath').value.trim(),
                 agent_ids: document.getElementById('aiAgentIds').value.split(',').map(value => value.trim()).filter(Boolean)
             };
-            setText('aiDeployStatus', '正在提交部署任务，等待 Agent 回执...');
+            setText('aiDeployStatus', '姝ｅ湪鎻愪氦閮ㄧ讲浠诲姟锛岀瓑寰?Agent 鍥炴墽...');
             const result = await postAPI(`/api/ai/rules/${encodeURIComponent(taskId)}/deploy`, payload);
             if (!isSuccess(result) || !result.data) {
-                setText('aiDeployStatus', `规则下发失败：${result?.message || '未知错误'}`);
+            setText('aiDeployStatus', `Rule deployment failed: ${result?.message || 'Unknown error'}`);
                 return;
             }
 
-            setText('aiDeployStatus', `部署任务已提交，当前状态：${result.data.deploy_status || '-'}${result.agent_count ? ` | 目标 Agent：${result.agent_count}` : ''}`);
+            setText('aiDeployStatus', `Deployment task submitted. Current status: ${result.data.deploy_status || '-'}${result.agent_count ? ` | Target agents: ${result.agent_count}` : ''}`);
             pollAIRuleTask(taskId);
         }
 
         async function analyzeAlertFromWorkbench(force = false) {
             const dbId = document.getElementById('aiAlertDbId').value.trim();
             if (!dbId) {
-                alert('请输入告警数据库 ID。');
+                alert('Please enter the alert database ID.');
                 return;
             }
 
-            setText('aiAlertOutput', force ? '正在强制重新生成 AI 研判结果...' : '正在读取告警并调用 AI 分析...');
+            setText('aiAlertOutput', force ? '姝ｅ湪寮哄埗閲嶆柊鐢熸垚 AI 鐮斿垽缁撴灉...' : '姝ｅ湪璇诲彇鍛婅骞惰皟鐢?AI 鍒嗘瀽...');
             const alertRes = await fetchAPI(`/api/alerts/${encodeURIComponent(dbId)}`);
             if (!alertRes || !alertRes.data || !alertRes.data.alert_id) {
-                setText('aiAlertOutput', '未能读取告警详情，或该告警缺少 alert_id。');
+                setText('aiAlertOutput', 'Failed to load the alert details, or the alert_id is missing.');
                 return;
             }
 
             const aiRes = await fetchAPI(`/api/alerts/${encodeURIComponent(alertRes.data.alert_id)}/ai-analysis${force ? '?force=true' : ''}`);
             if (!aiRes || !aiRes.data) {
-                setText('aiAlertOutput', 'AI 告警分析暂不可用，请检查 Master AI 配置与 DeepSeek Key。');
+                setText('aiAlertOutput', 'AI alert analysis is unavailable. Please verify the Master AI settings and API key.');
                 return;
             }
 
             const item = aiRes.data;
-            setText('aiAlertOutput', `摘要：${item.summary || '-'}
-攻击类型：${item.attack_type || '-'}
-建议动作：${formatActionText(item.recommended_action)}
-置信度：${formatConfidence(item.confidence)}
+            setText('aiAlertOutput', `Summary: ${item.summary || '-'}
+鏀诲嚮绫诲瀷锛?{item.attack_type || '-'}
+寤鸿鍔ㄤ綔锛?{formatActionText(item.recommended_action)}
+缃俊搴︼細${formatConfidence(item.confidence)}
 
-风险原因：
+椋庨櫓鍘熷洜锛?
 ${item.risk_reason || '-'}
 
-影响范围：
+褰卞搷鑼冨洿锛?
 ${item.impact_scope || '-'}
 
-研判证据：
+鐮斿垽璇佹嵁锛?
 ${item.evidence_points || '-'}
 
-可疑路径：
+鍙枒璺緞锛?
 ${item.suspicious_path || '-'}
 
-可疑参数：
+鍙枒鍙傛暟锛?
 ${item.suspicious_params || '-'}
 
-命令片段：
+鍛戒护鐗囨锛?
 ${item.command_fragments || '-'}
 
-处置建议：
+澶勭疆寤鸿锛?
 ${item.operator_advice || '-'}`);
         }
 
@@ -1754,12 +1834,12 @@ ${item.operator_advice || '-'}`);
         async function showAlertDetails(id) {
             const modal = document.getElementById('alertModal');
             const modalBody = document.getElementById('modalBody');
-            modalBody.innerHTML = '<div class="empty">正在拉取告警详情与载荷内容...</div>';
+            modalBody.innerHTML = '<div class="empty">姝ｅ湪鎷夊彇鍛婅璇︽儏涓庤浇鑽峰唴瀹?..</div>';
             modal.style.display = 'flex';
             try {
                 const res = await fetchAPI(`/api/alerts/${id}`);
                 if (!res || !res.data) {
-                    modalBody.innerHTML = '<div class="empty">未能获取告警详情。</div>';
+                    modalBody.innerHTML = '<div class="empty">鏈兘鑾峰彇鍛婅璇︽儏銆?/div>';
                     return;
                 }
                 const alert = res.data;
@@ -1771,9 +1851,9 @@ ${item.operator_advice || '-'}`);
                 let rawText = '';
                 if (alert.payload) {
                     try { rawText = atob(alert.payload); }
-                    catch (error) { rawText = `[无法解析的 Base64 负载] ${alert.payload}`; }
+                    catch (error) { rawText = `[鏃犳硶瑙ｆ瀽鐨?Base64 璐熻浇] ${alert.payload}`; }
                 } else {
-                    rawText = '当前没有原始 payload。请确认 Suricata 是否启用了 payload 输出。';
+                    rawText = 'No raw payload is available. Please confirm Suricata payload output is enabled.';
                 }
                 const keywords = ['union select', 'select', 'insert into', 'drop table', 'script', 'alert(', '/etc/passwd', 'eval(', 'base64_decode', 'cmd.exe', '/bin/bash', '..%2f'];
                 let highlightedText = escapeHtml(rawText);
@@ -1783,47 +1863,47 @@ ${item.operator_advice || '-'}`);
                 });
                 modalBody.innerHTML = `
                     <div class="grid-2 mb-30">
-                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">攻击上下文</div><div class="panel-subtitle">来源、目标与风险分数</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>来源 IP：</strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>目标 IP：</strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>特征 SID：</strong>${safeText(alert.sid)}</div><div><strong>风险评分：</strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
-                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">事件摘要</div><div class="panel-subtitle">签名、等级与系统动作</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>告警签名：</strong>${safeText(alert.signature_name)}</div><div><strong>严重等级：</strong><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></div><div><strong>发生时间：</strong>${formatDateTime(alert.created_at)}</div><div><strong>系统动作：</strong><span class="badge info">${formatActionText(alert.action)}</span></div></div></div>
+                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">鏀诲嚮涓婁笅鏂?/div><div class="panel-subtitle">鏉ユ簮銆佺洰鏍囦笌椋庨櫓鍒嗘暟</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>鏉ユ簮 IP锛?/strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>鐩爣 IP锛?/strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>鐗瑰緛 SID锛?/strong>${safeText(alert.sid)}</div><div><strong>椋庨櫓璇勫垎锛?/strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
+                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">浜嬩欢鎽樿</div><div class="panel-subtitle">绛惧悕銆佺瓑绾т笌绯荤粺鍔ㄤ綔</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>鍛婅绛惧悕锛?/strong>${safeText(alert.signature_name)}</div><div><strong>涓ラ噸绛夌骇锛?/strong><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></div><div><strong>鍙戠敓鏃堕棿锛?/strong>${formatDateTime(alert.created_at)}</div><div><strong>绯荤粺鍔ㄤ綔锛?/strong><span class="badge info">${formatActionText(alert.action)}</span></div></div></div>
                     </div>
                     <div class="glass-panel" style="margin-bottom:20px;">
-                        <div class="panel-title">AI 告警分析</div>
-                        <div class="panel-subtitle">结合规则引擎结果、资产上下文和最近告警生成的语义解释</div>
+                        <div class="panel-title">AI 鍛婅鍒嗘瀽</div>
+                        <div class="panel-subtitle">缁撳悎瑙勫垯寮曟搸缁撴灉銆佽祫浜т笂涓嬫枃鍜屾渶杩戝憡璀︾敓鎴愮殑璇箟瑙ｉ噴</div>
                         ${aiInsight ? `
                             <div class="ai-insight-grid">
-                                <div><strong>摘要：</strong>${safeText(aiInsight.summary)}</div>
-                                <div><strong>攻击类型：</strong>${safeText(aiInsight.attack_type)}</div>
-                                <div><strong>建议动作：</strong><span class="badge info">${formatActionText(aiInsight.recommended_action)}</span></div>
-                                <div><strong>置信度：</strong>${formatConfidence(aiInsight.confidence)}</div>
-                                <div class="hint-block" style="grid-column:1 / -1;"><strong>风险原因：</strong><br>${safeText(aiInsight.risk_reason)}</div>
-                                <div class="hint-block" style="grid-column:1 / -1;"><strong>影响范围：</strong><br>${safeText(aiInsight.impact_scope)}</div>
-                                <div class="hint-block" style="grid-column:1 / -1;"><strong>研判证据：</strong><br>${safeText(aiInsight.evidence_points)}</div>
-                                <div><strong>可疑路径：</strong>${safeText(aiInsight.suspicious_path)}</div>
-                                <div><strong>可疑参数：</strong>${safeText(aiInsight.suspicious_params)}</div>
-                                <div class="hint-block" style="grid-column:1 / -1;"><strong>命令片段：</strong><br>${safeText(aiInsight.command_fragments)}</div>
-                                <div class="hint-block" style="grid-column:1 / -1;"><strong>运维建议：</strong><br>${safeText(aiInsight.operator_advice)}</div>
+                                <div><strong>鎽樿锛?/strong>${safeText(aiInsight.summary)}</div>
+                                <div><strong>鏀诲嚮绫诲瀷锛?/strong>${safeText(aiInsight.attack_type)}</div>
+                                <div><strong>寤鸿鍔ㄤ綔锛?/strong><span class="badge info">${formatActionText(aiInsight.recommended_action)}</span></div>
+                                <div><strong>缃俊搴︼細</strong>${formatConfidence(aiInsight.confidence)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>椋庨櫓鍘熷洜锛?/strong><br>${safeText(aiInsight.risk_reason)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>褰卞搷鑼冨洿锛?/strong><br>${safeText(aiInsight.impact_scope)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>鐮斿垽璇佹嵁锛?/strong><br>${safeText(aiInsight.evidence_points)}</div>
+                                <div><strong>鍙枒璺緞锛?/strong>${safeText(aiInsight.suspicious_path)}</div>
+                                <div><strong>鍙枒鍙傛暟锛?/strong>${safeText(aiInsight.suspicious_params)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>鍛戒护鐗囨锛?/strong><br>${safeText(aiInsight.command_fragments)}</div>
+                                <div class="hint-block" style="grid-column:1 / -1;"><strong>杩愮淮寤鸿锛?/strong><br>${safeText(aiInsight.operator_advice)}</div>
                             </div>
-                        ` : `<div class="hint-block">当前还没有可用的 AI 分析结果。请确认 AI 已启用并配置了 DeepSeek Key。</div>`}
+                        ` : `<div class="hint-block">褰撳墠杩樻病鏈夊彲鐢ㄧ殑 AI 鍒嗘瀽缁撴灉銆傝纭 AI 宸插惎鐢ㄥ苟閰嶇疆浜?DeepSeek Key銆?/div>`}
                     </div>
                     <div class="terminal-box"><div style="white-space:pre-wrap;word-break:break-word;">${highlightedText}</div><div class="payload-hex">${escapeHtml(toHexDump(rawText))}</div></div>
-                    <div class="alert-note"><h4>人工决策建议</h4><p>请结合原始载荷、来源地址和业务上下文进行判断。如果确认是恶意攻击，建议立即封禁；如果确认为误报，建议加入白名单以减少后续噪音。</p><div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn-danger" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'block')">确认攻击并封禁</button><button class="btn btn-outline" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'whitelist')">判定误报并加入白名单</button></div></div>
+                    <div class="alert-note"><h4>浜哄伐鍐崇瓥寤鸿</h4><p>璇风粨鍚堝師濮嬭浇鑽枫€佹潵婧愬湴鍧€鍜屼笟鍔′笂涓嬫枃杩涜鍒ゆ柇銆傚鏋滅‘璁ゆ槸鎭舵剰鏀诲嚮锛屽缓璁珛鍗冲皝绂侊紱濡傛灉纭涓鸿鎶ワ紝寤鸿鍔犲叆鐧藉悕鍗曚互鍑忓皯鍚庣画鍣煶銆?/p><div style="display:flex;gap:10px;flex-wrap:wrap;"><button class="btn btn-danger" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'block', '${escapeHtml(alert.agent_id || '')}')">纭鏀诲嚮骞跺皝绂?/button><button class="btn btn-outline" onclick="manualAction('${escapeHtml(alert.source_ip || '')}', 'whitelist')">鍒ゅ畾璇姤骞跺姞鍏ョ櫧鍚嶅崟</button></div></div>
                 `;
             } catch (error) {
-                modalBody.innerHTML = `<div class="empty">读取详情失败：${escapeHtml(error.message)}</div>`;
+                modalBody.innerHTML = `<div class="empty">璇诲彇璇︽儏澶辫触锛?{escapeHtml(error.message)}</div>`;
             }
         }
 
-        async function manualAction(ip, action) {
+        async function manualAction(ip, action, agentId = '') {
             let result;
             if (action === 'block') {
-                result = await postAPI('/api/block', { ip, reason: '人工审计确认攻击' });
-                if (isSuccess(result)) notify(result?.message || '已下发封禁指令。', 'success', '封禁已提交');
+                result = await postAPI('/api/block', { ip, reason: '浜哄伐瀹¤纭鏀诲嚮', agent_id: agentId });
+                if (isSuccess(result)) notify(result?.message || 'Block command queued.', 'success', 'Block submitted');
             } else {
-                result = await postAPI('/api/whitelist', { ip, reason: '人工审计确认为误报' });
-                if (isSuccess(result)) notify(result?.message || '已加入白名单。', 'success', '白名单已更新');
+                result = await postAPI('/api/whitelist', { ip, reason: 'Manual review marked as false positive' });
+                if (isSuccess(result)) notify(result?.message || 'Added to whitelist.', 'success', 'Whitelist updated');
             }
             if (!isSuccess(result)) {
-                notify(result?.message || '未知错误', 'error', '操作失败');
+                notify(result?.message || 'Unknown error', 'error', 'Action failed');
                 return;
             }
             closeModal();
@@ -1834,21 +1914,24 @@ ${item.operator_advice || '-'}`);
         function closeModal() {
             document.getElementById('alertModal').style.display = 'none';
         }
-        function blockIPFromAlert(ip) {
+        function blockIPFromAlert(ip, agentId = '') {
             document.getElementById('blockIp').value = ip;
+            document.getElementById('blockAgentId').value = agentId || '';
             showPage('block');
         }
         async function blockIP() {
             const ip = document.getElementById('blockIp').value.trim();
             const reason = document.getElementById('blockReason').value.trim();
-            const result = await postAPI('/api/block', { ip, reason });
+            const agentId = document.getElementById('blockAgentId').value.trim();
+            const result = await postAPI('/api/block', { ip, reason, agent_id: agentId });
             if (!isSuccess(result)) {
-                notify(result?.message || '未知错误', 'error', '封禁失败');
+                notify(result?.message || 'Unknown error', 'error', 'Block failed');
                 return;
             }
             document.getElementById('blockIp').value = '';
+            document.getElementById('blockAgentId').value = '';
             document.getElementById('blockReason').value = '';
-            notify(result?.message || '封禁指令已下发。', 'success', '封禁已提交');
+            notify(result?.message || 'Block command queued.', 'success', 'Block submitted');
             loadStats();
             refreshBlockedIps();
         }
@@ -1857,7 +1940,7 @@ ${item.operator_advice || '-'}`);
             const tbody = document.getElementById('blockedIpsTable').querySelector('tbody');
             if (!tbody) return;
             if (!res || !res.success || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="empty">当前没有封禁记录</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">褰撳墠娌℃湁灏佺璁板綍</td></tr>';
                 loadStats();
                 return;
             }
@@ -1867,8 +1950,8 @@ ${item.operator_advice || '-'}`);
                     <td class="mono" style="color:var(--danger);">${safeText(item.ip)}</td>
                     <td><span class="badge ${formatBlockStatus(item.status).badge}">${formatBlockStatus(item.status).text}</span></td>
                     <td>${formatDateTime(item.blocked_at)}</td>
-                    <td class="truncate">${safeText(item.reason || '自动分析阻断')}</td>
-                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="unblockIP('${escapeHtml(item.ip || '')}')">立即解封</button></td>
+                    <td class="truncate">${safeText(item.reason || '鑷姩鍒嗘瀽闃绘柇')}</td>
+                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="unblockIP('${escapeHtml(item.ip || '')}')">绔嬪嵆瑙ｅ皝</button></td>
                 </tr>
             `).join('');
             loadStats();
@@ -1881,28 +1964,28 @@ ${item.operator_advice || '-'}`);
         }
         async function batchBlock() {
             const ips = getSelectedIps('alertsMainTable');
-            if (ips.length === 0) return notify('请先勾选需要封禁的 IP。', 'info', '未选择目标');
-            if (!confirm(`确定要批量封禁这 ${ips.length} 个 IP 吗？`)) return;
-            const result = await postAPI('/api/batch-block', { ips, reason: '批量手动封禁' });
-            if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量封禁失败');
-            notify(result?.message || '批量封禁指令已下发。', 'success', '批量封禁已提交');
+            if (ips.length === 0) return notify('Select at least one IP to block.', 'info', 'No selection');
+            if (!confirm(`Block these ${ips.length} IP(s)?`)) return;
+            const result = await postAPI('/api/batch-block', { ips, reason: '鎵归噺鎵嬪姩灏佺' });
+            if (!isSuccess(result)) return notify(result?.message || '鏈煡閿欒', 'error', '鎵归噺灏佺澶辫触');
+            notify(result?.message || 'Batch block command queued.', 'success', 'Batch block submitted');
             refreshAlerts();
             loadStats();
         }
         async function batchUnblock() {
             const ips = getSelectedIps('blockedIpsTable');
-            if (ips.length === 0) return notify('请先勾选需要解封的 IP。', 'info', '未选择目标');
-            if (!confirm(`确定要批量解封这 ${ips.length} 个 IP 吗？`)) return;
-            const result = await postAPI('/api/batch-unblock', { ips, reason: '批量手动解封' });
-            if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量解封失败');
-            notify(result?.message || '批量解封指令已下发。', 'success', '批量解封已提交');
+            if (ips.length === 0) return notify('Select at least one IP to unblock.', 'info', 'No selection');
+            if (!confirm(`Unblock these ${ips.length} IP(s)?`)) return;
+            const result = await postAPI('/api/batch-unblock', { ips, reason: '鎵归噺鎵嬪姩瑙ｅ皝' });
+            if (!isSuccess(result)) return notify(result?.message || '鏈煡閿欒', 'error', '鎵归噺瑙ｅ皝澶辫触');
+            notify(result?.message || 'Batch unblock command queued.', 'success', 'Batch unblock submitted');
             refreshBlockedIps();
         }
         async function unblockIP(ip) {
-            if (!confirm(`确定要解除对 IP ${ip} 的封禁吗？`)) return;
-            const result = await postAPI('/api/unblock', { ip, reason: '人工手动解封' });
-            if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '解封失败');
-            notify(result?.message || '解封指令已下发。', 'success', '解封已提交');
+            if (!confirm(`Unblock IP ${ip}?`)) return;
+            const result = await postAPI('/api/unblock', { ip, reason: '浜哄伐鎵嬪姩瑙ｅ皝' });
+            if (!isSuccess(result)) return notify(result?.message || '鏈煡閿欒', 'error', '瑙ｅ皝澶辫触');
+            notify(result?.message || 'Unblock command queued.', 'success', 'Unblock submitted');
             refreshBlockedIps();
         }
         async function refreshWhitelist() {
@@ -1910,15 +1993,15 @@ ${item.operator_advice || '-'}`);
             const tbody = document.getElementById('whitelistTable').querySelector('tbody');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="empty">当前白名单为空</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="empty">褰撳墠鐧藉悕鍗曚负绌?/td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(item => `
                 <tr>
                     <td class="mono">${safeText(item.ip)}</td>
-                    <td>${safeText(item.reason, '未填写备注')}</td>
+                    <td>${safeText(item.reason, 'No note')}</td>
                     <td>${formatDate(item.created_at)}</td>
-                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="deleteWhitelist('${item.id}')">移除</button></td>
+                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="deleteWhitelist('${item.id}')">绉婚櫎</button></td>
                 </tr>
             `).join('');
         }
@@ -1927,16 +2010,16 @@ ${item.operator_advice || '-'}`);
                 ip: document.getElementById('whitelistIp').value.trim(),
                 reason: document.getElementById('whitelistReason').value.trim()
             });
-            if (!isSuccess(result)) return alert(`添加白名单失败：${result?.message || '未知错误'}`);
+            if (!isSuccess(result)) return alert(`娣诲姞鐧藉悕鍗曞け璐ワ細${result?.message || '鏈煡閿欒'}`);
             document.getElementById('whitelistIp').value = '';
             document.getElementById('whitelistReason').value = '';
-            alert('已加入白名单。');
+            alert('Added to whitelist.');
             refreshWhitelist();
         }
         async function deleteWhitelist(id) {
-            if (!confirm('确定要将该 IP 从白名单移除吗？')) return;
+            if (!confirm('Remove this IP from the whitelist?')) return;
             const res = await fetch(`${API_BASE}/api/whitelist/${id}`, { method: 'DELETE' });
-            if (!res.ok) return alert('移除失败。');
+            if (!res.ok) return alert('Remove failed.');
             refreshWhitelist();
         }
         async function refreshLogs() {
@@ -1944,14 +2027,14 @@ ${item.operator_advice || '-'}`);
             const container = document.getElementById('logsList');
             if (!container) return;
             if (!res || !res.data || res.data.length === 0) {
-                container.innerHTML = '<div class="empty">当前没有操作日志。</div>';
+                container.innerHTML = '<div class="empty">褰撳墠娌℃湁鎿嶄綔鏃ュ織銆?/div>';
                 return;
             }
             container.innerHTML = res.data.map(log => `
                 <div class="log-item">
-                    <div class="log-head"><span>任务 ID: ${safeText(log.command_id)}</span><span>${formatDateTime(log.created_at)}</span></div>
-                    <div class="log-title"><span style="color:var(--primary);">${safeText(log.command_type)}</span><span style="color:${log.result === 1 ? 'var(--success)' : 'var(--danger)'};">${log.result === 1 ? ' 执行成功' : ' 执行失败'}</span></div>
-                    <div style="margin-top:8px;color:var(--ink-soft);font-size:13px;line-height:1.7;">${safeText(log.message || log.target || '无补充说明')}</div>
+                    <div class="log-head"><span>浠诲姟 ID: ${safeText(log.command_id)}</span><span>${formatDateTime(log.created_at)}</span></div>
+                    <div class="log-title"><span style="color:var(--primary);">${safeText(log.command_type)}</span><span style="color:${log.result === 1 ? 'var(--success)' : 'var(--danger)'};">${log.result === 1 ? ' 鎵ц鎴愬姛' : ' 鎵ц澶辫触'}</span></div>
+                    <div style="margin-top:8px;color:var(--ink-soft);font-size:13px;line-height:1.7;">${safeText(log.message || log.target || 'No details')}</div>
                 </div>
             `).join('');
         }
@@ -1961,14 +2044,14 @@ ${item.operator_advice || '-'}`);
             const modalBody = document.getElementById('modalBody');
             const modalTitle = document.querySelector('#alertModal .modal-title');
             const modalSubtitle = document.querySelector('#alertModal .panel-subtitle');
-            if (modalTitle) modalTitle.textContent = '节点服务详情';
-            if (modalSubtitle) modalSubtitle.textContent = '查看当前节点的基础状态与服务清单';
-            modalBody.innerHTML = '<div class="empty">正在拉取节点详情...</div>';
+            if (modalTitle) modalTitle.textContent = '鑺傜偣鏈嶅姟璇︽儏';
+            if (modalSubtitle) modalSubtitle.textContent = '鏌ョ湅褰撳墠鑺傜偣鐨勫熀纭€鐘舵€佷笌鏈嶅姟娓呭崟';
+            modalBody.innerHTML = '<div class="empty">姝ｅ湪鎷夊彇鑺傜偣璇︽儏...</div>';
             modal.style.display = 'flex';
             try {
                 const res = await fetchAPI(`/api/agents/${encodeURIComponent(agentID)}`);
                 if (!res || !res.data) {
-                    modalBody.innerHTML = '<div class="empty">未能获取节点详情。</div>';
+                    modalBody.innerHTML = '<div class="empty">鏈兘鑾峰彇鑺傜偣璇︽儏銆?/div>';
                     return;
                 }
                 const agent = res.data;
@@ -1977,11 +2060,11 @@ ${item.operator_advice || '-'}`);
                     ? `
                         <div class="table-shell" style="margin-top:18px;">
                             <table>
-                                <thead><tr><th>服务</th><th>端口</th><th>协议</th><th>进程</th><th>监听地址</th><th>状态</th></tr></thead>
+                                <thead><tr><th>鏈嶅姟</th><th>绔彛</th><th>鍗忚</th><th>杩涚▼</th><th>鐩戝惉鍦板潃</th><th>鐘舵€?/th></tr></thead>
                                 <tbody>
                                     ${services.map(service => `
                                         <tr>
-                                            <td>${safeText(service.name, '未命名')}</td>
+                                            <td>${safeText(service.name, 'Unnamed')}</td>
                                             <td class="mono">${safeText(service.port, '-')}</td>
                                             <td>${safeText(service.protocol, '-')}</td>
                                             <td>${safeText(service.process, '-')}</td>
@@ -1992,41 +2075,41 @@ ${item.operator_advice || '-'}`);
                                 </tbody>
                             </table>
                         </div>`
-                    : '<div class="empty" style="margin-top:18px;">当前节点还没有服务扫描数据，下一步我们再把 Agent 本地服务发现接进来。</div>';
+                    : '<div class="empty" style="margin-top:18px;">褰撳墠鑺傜偣杩樻病鏈夋湇鍔℃壂鎻忔暟鎹紝涓嬩竴姝ユ垜浠啀鎶?Agent 鏈湴鏈嶅姟鍙戠幇鎺ヨ繘鏉ャ€?/div>';
 
                 modalBody.innerHTML = `
                     <div class="grid-2 mb-30">
                         <div class="glass-panel" style="margin-bottom:0;">
-                            <div class="panel-title">节点基本信息</div>
-                            <div class="panel-subtitle">在线状态、IP 地址和最后心跳</div>
+                            <div class="panel-title">鑺傜偣鍩烘湰淇℃伅</div>
+                            <div class="panel-subtitle">鍦ㄧ嚎鐘舵€併€両P 鍦板潃鍜屾渶鍚庡績璺?/div>
                             <div style="display:grid;gap:12px;margin-top:18px;">
-                                <div><strong>节点状态：</strong><span class="badge ${agent.status === 1 ? 'success' : 'info'}">${agent.status === 1 ? '在线' : '离线'}</span></div>
-                                <div><strong>资产 IP：</strong><span class="mono">${safeText(agent.ip)}</span></div>
-                                <div><strong>主机名：</strong>${safeText(agent.hostname, '-')}</div>
-                                <div><strong>节点 ID：</strong><span class="mono">${safeText(agent.agent_id)}</span></div>
-                                <div><strong>节点名称：</strong>${safeText(agent.name, '-')}</div>
-                                <div><strong>最后心跳：</strong>${formatDateTime(agent.last_seen_at)}</div>
+                                <div><strong>鑺傜偣鐘舵€侊細</strong><span class="badge ${agent.status === 1 ? 'success' : 'info'}">${agent.status === 1 ? '鍦ㄧ嚎' : '绂荤嚎'}</span></div>
+                                <div><strong>璧勪骇 IP锛?/strong><span class="mono">${safeText(agent.ip)}</span></div>
+                                <div><strong>涓绘満鍚嶏細</strong>${safeText(agent.hostname, '-')}</div>
+                                <div><strong>鑺傜偣 ID锛?/strong><span class="mono">${safeText(agent.agent_id)}</span></div>
+                                <div><strong>鑺傜偣鍚嶇О锛?/strong>${safeText(agent.name, '-')}</div>
+                                <div><strong>鏈€鍚庡績璺筹細</strong>${formatDateTime(agent.last_seen_at)}</div>
                             </div>
                         </div>
                         <div class="glass-panel" style="margin-bottom:0;">
-                            <div class="panel-title">服务概览</div>
-                            <div class="panel-subtitle">当前节点已经记录的服务及其运行信息</div>
+                            <div class="panel-title">鏈嶅姟姒傝</div>
+                            <div class="panel-subtitle">褰撳墠鑺傜偣宸茬粡璁板綍鐨勬湇鍔″強鍏惰繍琛屼俊鎭?/div>
                             <div style="display:grid;gap:12px;margin-top:18px;">
-                                <div><strong>服务数量：</strong><span style="font-size:22px;font-weight:800;color:var(--primary);">${services.length}</span></div>
-                                <div><strong>数据来源：</strong>${services[0] ? safeText(services[0].source, 'agent') : '未上报'}</div>
-                                <div><strong>最近更新：</strong>${services[0] && services[0].updated_at ? safeText(services[0].updated_at) : '未提供'}</div>
-                                <div class="hint-block">这里先展示 Master 已保存的服务清单。等我们把 Agent 本地扫描接上后，这个面板就会自动更新。</div>
+                                <div><strong>鏈嶅姟鏁伴噺锛?/strong><span style="font-size:22px;font-weight:800;color:var(--primary);">${services.length}</span></div>
+                                <div><strong>鏁版嵁鏉ユ簮锛?/strong>${services[0] ? safeText(services[0].source, 'agent') : 'Not reported'}</div>
+                                <div><strong>鏈€杩戞洿鏂帮細</strong>${services[0] && services[0].updated_at ? safeText(services[0].updated_at) : 'Not provided'}</div>
+                                <div class="hint-block">杩欓噷鍏堝睍绀?Master 宸蹭繚瀛樼殑鏈嶅姟娓呭崟銆傜瓑鎴戜滑鎶?Agent 鏈湴鎵弿鎺ヤ笂鍚庯紝杩欎釜闈㈡澘灏变細鑷姩鏇存柊銆?/div>
                             </div>
                         </div>
                     </div>
                     <div class="glass-panel" style="margin-bottom:0;">
-                        <div class="panel-title">服务清单</div>
-                        <div class="panel-subtitle">点击节点状态后可直接查看该节点当前有哪些服务</div>
+                        <div class="panel-title">鏈嶅姟娓呭崟</div>
+                        <div class="panel-subtitle">鐐瑰嚮鑺傜偣鐘舵€佸悗鍙洿鎺ユ煡鐪嬭鑺傜偣褰撳墠鏈夊摢浜涙湇鍔?/div>
                         ${servicesHTML}
                     </div>
                 `;
             } catch (error) {
-                modalBody.innerHTML = `<div class="empty">读取节点详情失败：${escapeHtml(error.message)}</div>`;
+                modalBody.innerHTML = `<div class="empty">璇诲彇鑺傜偣璇︽儏澶辫触锛?{escapeHtml(error.message)}</div>`;
             }
         }
 
@@ -2035,12 +2118,12 @@ ${item.operator_advice || '-'}`);
             const tbody = document.getElementById('agentsTable');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="empty">当前没有已注册的 Agent 节点</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">褰撳墠娌℃湁宸叉敞鍐岀殑 Agent 鑺傜偣</td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(agent => `
                 <tr>
-                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAgentDetails('${escapeHtml(agent.agent_id || '')}')"><span class="status-dot" style="background:${agent.status === 1 ? 'var(--success)' : '#94a3b8'};box-shadow:0 0 0 5px ${agent.status === 1 ? 'rgba(15,159,116,0.12)' : 'rgba(128,144,170,0.15)'};"></span>${agent.status === 1 ? '在线' : '离线'}</button></td>
+                    <td><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAgentDetails('${escapeHtml(agent.agent_id || '')}')"><span class="status-dot" style="background:${agent.status === 1 ? 'var(--success)' : '#94a3b8'};box-shadow:0 0 0 5px ${agent.status === 1 ? 'rgba(15,159,116,0.12)' : 'rgba(128,144,170,0.15)'};"></span>${agent.status === 1 ? '鍦ㄧ嚎' : '绂荤嚎'}</button></td>
                     <td class="mono">${safeText(agent.ip)}</td>
                     <td>${safeText(agent.hostname)}</td>
                     <td class="mono">${safeText(agent.agent_id)}</td>
@@ -2054,8 +2137,8 @@ ${item.operator_advice || '-'}`);
         showAlertDetails = async function(id) {
             const modalTitle = document.querySelector('#alertModal .modal-title');
             const modalSubtitle = document.querySelector('#alertModal .panel-subtitle');
-            if (modalTitle) modalTitle.textContent = '告警审计详情';
-            if (modalSubtitle) modalSubtitle.textContent = '查看事件内容、原始载荷和处置建议';
+            if (modalTitle) modalTitle.textContent = '鍛婅瀹¤璇︽儏';
+            if (modalSubtitle) modalSubtitle.textContent = '鏌ョ湅浜嬩欢鍐呭銆佸師濮嬭浇鑽峰拰澶勭疆寤鸿';
             return originalShowAlertDetails(id);
         };
 
@@ -2067,3 +2150,7 @@ ${item.operator_advice || '-'}`);
     </script>
 </body>
 </html>
+
+
+
+

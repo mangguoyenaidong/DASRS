@@ -2,9 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -541,45 +543,8 @@ func (s *Server) getStats(c *gin.Context) {
 
 // listBlockedIPs 获取当前封禁中的 IP 列表 (基于操作日志)
 func (s *Server) listBlockedIPs(c *gin.Context) {
-	var results []struct {
-		Target    string    `json:"ip"`
-		CreatedAt time.Time `json:"blocked_at"`
-		Message   string    `json:"reason"`
-		Status    string    `json:"status"`
-	}
-
-	// 优先展示当前仍处于封禁或待执行状态的最新 block 记录。
-	// 结果说明：
-	// - active: Agent 已回执封禁成功
-	// - pending: 封禁命令已下发，但尚未收到 Agent 执行回执
-	query := `
-		SELECT b.target, b.created_at, b.message,
-		       CASE
-		           WHEN b.result = 1 THEN 'active'
-		           WHEN b.result = 0 AND COALESCE(b.execution_time_ms, 0) = 0 THEN 'pending'
-		           ELSE 'inactive'
-		       END AS status
-		FROM operation_logs b
-		INNER JOIN (
-			SELECT target, MAX(created_at) AS latest_created_at
-			FROM operation_logs
-			WHERE command_type = 'block_ip'
-			GROUP BY target
-		) latest ON latest.target = b.target AND latest.latest_created_at = b.created_at
-		WHERE b.command_type = 'block_ip'
-		AND (
-			b.result = 1
-			OR (b.result = 0 AND COALESCE(b.execution_time_ms, 0) = 0)
-		)
-		AND b.target NOT IN (
-			SELECT target FROM operation_logs
-			WHERE command_type = 'unblock_ip' AND result = 1
-		)
-		ORDER BY b.created_at DESC
-		LIMIT 100
-	`
-
-	if err := s.db.Raw(query).Scan(&results).Error; err != nil {
+	results, err := s.collectBlockedIPs()
+	if err != nil {
 		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -590,51 +555,265 @@ func (s *Server) listBlockedIPs(c *gin.Context) {
 	})
 }
 
+type blockOperationSnapshot struct {
+	ID              uint
+	AgentID         string
+	CommandType     string
+	Target          string
+	Result          int
+	Message         string
+	ExecutionTimeMs int64
+	CreatedAt       time.Time
+}
+
+type blockedIPView struct {
+	Target    string    `json:"ip"`
+	CreatedAt time.Time `json:"blocked_at"`
+	Message   string    `json:"reason"`
+	Status    string    `json:"status"`
+}
+
+func (s *Server) collectBlockedIPs() ([]blockedIPView, error) {
+	var logs []blockOperationSnapshot
+	if err := s.db.Where("command_type IN ?", []string{"block_ip", "unblock_ip"}).
+		Order("created_at DESC, id DESC").
+		Find(&logs).Error; err != nil {
+		return nil, err
+	}
+
+	latestByAgentIP := make(map[string]blockOperationSnapshot)
+	for _, item := range logs {
+		ip := strings.TrimSpace(item.Target)
+		if ip == "" {
+			continue
+		}
+		agentKey := strings.TrimSpace(item.AgentID)
+		if agentKey == "" {
+			agentKey = "__global__"
+		}
+		key := ip + "|" + agentKey
+		if _, exists := latestByAgentIP[key]; exists {
+			continue
+		}
+		latestByAgentIP[key] = item
+	}
+
+	aggregated := make(map[string]blockedIPView)
+	for _, item := range latestByAgentIP {
+		if item.CommandType != "block_ip" {
+			continue
+		}
+
+		status := ""
+		switch {
+		case item.Result == 1:
+			status = "active"
+		case item.Result == 0 && item.ExecutionTimeMs == 0:
+			status = "pending"
+		default:
+			continue
+		}
+
+		ip := strings.TrimSpace(item.Target)
+		current, exists := aggregated[ip]
+		if !exists || item.CreatedAt.After(current.CreatedAt) || (current.Status != "active" && status == "active") {
+			aggregated[ip] = blockedIPView{
+				Target:    ip,
+				CreatedAt: item.CreatedAt,
+				Message:   item.Message,
+				Status:    status,
+			}
+		}
+	}
+
+	results := make([]blockedIPView, 0, len(aggregated))
+	for _, item := range aggregated {
+		results = append(results, item)
+	}
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].CreatedAt.After(results[j].CreatedAt)
+	})
+	if len(results) > 100 {
+		results = results[:100]
+	}
+	return results, nil
+}
+
 func (s *Server) getBlockState(ip string) string {
 	ip = strings.TrimSpace(ip)
 	if ip == "" {
 		return ""
 	}
 
-	var latest struct {
-		CommandType string
-		Result      int
-	}
-
-	err := s.db.Raw(`
-		SELECT command_type, result
-		FROM operation_logs
-		WHERE target = ?
-		AND command_type IN ('block_ip', 'unblock_ip')
-		ORDER BY created_at DESC, id DESC
-		LIMIT 1
-	`, ip).Scan(&latest).Error
-	if err != nil || strings.TrimSpace(latest.CommandType) == "" {
+	var logs []blockOperationSnapshot
+	err := s.db.Where("target = ? AND command_type IN ?", ip, []string{"block_ip", "unblock_ip"}).
+		Order("created_at DESC, id DESC").
+		Find(&logs).Error
+	if err != nil || len(logs) == 0 {
 		return ""
 	}
 
-	switch latest.CommandType {
-	case "block_ip":
-		if latest.Result == 1 {
-			return "active"
+	latestByAgent := make(map[string]blockOperationSnapshot)
+	for _, item := range logs {
+		agentKey := strings.TrimSpace(item.AgentID)
+		if agentKey == "" {
+			agentKey = "__global__"
 		}
-		if latest.Result == 0 {
-			return "pending"
+		if _, exists := latestByAgent[agentKey]; exists {
+			continue
 		}
-	case "unblock_ip":
-		if latest.Result == 0 {
-			return "unblock_pending"
+		latestByAgent[agentKey] = item
+	}
+
+	hasActive := false
+	hasPending := false
+	hasUnblockPending := false
+	for _, item := range latestByAgent {
+		switch item.CommandType {
+		case "block_ip":
+			if item.Result == 1 {
+				hasActive = true
+			}
+			if item.Result == 0 && item.ExecutionTimeMs == 0 {
+				hasPending = true
+			}
+		case "unblock_ip":
+			if item.Result == 0 && item.ExecutionTimeMs == 0 {
+				hasUnblockPending = true
+			}
 		}
+	}
+
+	switch {
+	case hasActive:
+		return "active"
+	case hasPending:
+		return "pending"
+	case hasUnblockPending:
+		return "unblock_pending"
 	}
 
 	return ""
 }
 
+func (s *Server) resolveCommandAgents(targetAgentID string) ([]*sgrpc.AgentInfo, error) {
+	if s.grpcServer == nil {
+		return nil, errors.New("grpc server unavailable")
+	}
+	if agentID := strings.TrimSpace(targetAgentID); agentID != "" {
+		for _, agent := range s.grpcServer.GetConnectedAgents() {
+			if agent != nil && agent.AgentID == agentID {
+				return []*sgrpc.AgentInfo{agent}, nil
+			}
+		}
+		return nil, fmt.Errorf("target agent %s is not connected", agentID)
+	}
+	agents := s.grpcServer.GetConnectedAgents()
+	if len(agents) == 0 {
+		return nil, errors.New("no connected agents available")
+	}
+	return agents, nil
+}
+
+func (s *Server) resolveUnblockAgents(ip, targetAgentID string) ([]*sgrpc.AgentInfo, error) {
+	if strings.TrimSpace(targetAgentID) != "" {
+		return s.resolveCommandAgents(targetAgentID)
+	}
+
+	var logs []blockOperationSnapshot
+	if err := s.db.Where("target = ? AND command_type IN ?", strings.TrimSpace(ip), []string{"block_ip", "unblock_ip"}).
+		Order("created_at DESC, id DESC").
+		Find(&logs).Error; err != nil {
+		return nil, err
+	}
+
+	latestByAgent := make(map[string]blockOperationSnapshot)
+	for _, item := range logs {
+		agentKey := strings.TrimSpace(item.AgentID)
+		if agentKey == "" {
+			continue
+		}
+		if _, exists := latestByAgent[agentKey]; exists {
+			continue
+		}
+		latestByAgent[agentKey] = item
+	}
+	if len(latestByAgent) == 0 {
+		return s.resolveCommandAgents("")
+	}
+
+	connectedByID := make(map[string]*sgrpc.AgentInfo)
+	for _, agent := range s.grpcServer.GetConnectedAgents() {
+		if agent != nil {
+			connectedByID[agent.AgentID] = agent
+		}
+	}
+
+	selected := make([]*sgrpc.AgentInfo, 0, len(latestByAgent))
+	for agentID, item := range latestByAgent {
+		if item.CommandType != "block_ip" {
+			continue
+		}
+		if item.Result != 1 && !(item.Result == 0 && item.ExecutionTimeMs == 0) {
+			continue
+		}
+		if agent, ok := connectedByID[agentID]; ok {
+			selected = append(selected, agent)
+		}
+	}
+	if len(selected) > 0 {
+		return selected, nil
+	}
+	return s.resolveCommandAgents("")
+}
+
+func (s *Server) queueCommandForAgents(commandType string, targetIP, reason string, agents []*sgrpc.AgentInfo, protoType proto.CommandType) (int, error) {
+	targetIP = strings.TrimSpace(targetIP)
+	if targetIP == "" {
+		return 0, errors.New("target ip is required")
+	}
+	if len(agents) == 0 {
+		return 0, errors.New("no eligible connected agents available")
+	}
+	if strings.TrimSpace(reason) == "" {
+		reason = strings.ReplaceAll(commandType, "_", " ")
+	}
+
+	dispatched := 0
+	now := time.Now()
+	for idx, agent := range agents {
+		if agent == nil {
+			continue
+		}
+		commandID := fmt.Sprintf("%s-%d-%d", strings.ReplaceAll(commandType, "_", "-"), now.UnixNano(), idx)
+		s.db.Create(&model.OperationLog{
+			CommandID:   commandID,
+			AgentID:     agent.AgentID,
+			CommandType: commandType,
+			Target:      targetIP,
+			Result:      0,
+			Message:     reason,
+			CreatedAt:   time.Now(),
+		})
+		s.grpcServer.QueueCommand(agent.AgentID, &proto.CommandMessage{
+			CommandId: commandID,
+			Type:      protoType,
+			TargetIp:  targetIP,
+		})
+		dispatched++
+	}
+	if dispatched == 0 {
+		return 0, errors.New("no eligible connected agents available")
+	}
+	return dispatched, nil
+}
+
 // blockIP 手动封禁 IP
 func (s *Server) blockIP(c *gin.Context) {
 	var req struct {
-		IP     string `json:"ip" binding:"required"`
-		Reason string `json:"reason"`
+		IP      string `json:"ip" binding:"required"`
+		Reason  string `json:"reason"`
+		AgentID string `json:"agent_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -666,49 +845,37 @@ func (s *Server) blockIP(c *gin.Context) {
 		return
 	}
 
-	commandID := fmt.Sprintf("man-block-%d", time.Now().Unix())
-	cmd := &proto.CommandMessage{
-		CommandId: commandID,
-		Type:      proto.CommandType_BLOCK_IP,
-		TargetIp:  req.IP,
-	}
-
-	agents := s.grpcServer.GetConnectedAgents()
-	if len(agents) == 0 {
+	agents, err := s.resolveCommandAgents(req.AgentID)
+	if err != nil {
 		c.PureJSON(http.StatusConflict, gin.H{
 			"success": false,
-			"message": "no connected agents available to execute block command",
+			"message": err.Error(),
+		})
+		return
+	}
+	dispatched, err := s.queueCommandForAgents("block_ip", req.IP, req.Reason, agents, proto.CommandType_BLOCK_IP)
+	if err != nil {
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": err.Error(),
 		})
 		return
 	}
 
-	// 预先记录操作日志
-	s.db.Create(&model.OperationLog{
-		CommandID:   commandID,
-		CommandType: "block_ip",
-		Target:      req.IP,
-		Result:      0, // 初始为进行中
-		Message:     fmt.Sprintf("Manual block: %s", req.Reason),
-		CreatedAt:   time.Now(),
-	})
-
-	for _, agent := range agents {
-		s.grpcServer.QueueCommand(agent.AgentID, cmd)
-	}
-
-	s.logger.Info("Manual block command sent for IP: %s, reason: %s", req.IP, req.Reason)
+	s.logger.Info("Manual block command sent for IP: %s, reason: %s, agent: %s", req.IP, req.Reason, req.AgentID)
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("Block command sent for IP %s to %d agents", req.IP, len(agents)),
+		"message": fmt.Sprintf("Block command sent for IP %s to %d agent(s)", req.IP, dispatched),
 	})
 }
 
 // unblockIP 手动解封 IP
 func (s *Server) unblockIP(c *gin.Context) {
 	var req struct {
-		IP     string `json:"ip" binding:"required"`
-		Reason string `json:"reason"`
+		IP      string `json:"ip" binding:"required"`
+		Reason  string `json:"reason"`
+		AgentID string `json:"agent_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -716,34 +883,21 @@ func (s *Server) unblockIP(c *gin.Context) {
 		return
 	}
 
-	commandID := fmt.Sprintf("man-unblock-%d", time.Now().Unix())
-	cmd := &proto.CommandMessage{
-		CommandId: commandID,
-		Type:      proto.CommandType_UNBLOCK_IP,
-		TargetIp:  req.IP,
-	}
-
-	agents := s.grpcServer.GetConnectedAgents()
-	if len(agents) == 0 {
+	agents, err := s.resolveUnblockAgents(req.IP, req.AgentID)
+	if err != nil {
 		c.PureJSON(http.StatusConflict, gin.H{
 			"success": false,
-			"message": "no connected agents available to execute unblock command",
+			"message": err.Error(),
 		})
 		return
 	}
-
-	// 预记录解封日志
-	s.db.Create(&model.OperationLog{
-		CommandID:   commandID,
-		CommandType: "unblock_ip",
-		Target:      req.IP,
-		Result:      0,
-		Message:     fmt.Sprintf("Manual unblock: %s", req.Reason),
-		CreatedAt:   time.Now(),
-	})
-
-	for _, agent := range agents {
-		s.grpcServer.QueueCommand(agent.AgentID, cmd)
+	dispatched, err := s.queueCommandForAgents("unblock_ip", req.IP, req.Reason, agents, proto.CommandType_UNBLOCK_IP)
+	if err != nil {
+		c.PureJSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
 	}
 
 	// 同步更新数据库状态，确保 Web 后台不再显示该 IP 为封禁状态
@@ -758,15 +912,16 @@ func (s *Server) unblockIP(c *gin.Context) {
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("Unblock command sent for IP %s to %d agents", req.IP, len(agents)),
+		"message": fmt.Sprintf("Unblock command sent for IP %s to %d agent(s)", req.IP, dispatched),
 	})
 }
 
 // batchBlockIP 批量封禁 IP
 func (s *Server) batchBlockIP(c *gin.Context) {
 	var req struct {
-		IPs    []string `json:"ips" binding:"required"`
-		Reason string   `json:"reason"`
+		IPs     []string `json:"ips" binding:"required"`
+		Reason  string   `json:"reason"`
+		AgentID string   `json:"agent_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -774,11 +929,11 @@ func (s *Server) batchBlockIP(c *gin.Context) {
 		return
 	}
 
-	agents := s.grpcServer.GetConnectedAgents()
-	if len(agents) == 0 {
+	agents, err := s.resolveCommandAgents(req.AgentID)
+	if err != nil {
 		c.PureJSON(http.StatusConflict, gin.H{
 			"success": false,
-			"message": "no connected agents available to execute batch block command",
+			"message": err.Error(),
 		})
 		return
 	}
@@ -795,13 +950,9 @@ func (s *Server) batchBlockIP(c *gin.Context) {
 			continue
 		}
 
-		cmd := &proto.CommandMessage{
-			CommandId: fmt.Sprintf("batch-block-%d-%d", time.Now().Unix(), count),
-			Type:      proto.CommandType_BLOCK_IP,
-			TargetIp:  ip,
-		}
-		for _, agent := range agents {
-			s.grpcServer.QueueCommand(agent.AgentID, cmd)
+		if _, err := s.queueCommandForAgents("block_ip", ip, req.Reason, agents, proto.CommandType_BLOCK_IP); err != nil {
+			s.logger.Warn("Skip batch block for IP %s: %v", ip, err)
+			continue
 		}
 		count++
 		realBlocked++
@@ -809,15 +960,16 @@ func (s *Server) batchBlockIP(c *gin.Context) {
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("Batch block command sent for %d IPs (skipped whitelisted) to %d agents", realBlocked, len(agents)),
+		"message": fmt.Sprintf("Batch block command sent for %d IP(s)", realBlocked),
 	})
 }
 
 // batchUnblockIP 批量解封 IP
 func (s *Server) batchUnblockIP(c *gin.Context) {
 	var req struct {
-		IPs    []string `json:"ips" binding:"required"`
-		Reason string   `json:"reason"`
+		IPs     []string `json:"ips" binding:"required"`
+		Reason  string   `json:"reason"`
+		AgentID string   `json:"agent_id"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -825,23 +977,16 @@ func (s *Server) batchUnblockIP(c *gin.Context) {
 		return
 	}
 
-	agents := s.grpcServer.GetConnectedAgents()
-	if len(agents) == 0 {
-		c.PureJSON(http.StatusConflict, gin.H{
-			"success": false,
-			"message": "no connected agents available to execute batch unblock command",
-		})
-		return
-	}
 	count := 0
 	for _, ip := range req.IPs {
-		cmd := &proto.CommandMessage{
-			CommandId: fmt.Sprintf("batch-unblock-%d-%d", time.Now().Unix(), count),
-			Type:      proto.CommandType_UNBLOCK_IP,
-			TargetIp:  ip,
+		agents, err := s.resolveUnblockAgents(ip, req.AgentID)
+		if err != nil {
+			s.logger.Warn("Skip batch unblock for IP %s: %v", ip, err)
+			continue
 		}
-		for _, agent := range agents {
-			s.grpcServer.QueueCommand(agent.AgentID, cmd)
+		if _, err := s.queueCommandForAgents("unblock_ip", ip, req.Reason, agents, proto.CommandType_UNBLOCK_IP); err != nil {
+			s.logger.Warn("Skip batch unblock for IP %s: %v", ip, err)
+			continue
 		}
 		count++
 	}
@@ -856,7 +1001,7 @@ func (s *Server) batchUnblockIP(c *gin.Context) {
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("Batch unblock command sent for %d IPs to %d agents", len(req.IPs), len(agents)),
+		"message": fmt.Sprintf("Batch unblock command sent for %d IP(s)", count),
 	})
 }
 

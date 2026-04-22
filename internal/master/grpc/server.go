@@ -108,6 +108,15 @@ func (s *Server) dispatchCommands() {
 		case cmdReq := <-s.commandQueue:
 			if err := s.PushCommand(cmdReq.AgentID, cmdReq.Command); err != nil {
 				s.logger.Error("Failed to dispatch command to %s: %v", cmdReq.AgentID, err)
+				if db, ok := s.db.(*gorm.DB); ok {
+					db.Model(&model.OperationLog{}).
+						Where("command_id = ?", cmdReq.Command.GetCommandId()).
+						Updates(map[string]interface{}{
+							"result":            0,
+							"message":           fmt.Sprintf("[%s] dispatch failed: %v", cmdReq.AgentID, err),
+							"execution_time_ms": time.Now().UnixMilli(),
+						})
+				}
 			} else {
 				s.logger.Info("Command sent to %s: %s", cmdReq.AgentID, cmdReq.Command.GetType().String())
 			}
@@ -213,6 +222,7 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 		// 没找到原始记录 (可能是系统自动产生的其他回执)，保存为新记录
 		opLog = model.OperationLog{
 			CommandID:       result.GetCommandId(),
+			AgentID:         agentID,
 			CommandType:     "result_report",
 			Target:          agentID,
 			Result:          boolToInt(result.GetSuccess()),
@@ -440,27 +450,27 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 
 		s.logger.Info("Auto blocking IP %s for alert %s", alert.SourceIP, decision.AlertID)
 
-		commandID := fmt.Sprintf("cmd-block-%d", time.Now().Unix())
-		cmd := &proto.CommandMessage{
-			CommandId: commandID,
-			Type:      proto.CommandType_BLOCK_IP,
-			TargetIp:  alert.SourceIP,
-		}
-
-		// 预先记录到操作日志，以便 Web 端立即显示
-		db.Create(&model.OperationLog{
-			CommandID:   commandID,
-			CommandType: "block_ip",
-			Target:      alert.SourceIP,
-			Result:      0, // 初始为 0 (待确认/进行中)
-			Message:     "System auto block triggered by risk score",
-			CreatedAt:   time.Now(),
-		})
-
 		// 寻找所有已连接的 Agent 下发阻断命令
 		agents := s.GetConnectedAgents()
-		for _, agent := range agents {
-			s.QueueCommand(agent.AgentID, cmd)
+		for idx, agent := range agents {
+			if agent == nil {
+				continue
+			}
+			commandID := fmt.Sprintf("cmd-block-%d-%d", time.Now().UnixNano(), idx)
+			db.Create(&model.OperationLog{
+				CommandID:   commandID,
+				AgentID:     agent.AgentID,
+				CommandType: "block_ip",
+				Target:      alert.SourceIP,
+				Result:      0,
+				Message:     "System auto block triggered by risk score",
+				CreatedAt:   time.Now(),
+			})
+			s.QueueCommand(agent.AgentID, &proto.CommandMessage{
+				CommandId: commandID,
+				Type:      proto.CommandType_BLOCK_IP,
+				TargetIp:  alert.SourceIP,
+			})
 		}
 	}
 
