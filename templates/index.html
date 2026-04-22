@@ -1360,6 +1360,8 @@
                 setText('aiDeployStatus', summary);
                 if (!status.enabled) {
                     setText('aiRuleSummary', 'AI 尚未启用，请检查 configs/config.yaml 中的 master.ai.enabled 与 DeepSeek 配置。');
+                } else if (status.init_error) {
+                    setText('aiRuleSummary', `AI 已启用但初始化失败：${status.init_error}`);
                 } else if (status.demo_mode) {
                     setText('aiRuleSummary', `当前处于 Demo Mode，自动处置阈值已放宽：block=${status.demo_block_threshold || status.block_threshold}, repair=${status.demo_repair_threshold || status.repair_threshold}。`);
                 }
@@ -1438,7 +1440,11 @@
             }
 
             aiSettingsDirty = false;
-            setText('aiSettingsStatus', `保存成功：${result?.data?.config_path || 'configs/config.yaml'}，当前 Demo Mode：${result?.data?.demo_mode ? '开启' : '关闭'}。`);
+            if (result?.data?.init_error) {
+                setText('aiSettingsStatus', `配置已保存：${result?.data?.config_path || 'configs/config.yaml'}，但 AI 初始化失败：${result.data.init_error}`);
+            } else {
+                setText('aiSettingsStatus', `保存成功：${result?.data?.config_path || 'configs/config.yaml'}，当前 Demo Mode：${result?.data?.demo_mode ? '开启' : '关闭'}。`);
+            }
             await loadAIWorkbench();
         }
 

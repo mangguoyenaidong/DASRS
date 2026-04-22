@@ -197,18 +197,32 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 	s.logger.Info("Command result from %s: CommandID=%s, Success=%v, Message=%s",
 		agentID, result.GetCommandId(), result.GetSuccess(), result.GetMessage())
 
-	// 保存到数据库
 	db := s.db.(*gorm.DB)
-	opLog := &model.OperationLog{
-		CommandID:       result.GetCommandId(),
-		CommandType:     "result_report",
-		Target:          agentID,
-		Result:          boolToInt(result.GetSuccess()),
-		Message:         result.GetMessage(),
-		ExecutionTimeMs: time.Now().UnixMilli(),
-		CreatedAt:       time.Now(),
+
+	// 尝试寻找之前发送指令时预存的日志记录
+	var opLog model.OperationLog
+	if err := db.Where("command_id = ?", result.GetCommandId()).First(&opLog).Error; err == nil {
+		// 找到了原始指令记录，更新执行状态和来自哪个 Agent
+		db.Model(&opLog).Updates(map[string]interface{}{
+			"result":            boolToInt(result.GetSuccess()),
+			"message":           fmt.Sprintf("[%s] %s", agentID, result.GetMessage()),
+			"execution_time_ms": time.Now().UnixMilli(),
+			"updated_at":        time.Now(),
+		})
+	} else {
+		// 没找到原始记录 (可能是系统自动产生的其他回执)，保存为新记录
+		opLog = model.OperationLog{
+			CommandID:       result.GetCommandId(),
+			CommandType:     "result_report",
+			Target:          agentID,
+			Result:          boolToInt(result.GetSuccess()),
+			Message:         result.GetMessage(),
+			ExecutionTimeMs: time.Now().UnixMilli(),
+			CreatedAt:       time.Now(),
+		}
+		db.Create(&opLog)
 	}
-	db.Create(opLog)
+
 	s.updateAIRuleTaskDeployStatus(agentID, result)
 	s.updateAIRuleTaskTestStatus(agentID, result)
 
@@ -352,10 +366,7 @@ func (s *Server) SendHeartbeat(ctx context.Context, req *proto.HeartbeatRequest)
 func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest) (*proto.AlertReportResponse, error) {
 	s.logger.Info("ReportAlert received: SID=%s, SourceIP=%s, Severity=%s", req.GetSid(), req.GetSourceIp(), req.GetSeverity())
 
-	destIP := req.GetDestIp()
-	if destIP == "" {
-		destIP = extractDestIP(req.GetAssetInfo())
-	}
+	destIP := extractDestIP(req.GetAssetInfo())
 
 	alert := &core.Alert{
 		SID:           req.GetSid(),
@@ -429,11 +440,22 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 
 		s.logger.Info("Auto blocking IP %s for alert %s", alert.SourceIP, decision.AlertID)
 
+		commandID := fmt.Sprintf("cmd-block-%d", time.Now().Unix())
 		cmd := &proto.CommandMessage{
-			CommandId: fmt.Sprintf("cmd-block-%d", time.Now().Unix()),
+			CommandId: commandID,
 			Type:      proto.CommandType_BLOCK_IP,
 			TargetIp:  alert.SourceIP,
 		}
+
+		// 预先记录到操作日志，以便 Web 端立即显示
+		db.Create(&model.OperationLog{
+			CommandID:   commandID,
+			CommandType: "block_ip",
+			Target:      alert.SourceIP,
+			Result:      0, // 初始为 0 (待确认/进行中)
+			Message:     "System auto block triggered by risk score",
+			CreatedAt:   time.Now(),
+		})
 
 		// 寻找所有已连接的 Agent 下发阻断命令
 		agents := s.GetConnectedAgents()
