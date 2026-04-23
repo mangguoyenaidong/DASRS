@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS alert_logs (
     payload TEXT,
     asset_info TEXT,
     risk_score INT DEFAULT 0,
+    attack_category VARCHAR(50),
     action VARCHAR(50),
     status TINYINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -51,6 +52,7 @@ CREATE TABLE IF NOT EXISTS alert_logs (
     INDEX idx_source_ip (source_ip),
     INDEX idx_dest_ip (dest_ip),
     INDEX idx_severity (severity),
+    INDEX idx_attack_category (attack_category),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

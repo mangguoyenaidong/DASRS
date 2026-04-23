@@ -60,21 +60,22 @@ func (Strategy) TableName() string {
 
 // AlertLog stores all collected alerts.
 type AlertLog struct {
-	ID            uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	AlertID       string    `gorm:"type:varchar(36);uniqueIndex;not null" json:"alert_id"`
-	AgentID       string    `gorm:"type:varchar(100)" json:"agent_id"`
-	SourceIP      string    `gorm:"type:varchar(45);index" json:"source_ip"`
-	DestIP        string    `gorm:"type:varchar(45);index" json:"dest_ip"`
-	SID           string    `gorm:"type:varchar(100);index" json:"sid"`
-	SignatureName string    `gorm:"type:varchar(500)" json:"signature_name"`
-	Severity      string    `gorm:"type:varchar(20);index" json:"severity"`
-	Payload       string    `gorm:"type:text" json:"payload"`
-	AssetInfo     string    `gorm:"type:text" json:"asset_info"`
-	RiskScore     int       `gorm:"default:0" json:"risk_score"`
-	Action        string    `gorm:"type:varchar(50)" json:"action"`
-	Status        int       `gorm:"default:0;index" json:"status"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	ID             uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	AlertID        string    `gorm:"type:varchar(36);uniqueIndex;not null" json:"alert_id"`
+	AgentID        string    `gorm:"type:varchar(100)" json:"agent_id"`
+	SourceIP       string    `gorm:"type:varchar(45);index" json:"source_ip"`
+	DestIP         string    `gorm:"type:varchar(45);index" json:"dest_ip"`
+	SID            string    `gorm:"type:varchar(100);index" json:"sid"`
+	SignatureName  string    `gorm:"type:varchar(500)" json:"signature_name"`
+	Severity       string    `gorm:"type:varchar(20);index" json:"severity"`
+	Payload        string    `gorm:"type:text" json:"payload"`
+	AssetInfo      string    `gorm:"type:text" json:"asset_info"`
+	RiskScore      int       `gorm:"default:0" json:"risk_score"`
+	AttackCategory string    `gorm:"type:varchar(50);index" json:"attack_category"`
+	Action         string    `gorm:"type:varchar(50)" json:"action"`
+	Status         int       `gorm:"default:0;index" json:"status"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 func (AlertLog) TableName() string {

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -57,9 +58,10 @@ func (e *IntelligenceEngine) UpdateConfig(cfg *model.Config) {
 // Analyze 分析告警并返回决策
 func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decision, error) {
 	decision := &Decision{
-		AlertID:   common.GenerateUUID(),
-		Alert:     alert,
-		Timestamp: time.Now().UnixMilli(),
+		AlertID:        common.GenerateUUID(),
+		Alert:          alert,
+		AttackCategory: "ordinary_attack",
+		Timestamp:      time.Now().UnixMilli(),
 	}
 
 	// 0. 白名单校验 - 强制忽略
@@ -75,8 +77,9 @@ func (e *IntelligenceEngine) Analyze(ctx context.Context, alert *Alert) (*Decisi
 	decision.BaseScore = baseScore
 
 	// 2. 目标资产上下文评分 - 服务匹配加分，不匹配降分
-	contextScore, contextReason := e.evaluateTargetContext(alert)
+	contextScore, contextReason, serviceMatched := e.evaluateTargetContext(alert)
 	decision.ContextScore = contextScore
+	decision.AttackCategory = e.classifyAttackCategory(alert, serviceMatched)
 
 	// 3. 时序分析 - 检查告警频率
 	timeSeriesScore := e.analyzeTimeSeries(alert.SourceIP)
@@ -195,35 +198,118 @@ func (e *IntelligenceEngine) calculateBaseScore(severity string) int {
 	}
 }
 
-func (e *IntelligenceEngine) evaluateTargetContext(alert *Alert) (int, string) {
+func (e *IntelligenceEngine) evaluateTargetContext(alert *Alert) (int, string, bool) {
 	targetIP := strings.TrimSpace(alert.DestIP)
 	if targetIP == "" {
-		return 0, "No target IP for asset context"
+		return 0, "No target IP for asset context", false
+	}
+
+	services := e.getTargetServices(targetIP)
+	if len(services) == 0 {
+		return 0, fmt.Sprintf("No service inventory for target %s", targetIP), false
+	}
+
+	signature := strings.ToLower(alert.SignatureName)
+	payload := strings.ToLower(alert.Payload)
+	negativeMatched := make([]string, 0)
+
+	for _, serviceType := range services {
+		positive, negative := e.signatureKeywordsByService(serviceType)
+		if containsString(signature, positive) || containsString(payload, positive) {
+			return 20, fmt.Sprintf("Target services %s match attack signature", strings.Join(services, ", ")), true
+		}
+
+		if containsString(signature, negative) || containsString(payload, negative) {
+			negativeMatched = append(negativeMatched, serviceType)
+		}
+	}
+
+	if len(negativeMatched) > 0 {
+		return -20, fmt.Sprintf("Target services %s mismatch attack signature", strings.Join(negativeMatched, ", ")), false
+	}
+
+	return 0, fmt.Sprintf("Target services %s have no strong signature match", strings.Join(services, ", ")), false
+}
+
+type serviceInventoryEntry struct {
+	Name string `json:"name"`
+}
+
+func (e *IntelligenceEngine) getTargetServices(targetIP string) []string {
+	normalized := make([]string, 0)
+	seen := make(map[string]struct{})
+
+	var agent model.AgentNode
+	if err := e.db.Where("ip = ?", targetIP).First(&agent).Error; err == nil && strings.TrimSpace(agent.ServiceInventory) != "" {
+		var services []serviceInventoryEntry
+		if err := json.Unmarshal([]byte(agent.ServiceInventory), &services); err == nil {
+			for _, service := range services {
+				name := normalizeServiceName(service.Name)
+				if name == "" {
+					continue
+				}
+				if _, exists := seen[name]; exists {
+					continue
+				}
+				seen[name] = struct{}{}
+				normalized = append(normalized, name)
+			}
+		}
+	}
+
+	if len(normalized) > 0 {
+		return normalized
 	}
 
 	var asset model.Asset
-	if err := e.db.Where("ip = ?", targetIP).First(&asset).Error; err != nil {
-		return 0, fmt.Sprintf("No asset profile for target %s", targetIP)
+	if err := e.db.Where("ip = ?", targetIP).First(&asset).Error; err == nil {
+		name := normalizeServiceName(asset.ServiceType)
+		if name != "" {
+			return []string{name}
+		}
 	}
 
-	serviceType := strings.ToLower(strings.TrimSpace(asset.ServiceType))
-	if serviceType == "" {
-		return 0, fmt.Sprintf("Target %s has no service fingerprint", targetIP)
+	return normalized
+}
+
+func normalizeServiceName(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	switch name {
+	case "", "unknown":
+		return ""
+	case "spring", "springboot":
+		return "spring-boot"
+	case "httpd":
+		return "apache"
+	default:
+		return name
+	}
+}
+
+func (e *IntelligenceEngine) classifyAttackCategory(alert *Alert, serviceMatched bool) string {
+	if !serviceMatched {
+		return "ordinary_attack"
 	}
 
-	positive, negative := e.signatureKeywordsByService(serviceType)
-	signature := strings.ToLower(alert.SignatureName)
-	payload := strings.ToLower(alert.Payload)
-
-	if containsString(signature, negative) || containsString(payload, negative) {
-		return -20, fmt.Sprintf("Target service %s mismatches attack signature", asset.ServiceType)
+	signature := strings.ToLower(strings.TrimSpace(alert.SignatureName))
+	payload := strings.ToLower(strings.TrimSpace(alert.Payload))
+	intelKeywords := []string{
+		"scan", "probe", "enum", "discovery", "fingerprint", "version", "recon",
+		"crawler", "spider", "detect", "banner", "info leak", "directory listing",
+	}
+	validAttackKeywords := []string{
+		"rce", "inject", "injection", "shell", "upload", "deserialization",
+		"deserialize", "ssti", "xxe", "sql", "xss", "exploit", "traversal",
+		"bypass", "command", "execution", "file inclusion", "getshell", "webshell",
 	}
 
-	if containsString(signature, positive) || containsString(payload, positive) {
-		return 20, fmt.Sprintf("Target service %s matches attack signature", asset.ServiceType)
+	if containsString(signature, intelKeywords) || containsString(payload, intelKeywords) {
+		if !(containsString(signature, validAttackKeywords) || containsString(payload, validAttackKeywords)) {
+			return "threat_intel"
+		}
 	}
 
-	return 0, fmt.Sprintf("Target service %s has no strong signature match", asset.ServiceType)
+	return "valid_attack"
 }
 
 func (e *IntelligenceEngine) signatureKeywordsByService(serviceType string) ([]string, []string) {
@@ -292,6 +378,7 @@ type Decision struct {
 	BaseScore       int
 	ContextScore    int
 	TimeSeriesScore int
+	AttackCategory  string
 	Action          string
 	Reason          string
 	Timestamp       int64

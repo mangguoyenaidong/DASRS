@@ -410,20 +410,21 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 
 	// 保存告警到数据库
 	alertLog := &model.AlertLog{
-		AlertID:       decision.AlertID,
-		AgentID:       agentID, // 补全 AgentID
-		SourceIP:      alert.SourceIP,
-		DestIP:        alert.DestIP, // 保存目的 IP
-		SID:           alert.SID,
-		SignatureName: alert.SignatureName,
-		Severity:      alert.Severity,
-		Payload:       alert.Payload,
-		AssetInfo:     alert.AssetInfo,
-		RiskScore:     decision.Score,
-		Action:        decision.Action,
-		Status:        0,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
+		AlertID:        decision.AlertID,
+		AgentID:        agentID, // 补全 AgentID
+		SourceIP:       alert.SourceIP,
+		DestIP:         alert.DestIP, // 保存目的 IP
+		SID:            alert.SID,
+		SignatureName:  alert.SignatureName,
+		Severity:       alert.Severity,
+		Payload:        alert.Payload,
+		AssetInfo:      alert.AssetInfo,
+		RiskScore:      decision.Score,
+		AttackCategory: decision.AttackCategory,
+		Action:         decision.Action,
+		Status:         0,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
 
 	db := s.db.(*gorm.DB)

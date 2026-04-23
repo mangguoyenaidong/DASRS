@@ -689,7 +689,7 @@
                     <section class="glass-panel">
                         <div class="table-shell">
                             <table id="alertsMainTable">
-                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('alertsMainTable', this.checked)"></th><th>状态</th><th>当前动作</th><th>SID</th><th>发生时间</th><th>来源 IP</th><th>目标 IP</th><th>严重等级</th><th>告警签名</th><th>操作</th></tr></thead>
+                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('alertsMainTable', this.checked)"></th><th>状态</th><th>攻击分类</th><th>当前动作</th><th>SID</th><th>发生时间</th><th>来源 IP</th><th>目标 IP</th><th>严重等级</th><th>告警签名</th><th>操作</th></tr></thead>
                                 <tbody id="alertsTable"></tbody>
                             </table>
                         </div>
@@ -1033,6 +1033,12 @@
             if (value === 'ignore') return 'warning';
             return 'info';
         }
+        function formatAttackCategory(category) {
+            const value = String(category || '').toLowerCase();
+            if (value === 'valid_attack') return { text: '有效攻击', badge: 'danger' };
+            if (value === 'threat_intel') return { text: '情报', badge: 'warning' };
+            return { text: '普通攻击', badge: 'info' };
+        }
         function formatBlockStatus(status) {
             const value = String(status || '').toLowerCase();
             if (value === 'active') return { text: '已生效', badge: 'danger' };
@@ -1071,7 +1077,7 @@
         function renderAlertDetails(alert, rawText, highlightedText) {
             return `
                 <div class="grid-2 mb-30">
-                    <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">攻击上下文</div><div class="panel-subtitle">来源、目标与风险分数</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>来源 IP：</strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>目标 IP：</strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>特征 SID：</strong>${safeText(alert.sid)}</div><div><strong>风险评分：</strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
+                    <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">攻击上下文</div><div class="panel-subtitle">来源、目标与风险分数</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>来源 IP：</strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>目标 IP：</strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>特征 SID：</strong>${safeText(alert.sid)}</div><div><strong>攻击分类：</strong><span class="badge ${formatAttackCategory(alert.attack_category).badge}">${formatAttackCategory(alert.attack_category).text}</span></div><div><strong>风险评分：</strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
                     <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">事件摘要</div><div class="panel-subtitle">签名、等级与系统动作</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>告警签名：</strong>${safeText(alert.signature_name)}</div><div><strong>严重等级：</strong><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></div><div><strong>发生时间：</strong>${formatDateTime(alert.created_at)}</div><div><strong>系统动作：</strong><span class="badge info">${formatActionText(alert.action)}</span></div></div></div>
                 </div>
                 <div class="glass-panel" style="margin-bottom:20px;">
@@ -1352,13 +1358,14 @@
             const tbody = document.getElementById('alertsTable');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="empty">没有符合当前筛选条件的告警</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="empty">没有符合当前筛选条件的告警</td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(alert => `
                 <tr>
                     <td><input type="checkbox" class="row-checkbox" value="${escapeHtml(alert.source_ip || '')}"></td>
                     <td><span class="badge ${getStatusBadge(alert.status)}">${alert.status === 0 ? '待处理' : '已处置'}</span></td>
+                    <td><span class="badge ${formatAttackCategory(alert.attack_category).badge}">${formatAttackCategory(alert.attack_category).text}</span></td>
                     <td><span class="badge ${getActionBadge(alert.action)}">${formatActionText(alert.action)}</span></td>
                     <td>${safeText(alert.sid)}</td>
                     <td>${formatDateTime(alert.created_at)}</td>
@@ -1798,7 +1805,7 @@ ${item.operator_advice || '-'}`);
                 });
                 modalBody.innerHTML = `
                     <div class="grid-2 mb-30">
-                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">攻击上下文</div><div class="panel-subtitle">来源、目标与风险分数</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>来源 IP：</strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>目标 IP：</strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>特征 SID：</strong>${safeText(alert.sid)}</div><div><strong>风险评分：</strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
+                        <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">攻击上下文</div><div class="panel-subtitle">来源、目标与风险分数</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>来源 IP：</strong><span class="mono" style="color:var(--danger);">${safeText(alert.source_ip)}</span></div><div><strong>目标 IP：</strong><span class="mono" style="color:var(--primary);">${safeText(alert.dest_ip)}</span></div><div><strong>特征 SID：</strong>${safeText(alert.sid)}</div><div><strong>攻击分类：</strong><span class="badge ${formatAttackCategory(alert.attack_category).badge}">${formatAttackCategory(alert.attack_category).text}</span></div><div><strong>风险评分：</strong><span style="font-size:22px;font-weight:800;color:var(--danger);">${safeText(alert.risk_score, '0')}</span></div></div></div>
                         <div class="glass-panel" style="margin-bottom:0;"><div class="panel-title">事件摘要</div><div class="panel-subtitle">签名、等级与系统动作</div><div style="display:grid;gap:12px;margin-top:18px;"><div><strong>告警签名：</strong>${safeText(alert.signature_name)}</div><div><strong>严重等级：</strong><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></div><div><strong>发生时间：</strong>${formatDateTime(alert.created_at)}</div><div><strong>系统动作：</strong><span class="badge info">${formatActionText(alert.action)}</span></div></div></div>
                     </div>
                     <div class="glass-panel" style="margin-bottom:20px;">
