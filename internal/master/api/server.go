@@ -562,6 +562,10 @@ type blockOperationSnapshot struct {
 	CreatedAt       time.Time
 }
 
+func (blockOperationSnapshot) TableName() string {
+	return "operation_logs"
+}
+
 type blockedIPView struct {
 	Target    string    `json:"ip"`
 	CreatedAt time.Time `json:"blocked_at"`
