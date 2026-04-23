@@ -689,7 +689,7 @@
                     <section class="glass-panel">
                         <div class="table-shell">
                             <table id="alertsMainTable">
-                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('alertsMainTable', this.checked)"></th><th>状态</th><th>SID</th><th>发生时间</th><th>来源 IP</th><th>目标 IP</th><th>严重等级</th><th>告警签名</th><th>操作</th></tr></thead>
+                                <thead><tr><th style="width: 48px;"><input type="checkbox" onclick="selectAll('alertsMainTable', this.checked)"></th><th>状态</th><th>当前动作</th><th>SID</th><th>发生时间</th><th>来源 IP</th><th>目标 IP</th><th>严重等级</th><th>告警签名</th><th>操作</th></tr></thead>
                                 <tbody id="alertsTable"></tbody>
                             </table>
                         </div>
@@ -1025,6 +1025,14 @@
             if (value === 'observe' || value === '') return '观察';
             return '未知';
         }
+        function getActionBadge(action) {
+            const value = String(action || '').toLowerCase();
+            if (value === 'block') return 'danger';
+            if (value === 'unblock') return 'success';
+            if (value === 'patch') return 'info';
+            if (value === 'ignore') return 'warning';
+            return 'info';
+        }
         function formatBlockStatus(status) {
             const value = String(status || '').toLowerCase();
             if (value === 'active') return { text: '已生效', badge: 'danger' };
@@ -1344,13 +1352,14 @@
             const tbody = document.getElementById('alertsTable');
             if (!tbody) return;
             if (!res || !res.data || res.data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty">没有符合当前筛选条件的告警</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="empty">没有符合当前筛选条件的告警</td></tr>';
                 return;
             }
             tbody.innerHTML = res.data.map(alert => `
                 <tr>
                     <td><input type="checkbox" class="row-checkbox" value="${escapeHtml(alert.source_ip || '')}"></td>
                     <td><span class="badge ${getStatusBadge(alert.status)}">${alert.status === 0 ? '待处理' : '已处置'}</span></td>
+                    <td><span class="badge ${getActionBadge(alert.action)}">${formatActionText(alert.action)}</span></td>
                     <td>${safeText(alert.sid)}</td>
                     <td>${formatDateTime(alert.created_at)}</td>
                     <td class="mono">${safeText(alert.source_ip)}</td>
@@ -1905,6 +1914,7 @@ ${item.operator_advice || '-'}`);
             notify(result?.message || '封禁指令已下发。', 'success', '封禁已提交');
             loadStats();
             refreshBlockedIps();
+            refreshAlerts();
         }
         async function refreshBlockedIps() {
             const res = await fetchAPI('/api/blocked-ips');
@@ -1941,6 +1951,7 @@ ${item.operator_advice || '-'}`);
             if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量封禁失败');
             notify(result?.message || '批量封禁指令已下发。', 'success', '批量封禁已提交');
             refreshAlerts();
+            refreshBlockedIps();
             loadStats();
         }
         async function batchUnblock() {
@@ -1951,6 +1962,7 @@ ${item.operator_advice || '-'}`);
             if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量解封失败');
             notify(result?.message || '批量解封指令已下发。', 'success', '批量解封已提交');
             refreshBlockedIps();
+            refreshAlerts();
         }
         async function unblockIP(ip) {
             if (!confirm(`确定要解除对 IP ${ip} 的封禁吗？`)) return;
@@ -1958,6 +1970,7 @@ ${item.operator_advice || '-'}`);
             if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '解封失败');
             notify(result?.message || '解封指令已下发。', 'success', '解封已提交');
             refreshBlockedIps();
+            refreshAlerts();
         }
         async function refreshWhitelist() {
             const res = await fetchAPI('/api/whitelist');

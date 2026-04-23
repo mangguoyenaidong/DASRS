@@ -528,15 +528,11 @@ func (s *Server) getStats(c *gin.Context) {
 	s.db.Model(&model.Strategy{}).Count(&stats.TotalStrategies)
 	s.db.Model(&model.Strategy{}).Where("enabled = ?", 1).Count(&stats.EnabledStrategies)
 
-	// 同时获取已封禁 IP 数 (从封禁 API 的逻辑获取)
-	var blockedCount int64
-	s.db.Raw(`
-		SELECT COUNT(DISTINCT target) 
-		FROM operation_logs 
-		WHERE command_type = 'block_ip' AND result = 1 
-		AND target NOT IN (SELECT target FROM operation_logs WHERE command_type = 'unblock_ip' AND result = 1)
-	`).Scan(&blockedCount)
-	stats.BlockedIPs = blockedCount
+	if blockedIPs, err := s.collectBlockedIPs(); err != nil {
+		s.logger.Error("Failed to collect blocked ip stats: %v", err)
+	} else {
+		stats.BlockedIPs = int64(len(blockedIPs))
+	}
 
 	c.PureJSON(http.StatusOK, gin.H{"data": stats})
 }
@@ -808,6 +804,29 @@ func (s *Server) queueCommandForAgents(commandType string, targetIP, reason stri
 	return dispatched, nil
 }
 
+func (s *Server) syncAlertActionForIP(ip, action string) {
+	ip = strings.TrimSpace(ip)
+	action = strings.TrimSpace(action)
+	if ip == "" || action == "" {
+		return
+	}
+
+	query := s.db.Model(&model.AlertLog{}).Where("source_ip = ?", ip)
+	switch action {
+	case "block":
+		query = query.Where("status = ?", 0)
+	case "unblock":
+		query = query.Where("action = ?", "block")
+	}
+
+	if err := query.Updates(map[string]interface{}{
+		"action": action,
+		"status": 1,
+	}).Error; err != nil {
+		s.logger.Error("Failed to sync alert action for ip %s to %s: %v", ip, action, err)
+	}
+}
+
 // blockIP 手动封禁 IP
 func (s *Server) blockIP(c *gin.Context) {
 	var req struct {
@@ -863,6 +882,7 @@ func (s *Server) blockIP(c *gin.Context) {
 	}
 
 	s.logger.Info("Manual block command sent for IP: %s, reason: %s, agent: %s", req.IP, req.Reason, req.AgentID)
+	s.syncAlertActionForIP(req.IP, "block")
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
@@ -900,15 +920,8 @@ func (s *Server) unblockIP(c *gin.Context) {
 		return
 	}
 
-	// 同步更新数据库状态，确保 Web 后台不再显示该 IP 为封禁状态
-	if err := s.db.Model(&model.AlertLog{}).Where("source_ip = ? AND action = ?", req.IP, "block").Updates(map[string]interface{}{
-		"action": "unblock",
-		"status": 1, // 已处理
-	}).Error; err != nil {
-		s.logger.Error("Failed to update alert logs for unblock: %v", err)
-	}
-
 	s.logger.Info("Manual unblock command sent for IP: %s", req.IP)
+	s.syncAlertActionForIP(req.IP, "unblock")
 
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
@@ -956,6 +969,7 @@ func (s *Server) batchBlockIP(c *gin.Context) {
 		}
 		count++
 		realBlocked++
+		s.syncAlertActionForIP(ip, "block")
 	}
 
 	c.PureJSON(http.StatusOK, gin.H{
