@@ -122,6 +122,7 @@ func (s *Server) setupRoutes() {
 		strategies.GET("", s.listStrategies)
 		strategies.GET("/:id", s.getStrategy)
 		strategies.POST("", s.createStrategy)
+		strategies.POST("/import", s.importStrategies)
 		strategies.PUT("/:id", s.updateStrategy)
 		strategies.DELETE("/:id", s.deleteStrategy)
 	}
@@ -448,10 +449,39 @@ func (s *Server) getStrategy(c *gin.Context) {
 	c.PureJSON(http.StatusOK, gin.H{"data": strategy})
 }
 
+func normalizeStrategyInput(strategy *model.Strategy) {
+	strategy.SID = strings.TrimSpace(strategy.SID)
+	strategy.TargetFile = strings.TrimSpace(strategy.TargetFile)
+	strategy.MatchRegex = strings.TrimSpace(strategy.MatchRegex)
+	strategy.ReplaceContent = strings.TrimSpace(strategy.ReplaceContent)
+	strategy.Description = strings.TrimSpace(strategy.Description)
+	if strategy.Enabled != 0 {
+		strategy.Enabled = 1
+	}
+}
+
+func validateStrategyInput(strategy model.Strategy) error {
+	if strings.TrimSpace(strategy.TargetFile) == "" {
+		return errors.New("target_file is required")
+	}
+	if strings.TrimSpace(strategy.MatchRegex) == "" {
+		return errors.New("match_regex is required")
+	}
+	if strings.TrimSpace(strategy.ReplaceContent) == "" {
+		return errors.New("replace_content is required")
+	}
+	return nil
+}
+
 // createStrategy 创建策略
 func (s *Server) createStrategy(c *gin.Context) {
 	var strategy model.Strategy
 	if err := c.ShouldBindJSON(&strategy); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	normalizeStrategyInput(&strategy)
+	if err := validateStrategyInput(strategy); err != nil {
 		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -485,11 +515,84 @@ func (s *Server) updateStrategy(c *gin.Context) {
 		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	normalizeStrategyInput(&strategy)
+	if err := validateStrategyInput(strategy); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	s.db.Save(&strategy)
 	c.PureJSON(http.StatusOK, gin.H{
 		"message": "strategy updated",
 		"data":    strategy,
+	})
+}
+
+func (s *Server) importStrategies(c *gin.Context) {
+	var req struct {
+		Strategies []model.Strategy `json:"strategies"`
+		Overwrite  bool             `json:"overwrite"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if len(req.Strategies) == 0 {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "strategies is required"})
+		return
+	}
+
+	created := 0
+	updated := 0
+	items := make([]model.Strategy, 0, len(req.Strategies))
+
+	for idx, item := range req.Strategies {
+		normalizeStrategyInput(&item)
+		if err := validateStrategyInput(item); err != nil {
+			c.PureJSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("strategy[%d]: %v", idx, err)})
+			return
+		}
+
+		var existing model.Strategy
+		err := s.db.Where("sid = ? AND target_file = ?", item.SID, item.TargetFile).First(&existing).Error
+		switch {
+		case err == nil:
+			if req.Overwrite {
+				existing.MatchRegex = item.MatchRegex
+				existing.ReplaceContent = item.ReplaceContent
+				existing.Description = item.Description
+				existing.Enabled = item.Enabled
+				if err := s.db.Save(&existing).Error; err != nil {
+					c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+				items = append(items, existing)
+				updated++
+			} else {
+				items = append(items, existing)
+			}
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			if err := s.db.Create(&item).Error; err != nil {
+				c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			items = append(items, item)
+			created++
+		default:
+			c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("strategy import completed: created %d, updated %d", created, updated),
+		"data": gin.H{
+			"created":    created,
+			"updated":    updated,
+			"total":      len(req.Strategies),
+			"overwrite":  req.Overwrite,
+			"strategies": items,
+		},
 	})
 }
 

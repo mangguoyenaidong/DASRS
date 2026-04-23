@@ -641,8 +641,12 @@
                                     <div class="panel-title" id="strategyFormTitle">新增策略</div>
                                     <div class="panel-subtitle" id="strategyFormSubtitle">快速录入一条补丁或修复规则</div>
                                 </div>
-                                <button class="btn btn-outline" type="button" id="strategyCancelBtn" onclick="resetStrategyForm()" style="display:none;">取消编辑</button>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                                    <button class="btn btn-outline" type="button" onclick="document.getElementById('strategyImportFile').click()">导入本地策略</button>
+                                    <button class="btn btn-outline" type="button" id="strategyCancelBtn" onclick="resetStrategyForm()" style="display:none;">取消编辑</button>
+                                </div>
                             </div>
+                            <input type="file" id="strategyImportFile" accept=".json,application/json" style="display:none;" onchange="importStrategyFile(event)">
                             <form id="addStrategyForm" onsubmit="addStrategy(event)">
                                 <div class="form-grid">
                                     <input type="hidden" id="strategyId">
@@ -651,7 +655,7 @@
                                     <div><label for="strategyMatch">匹配正则</label><input type="text" id="strategyMatch" placeholder="location /admin" required></div>
                                     <div><label for="strategyReplace">替换内容</label><textarea id="strategyReplace" placeholder="deny all;" required></textarea></div>
                                     <div><label for="strategyDesc">策略描述</label><input type="text" id="strategyDesc" placeholder="限制敏感路径访问"></div>
-                                    <div class="hint-block">建议将描述写成便于审计的动作说明，例如“关闭 admin 路径外部访问”。这样在回看日志时更容易理解策略意图。</div>
+                                    <div class="hint-block">建议将描述写成便于审计的动作说明，例如“关闭 admin 路径外部访问”。这样在回看日志时更容易理解策略意图。导入文件支持 JSON，格式示例：<br><code>{"strategies":[{"sid":"100001","target_file":"/etc/nginx/sites-available/default","match_regex":"location /admin","replace_content":"deny all;","description":"限制 admin 外部访问","enabled":1}],"overwrite":true}</code></div>
                                     <button type="submit" class="btn btn-primary" id="strategySubmitBtn">创建策略</button>
                                 </div>
                             </form>
@@ -1297,6 +1301,43 @@
             resetStrategyForm();
             refreshStrategies();
             alert(strategyId ? '策略已更新。' : '策略已创建。');
+        }
+        async function importStrategyFile(event) {
+            const input = event.target;
+            const file = input?.files?.[0];
+            if (!file) return;
+
+            try {
+                const content = await file.text();
+                const parsed = JSON.parse(content);
+                let payload;
+                if (Array.isArray(parsed)) {
+                    payload = { strategies: parsed, overwrite: true };
+                } else if (parsed && Array.isArray(parsed.strategies)) {
+                    payload = {
+                        strategies: parsed.strategies,
+                        overwrite: parsed.overwrite !== false
+                    };
+                } else {
+                    throw new Error('文件内容必须是策略数组，或包含 strategies 数组的对象');
+                }
+
+                const result = await postAPI('/api/strategies/import', payload);
+                if (!isSuccess(result)) {
+                    alert(`导入策略失败：${result?.message || result?.error || '未知错误'}`);
+                    return;
+                }
+
+                const created = result?.data?.created ?? 0;
+                const updated = result?.data?.updated ?? 0;
+                refreshStrategies();
+                resetStrategyForm();
+                alert(`策略导入完成。新增 ${created} 条，更新 ${updated} 条。`);
+            } catch (error) {
+                alert(`读取策略文件失败：${error.message}`);
+            } finally {
+                input.value = '';
+            }
         }
         async function editStrategy(id) {
             const res = await fetchAPI(`/api/strategies/${id}`);
