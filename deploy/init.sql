@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS operation_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     command_id VARCHAR(128) NOT NULL UNIQUE,
     agent_id VARCHAR(100),
+    agent_ip VARCHAR(45),
     alert_id BIGINT,
     command_type VARCHAR(50),
     target VARCHAR(500),
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS operation_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_agent_id (agent_id),
+    INDEX idx_agent_ip (agent_ip),
     INDEX idx_alert_id (alert_id),
     INDEX idx_command_type (command_type),
     INDEX idx_result (result)

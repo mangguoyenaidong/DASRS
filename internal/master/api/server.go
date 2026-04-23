@@ -554,6 +554,7 @@ func (s *Server) listBlockedIPs(c *gin.Context) {
 type blockOperationSnapshot struct {
 	ID              uint
 	AgentID         string
+	AgentIP         string
 	CommandType     string
 	Target          string
 	Result          int
@@ -564,6 +565,16 @@ type blockOperationSnapshot struct {
 
 func (blockOperationSnapshot) TableName() string {
 	return "operation_logs"
+}
+
+func operationAgentKey(agentID, agentIP string) string {
+	if ip := strings.TrimSpace(agentIP); ip != "" {
+		return "ip:" + ip
+	}
+	if id := strings.TrimSpace(agentID); id != "" {
+		return "id:" + id
+	}
+	return "__global__"
 }
 
 type blockedIPView struct {
@@ -587,10 +598,7 @@ func (s *Server) collectBlockedIPs() ([]blockedIPView, error) {
 		if ip == "" {
 			continue
 		}
-		agentKey := strings.TrimSpace(item.AgentID)
-		if agentKey == "" {
-			agentKey = "__global__"
-		}
+		agentKey := operationAgentKey(item.AgentID, item.AgentIP)
 		key := ip + "|" + agentKey
 		if _, exists := latestByAgentIP[key]; exists {
 			continue
@@ -655,10 +663,7 @@ func (s *Server) getBlockState(ip string) string {
 
 	latestByAgent := make(map[string]blockOperationSnapshot)
 	for _, item := range logs {
-		agentKey := strings.TrimSpace(item.AgentID)
-		if agentKey == "" {
-			agentKey = "__global__"
-		}
+		agentKey := operationAgentKey(item.AgentID, item.AgentIP)
 		if _, exists := latestByAgent[agentKey]; exists {
 			continue
 		}
@@ -729,7 +734,7 @@ func (s *Server) resolveUnblockAgents(ip, targetAgentID string) ([]*sgrpc.AgentI
 
 	latestByAgent := make(map[string]blockOperationSnapshot)
 	for _, item := range logs {
-		agentKey := strings.TrimSpace(item.AgentID)
+		agentKey := operationAgentKey(item.AgentID, item.AgentIP)
 		if agentKey == "" {
 			continue
 		}
@@ -742,22 +747,22 @@ func (s *Server) resolveUnblockAgents(ip, targetAgentID string) ([]*sgrpc.AgentI
 		return s.resolveCommandAgents("")
 	}
 
-	connectedByID := make(map[string]*sgrpc.AgentInfo)
+	connectedByKey := make(map[string]*sgrpc.AgentInfo)
 	for _, agent := range s.grpcServer.GetConnectedAgents() {
 		if agent != nil {
-			connectedByID[agent.AgentID] = agent
+			connectedByKey[operationAgentKey(agent.AgentID, agent.IP)] = agent
 		}
 	}
 
 	selected := make([]*sgrpc.AgentInfo, 0, len(latestByAgent))
-	for agentID, item := range latestByAgent {
+	for agentKey, item := range latestByAgent {
 		if item.CommandType != "block_ip" {
 			continue
 		}
 		if item.Result != 1 && !(item.Result == 0 && item.ExecutionTimeMs == 0) {
 			continue
 		}
-		if agent, ok := connectedByID[agentID]; ok {
+		if agent, ok := connectedByKey[agentKey]; ok {
 			selected = append(selected, agent)
 		}
 	}
@@ -789,6 +794,7 @@ func (s *Server) queueCommandForAgents(commandType string, targetIP, reason stri
 		if err := s.db.Create(&model.OperationLog{
 			CommandID:   commandID,
 			AgentID:     agent.AgentID,
+			AgentIP:     strings.TrimSpace(agent.IP),
 			CommandType: commandType,
 			Target:      targetIP,
 			Result:      0,

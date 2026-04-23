@@ -89,6 +89,7 @@ type OperationLog struct {
 	ID              uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	CommandID       string    `gorm:"type:varchar(128);uniqueIndex;not null" json:"command_id"`
 	AgentID         string    `gorm:"type:varchar(100);index" json:"agent_id"`
+	AgentIP         string    `gorm:"type:varchar(45);index" json:"agent_ip"`
 	AlertID         uint      `gorm:"index" json:"alert_id"`
 	CommandType     string    `gorm:"type:varchar(50);index" json:"command_type"`
 	Target          string    `gorm:"type:varchar(500)" json:"target"`
@@ -185,11 +186,18 @@ func AutoMigrate(db *gorm.DB) error {
 
 	compatSQL := []string{
 		"ALTER TABLE operation_logs MODIFY COLUMN command_id VARCHAR(128) NOT NULL",
+		"ALTER TABLE operation_logs ADD COLUMN agent_ip VARCHAR(45) NULL",
+		"CREATE INDEX idx_operation_logs_agent_ip ON operation_logs(agent_ip)",
 		"ALTER TABLE operation_logs ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
 		"ALTER TABLE alert_logs MODIFY COLUMN attack_category VARCHAR(50) NULL",
+		"UPDATE operation_logs ol JOIN agent_nodes an ON ol.agent_id = an.agent_id SET ol.agent_ip = an.ip WHERE (ol.agent_ip IS NULL OR ol.agent_ip = '') AND an.ip IS NOT NULL AND an.ip <> ''",
 	}
 	for _, stmt := range compatSQL {
-		if err := db.Exec(stmt).Error; err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
+		if err := db.Exec(stmt).Error; err != nil {
+			lowerErr := strings.ToLower(err.Error())
+			if strings.Contains(lowerErr, "duplicate column name") || strings.Contains(lowerErr, "duplicate key name") {
+				continue
+			}
 			return fmt.Errorf("schema compatibility migration failed: %w", err)
 		}
 	}

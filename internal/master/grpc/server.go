@@ -208,22 +208,35 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 		agentID, result.GetCommandId(), result.GetSuccess(), result.GetMessage())
 
 	db := s.db.(*gorm.DB)
+	agentIP := ""
+	if info, ok := s.agentClients.Load(agentID); ok {
+		if agent, ok := info.(*AgentInfo); ok {
+			agentIP = strings.TrimSpace(agent.IP)
+		}
+	}
 
 	// 尝试寻找之前发送指令时预存的日志记录
 	var opLog model.OperationLog
 	if err := db.Where("command_id = ?", result.GetCommandId()).First(&opLog).Error; err == nil {
 		// 找到了原始指令记录，更新执行状态和来自哪个 Agent
-		db.Model(&opLog).Updates(map[string]interface{}{
+		updates := map[string]interface{}{
 			"result":            boolToInt(result.GetSuccess()),
 			"message":           fmt.Sprintf("[%s] %s", agentID, result.GetMessage()),
 			"execution_time_ms": time.Now().UnixMilli(),
 			"updated_at":        time.Now(),
-		})
+		}
+		if agentIP != "" && strings.TrimSpace(opLog.AgentIP) == "" {
+			updates["agent_ip"] = agentIP
+		}
+		if err := db.Model(&opLog).Updates(updates).Error; err != nil {
+			s.logger.Error("Failed to update operation log for command %s: %v", result.GetCommandId(), err)
+		}
 	} else {
 		// 没找到原始记录 (可能是系统自动产生的其他回执)，保存为新记录
 		opLog = model.OperationLog{
 			CommandID:       result.GetCommandId(),
 			AgentID:         agentID,
+			AgentIP:         agentIP,
 			CommandType:     "result_report",
 			Target:          agentID,
 			Result:          boolToInt(result.GetSuccess()),
@@ -231,7 +244,9 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 			ExecutionTimeMs: time.Now().UnixMilli(),
 			CreatedAt:       time.Now(),
 		}
-		db.Create(&opLog)
+		if err := db.Create(&opLog).Error; err != nil {
+			s.logger.Error("Failed to create standalone operation result log for command %s: %v", result.GetCommandId(), err)
+		}
 	}
 
 	s.updateAIRuleTaskDeployStatus(agentID, result)
