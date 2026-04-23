@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -677,5 +678,16 @@ func extractDestIP(assetInfo string) string {
 	if pipe := strings.Index(value, "|"); pipe >= 0 {
 		value = strings.TrimSpace(value[:pipe])
 	}
-	return value
+
+	ipPattern := regexp.MustCompile(`(?i)\b(?:\d{1,3}\.){3}\d{1,3}\b|(?:[0-9a-f]{0,4}:){2,}[0-9a-f]{0,4}`)
+	match := ipPattern.FindString(value)
+	if match == "" {
+		return ""
+	}
+
+	if parsed := net.ParseIP(strings.TrimSpace(match)); parsed != nil {
+		return parsed.String()
+	}
+
+	return ""
 }
