@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -95,6 +96,7 @@ type OperationLog struct {
 	Message         string    `gorm:"type:text" json:"message"`
 	ExecutionTimeMs int64     `json:"execution_time_ms"`
 	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 func (OperationLog) TableName() string {
@@ -183,10 +185,11 @@ func AutoMigrate(db *gorm.DB) error {
 
 	compatSQL := []string{
 		"ALTER TABLE operation_logs MODIFY COLUMN command_id VARCHAR(128) NOT NULL",
+		"ALTER TABLE operation_logs ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
 		"ALTER TABLE alert_logs MODIFY COLUMN attack_category VARCHAR(50) NULL",
 	}
 	for _, stmt := range compatSQL {
-		if err := db.Exec(stmt).Error; err != nil {
+		if err := db.Exec(stmt).Error; err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column name") {
 			return fmt.Errorf("schema compatibility migration failed: %w", err)
 		}
 	}

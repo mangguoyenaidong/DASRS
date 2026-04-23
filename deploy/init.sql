@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS operation_logs (
     message TEXT,
     execution_time_ms BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_agent_id (agent_id),
     INDEX idx_alert_id (alert_id),
     INDEX idx_command_type (command_type),
