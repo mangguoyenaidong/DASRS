@@ -1927,9 +1927,16 @@ ${item.operator_advice || '-'}`);
             document.getElementById('blockIp').value = '';
             document.getElementById('blockReason').value = '';
             notify(result?.message || '封禁指令已下发。', 'success', '封禁已提交');
-            loadStats();
-            refreshBlockedIps();
-            refreshAlerts();
+            scheduleBlockStateRefresh();
+        }
+        function scheduleBlockStateRefresh() {
+            [0, 300, 900, 1800].forEach(delay => {
+                setTimeout(() => {
+                    refreshBlockedIps();
+                    refreshAlerts();
+                    loadStats();
+                }, delay);
+            });
         }
         async function refreshBlockedIps() {
             const res = await fetchAPI('/api/blocked-ips');
@@ -1965,9 +1972,7 @@ ${item.operator_advice || '-'}`);
             const result = await postAPI('/api/batch-block', { ips, reason: '批量手动封禁' });
             if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量封禁失败');
             notify(result?.message || '批量封禁指令已下发。', 'success', '批量封禁已提交');
-            refreshAlerts();
-            refreshBlockedIps();
-            loadStats();
+            scheduleBlockStateRefresh();
         }
         async function batchUnblock() {
             const ips = getSelectedIps('blockedIpsTable');
@@ -1976,16 +1981,14 @@ ${item.operator_advice || '-'}`);
             const result = await postAPI('/api/batch-unblock', { ips, reason: '批量手动解封' });
             if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '批量解封失败');
             notify(result?.message || '批量解封指令已下发。', 'success', '批量解封已提交');
-            refreshBlockedIps();
-            refreshAlerts();
+            scheduleBlockStateRefresh();
         }
         async function unblockIP(ip) {
             if (!confirm(`确定要解除对 IP ${ip} 的封禁吗？`)) return;
             const result = await postAPI('/api/unblock', { ip, reason: '人工手动解封' });
             if (!isSuccess(result)) return notify(result?.message || '未知错误', 'error', '解封失败');
             notify(result?.message || '解封指令已下发。', 'success', '解封已提交');
-            refreshBlockedIps();
-            refreshAlerts();
+            scheduleBlockStateRefresh();
         }
         async function refreshWhitelist() {
             const res = await fetchAPI('/api/whitelist');
