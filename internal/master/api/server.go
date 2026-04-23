@@ -577,6 +577,38 @@ func operationAgentKey(agentID, agentIP string) string {
 	return "__global__"
 }
 
+func (s *Server) buildAgentIPIndex() (map[string]string, error) {
+	var agents []model.AgentNode
+	if err := s.db.Select("agent_id", "ip").Find(&agents).Error; err != nil {
+		return nil, err
+	}
+
+	index := make(map[string]string, len(agents))
+	for _, agent := range agents {
+		agentID := strings.TrimSpace(agent.AgentID)
+		agentIP := strings.TrimSpace(agent.IP)
+		if agentID == "" || agentIP == "" {
+			continue
+		}
+		index[agentID] = agentIP
+	}
+	return index, nil
+}
+
+func resolveOperationAgentKey(item blockOperationSnapshot, agentIPIndex map[string]string) string {
+	if key := operationAgentKey(item.AgentID, item.AgentIP); !strings.HasPrefix(key, "id:") {
+		return key
+	}
+	agentID := strings.TrimSpace(item.AgentID)
+	if agentID == "" {
+		return ""
+	}
+	if agentIP := strings.TrimSpace(agentIPIndex[agentID]); agentIP != "" {
+		return operationAgentKey(agentID, agentIP)
+	}
+	return ""
+}
+
 type blockedIPView struct {
 	Target    string    `json:"ip"`
 	CreatedAt time.Time `json:"blocked_at"`
@@ -591,6 +623,10 @@ func (s *Server) collectBlockedIPs() ([]blockedIPView, error) {
 		Find(&logs).Error; err != nil {
 		return nil, err
 	}
+	agentIPIndex, err := s.buildAgentIPIndex()
+	if err != nil {
+		return nil, err
+	}
 
 	latestByAgentIP := make(map[string]blockOperationSnapshot)
 	for _, item := range logs {
@@ -598,7 +634,10 @@ func (s *Server) collectBlockedIPs() ([]blockedIPView, error) {
 		if ip == "" {
 			continue
 		}
-		agentKey := operationAgentKey(item.AgentID, item.AgentIP)
+		agentKey := resolveOperationAgentKey(item, agentIPIndex)
+		if agentKey == "" {
+			continue
+		}
 		key := ip + "|" + agentKey
 		if _, exists := latestByAgentIP[key]; exists {
 			continue
@@ -660,10 +699,17 @@ func (s *Server) getBlockState(ip string) string {
 	if err != nil || len(logs) == 0 {
 		return ""
 	}
+	agentIPIndex, err := s.buildAgentIPIndex()
+	if err != nil {
+		return ""
+	}
 
 	latestByAgent := make(map[string]blockOperationSnapshot)
 	for _, item := range logs {
-		agentKey := operationAgentKey(item.AgentID, item.AgentIP)
+		agentKey := resolveOperationAgentKey(item, agentIPIndex)
+		if agentKey == "" {
+			continue
+		}
 		if _, exists := latestByAgent[agentKey]; exists {
 			continue
 		}
@@ -731,10 +777,14 @@ func (s *Server) resolveUnblockAgents(ip, targetAgentID string) ([]*sgrpc.AgentI
 		Find(&logs).Error; err != nil {
 		return nil, err
 	}
+	agentIPIndex, err := s.buildAgentIPIndex()
+	if err != nil {
+		return nil, err
+	}
 
 	latestByAgent := make(map[string]blockOperationSnapshot)
 	for _, item := range logs {
-		agentKey := operationAgentKey(item.AgentID, item.AgentIP)
+		agentKey := resolveOperationAgentKey(item, agentIPIndex)
 		if agentKey == "" {
 			continue
 		}
