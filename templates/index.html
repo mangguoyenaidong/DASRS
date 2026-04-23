@@ -1045,6 +1045,14 @@
             if (value === 'pending') return { text: '待执行', badge: 'warning' };
             return { text: '未知', badge: 'info' };
         }
+        function formatOperationResult(log) {
+            if (!log) return { text: '未知', color: 'var(--ink-faint)' };
+            if (Number(log.result) === 1) return { text: '执行成功', color: 'var(--success)' };
+            if (Number(log.result) === 0 && Number(log.execution_time_ms || 0) === 0) {
+                return { text: '待执行', color: 'var(--warning)' };
+            }
+            return { text: '执行失败', color: 'var(--danger)' };
+        }
         function getStatusBadge(status) {
             return status === 0 ? 'warning' : 'success';
         }
@@ -2024,7 +2032,7 @@ ${item.operator_advice || '-'}`);
             container.innerHTML = res.data.map(log => `
                 <div class="log-item">
                     <div class="log-head"><span>任务 ID: ${safeText(log.command_id)}</span><span>${formatDateTime(log.created_at)}</span></div>
-                    <div class="log-title"><span style="color:var(--primary);">${safeText(log.command_type)}</span><span style="color:${log.result === 1 ? 'var(--success)' : 'var(--danger)'};">${log.result === 1 ? ' 执行成功' : ' 执行失败'}</span></div>
+                    <div class="log-title"><span style="color:var(--primary);">${safeText(log.command_type)}</span><span style="color:${formatOperationResult(log).color};"> ${formatOperationResult(log).text}</span></div>
                     <div style="margin-top:8px;color:var(--ink-soft);font-size:13px;line-height:1.7;">${safeText(log.message || log.target || '无补充说明')}</div>
                 </div>
             `).join('');

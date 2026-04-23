@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS alert_logs (
 
 CREATE TABLE IF NOT EXISTS operation_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    command_id VARCHAR(36) NOT NULL UNIQUE,
+    command_id VARCHAR(128) NOT NULL UNIQUE,
     agent_id VARCHAR(100),
     alert_id BIGINT,
     command_type VARCHAR(50),

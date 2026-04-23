@@ -85,7 +85,7 @@ func (AlertLog) TableName() string {
 // OperationLog stores all executed operations.
 type OperationLog struct {
 	ID              uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	CommandID       string    `gorm:"type:varchar(36);uniqueIndex;not null" json:"command_id"`
+	CommandID       string    `gorm:"type:varchar(128);uniqueIndex;not null" json:"command_id"`
 	AgentID         string    `gorm:"type:varchar(100);index" json:"agent_id"`
 	AlertID         uint      `gorm:"index" json:"alert_id"`
 	CommandType     string    `gorm:"type:varchar(50);index" json:"command_type"`
