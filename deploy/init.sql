@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS alert_logs (
 CREATE TABLE IF NOT EXISTS operation_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     command_id VARCHAR(36) NOT NULL UNIQUE,
+    agent_id VARCHAR(100),
     alert_id BIGINT,
     command_type VARCHAR(50),
     target VARCHAR(500),
@@ -65,8 +66,10 @@ CREATE TABLE IF NOT EXISTS operation_logs (
     message TEXT,
     execution_time_ms BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_agent_id (agent_id),
     INDEX idx_alert_id (alert_id),
-    INDEX idx_command_type (command_type)
+    INDEX idx_command_type (command_type),
+    INDEX idx_result (result)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO assets (ip, hostname, os_type, service_type, status) VALUES

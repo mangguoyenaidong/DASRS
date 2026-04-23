@@ -430,6 +430,11 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 	result := db.Create(alertLog)
 	if result.Error != nil {
 		s.logger.Error("Failed to save alert: %v", result.Error)
+		return &proto.AlertReportResponse{
+			Success: false,
+			Message: fmt.Sprintf("Failed to save alert: %v", result.Error),
+			AlertId: decision.AlertID,
+		}, result.Error
 	} else {
 		s.logger.Info("Alert saved successfully: ID=%d, AlertID=%s", alertLog.ID, alertLog.AlertID)
 	}
@@ -457,7 +462,7 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 				continue
 			}
 			commandID := fmt.Sprintf("cmd-block-%d-%d", time.Now().UnixNano(), idx)
-			db.Create(&model.OperationLog{
+			if err := db.Create(&model.OperationLog{
 				CommandID:   commandID,
 				AgentID:     agent.AgentID,
 				CommandType: "block_ip",
@@ -465,7 +470,10 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 				Result:      0,
 				Message:     "System auto block triggered by risk score",
 				CreatedAt:   time.Now(),
-			})
+			}).Error; err != nil {
+				s.logger.Error("Failed to create auto block operation log for agent %s target %s: %v", agent.AgentID, alert.SourceIP, err)
+				continue
+			}
 			s.QueueCommand(agent.AgentID, &proto.CommandMessage{
 				CommandId: commandID,
 				Type:      proto.CommandType_BLOCK_IP,

@@ -782,7 +782,7 @@ func (s *Server) queueCommandForAgents(commandType string, targetIP, reason stri
 			continue
 		}
 		commandID := fmt.Sprintf("%s-%d-%d", strings.ReplaceAll(commandType, "_", "-"), now.UnixNano(), idx)
-		s.db.Create(&model.OperationLog{
+		if err := s.db.Create(&model.OperationLog{
 			CommandID:   commandID,
 			AgentID:     agent.AgentID,
 			CommandType: commandType,
@@ -790,7 +790,10 @@ func (s *Server) queueCommandForAgents(commandType string, targetIP, reason stri
 			Result:      0,
 			Message:     reason,
 			CreatedAt:   time.Now(),
-		})
+		}).Error; err != nil {
+			s.logger.Error("Failed to create operation log for %s on agent %s: %v", commandType, agent.AgentID, err)
+			continue
+		}
 		s.grpcServer.QueueCommand(agent.AgentID, &proto.CommandMessage{
 			CommandId: commandID,
 			Type:      protoType,
