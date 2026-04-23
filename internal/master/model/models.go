@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"time"
 
 	"gorm.io/gorm"
@@ -167,7 +168,7 @@ func (AlertAIInsight) TableName() string {
 }
 
 func AutoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
+	if err := db.AutoMigrate(
 		&AgentNode{},
 		&Asset{},
 		&Strategy{},
@@ -176,5 +177,19 @@ func AutoMigrate(db *gorm.DB) error {
 		&WhitelistIP{},
 		&AIRuleTask{},
 		&AlertAIInsight{},
-	)
+	); err != nil {
+		return err
+	}
+
+	compatSQL := []string{
+		"ALTER TABLE operation_logs MODIFY COLUMN command_id VARCHAR(128) NOT NULL",
+		"ALTER TABLE alert_logs MODIFY COLUMN attack_category VARCHAR(50) NULL",
+	}
+	for _, stmt := range compatSQL {
+		if err := db.Exec(stmt).Error; err != nil {
+			return fmt.Errorf("schema compatibility migration failed: %w", err)
+		}
+	}
+
+	return nil
 }
