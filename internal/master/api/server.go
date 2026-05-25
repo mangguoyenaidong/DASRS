@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"sort"
 	"strconv"
@@ -145,6 +146,7 @@ func (s *Server) setupRoutes() {
 	// 手动封禁
 	s.router.GET("/api/blocked-ips", s.listBlockedIPs)
 	s.router.POST("/api/blocked-ips/sync", s.syncBlockedIPs)
+	s.router.POST("/api/blocked-ips/reconcile-retired-agent", s.reconcileRetiredAgentBlock)
 	s.router.POST("/api/block", s.blockIP)
 	s.router.POST("/api/unblock", s.unblockIP)
 	s.router.POST("/api/batch-block", s.batchBlockIP)
@@ -753,6 +755,82 @@ func (s *Server) syncBlockedIPs(c *gin.Context) {
 	})
 }
 
+// reconcileRetiredAgentBlock closes block state for an Agent that no longer exists.
+func (s *Server) reconcileRetiredAgentBlock(c *gin.Context) {
+	var req struct {
+		IP      string `json:"ip" binding:"required"`
+		AgentIP string `json:"agent_ip" binding:"required"`
+		Reason  string `json:"reason" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+
+	targetIP := net.ParseIP(strings.TrimSpace(req.IP))
+	agentIP := net.ParseIP(strings.TrimSpace(req.AgentIP))
+	if targetIP == nil || agentIP == nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"success": false, "message": "ip and agent_ip must be valid IP addresses"})
+		return
+	}
+	target := targetIP.String()
+	retiredAgentIP := agentIP.String()
+
+	if s.grpcServer != nil {
+		for _, agent := range s.grpcServer.GetConnectedAgents() {
+			if agent != nil && net.ParseIP(strings.TrimSpace(agent.IP)) != nil &&
+				net.ParseIP(strings.TrimSpace(agent.IP)).Equal(agentIP) {
+				c.PureJSON(http.StatusConflict, gin.H{
+					"success": false,
+					"message": fmt.Sprintf("agent %s is currently connected; use iptables synchronization instead", retiredAgentIP),
+				})
+				return
+			}
+		}
+	}
+
+	var latest blockOperationSnapshot
+	err := s.db.Where("target = ? AND agent_ip = ? AND command_type IN ?", target, retiredAgentIP, []string{"block_ip", "unblock_ip"}).
+		Order("created_at DESC, id DESC").
+		First(&latest).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.PureJSON(http.StatusNotFound, gin.H{"success": false, "message": "no block history found for this retired agent"})
+			return
+		}
+		c.PureJSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	if latest.CommandType != "block_ip" || (latest.Result != 1 && !(latest.Result == 0 && latest.ExecutionTimeMs == 0)) {
+		c.PureJSON(http.StatusConflict, gin.H{"success": false, "message": "this retired agent has no active block state for the target IP"})
+		return
+	}
+
+	now := time.Now()
+	reason := strings.TrimSpace(req.Reason)
+	record := &model.OperationLog{
+		CommandID:       fmt.Sprintf("retired-agent-unblock-%d", now.UnixNano()),
+		AgentID:         latest.AgentID,
+		AgentIP:         retiredAgentIP,
+		CommandType:     "unblock_ip",
+		Target:          target,
+		Result:          1,
+		Message:         fmt.Sprintf("Retired agent reconciliation: %s", reason),
+		ExecutionTimeMs: now.UnixMilli(),
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if err := s.db.Create(record).Error; err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("Cleared stale block state for %s on retired agent %s", target, retiredAgentIP),
+	})
+}
+
 type blockOperationSnapshot struct {
 	ID              uint
 	AgentID         string
@@ -1007,6 +1085,7 @@ func (s *Server) resolveUnblockAgents(ip, targetAgentID string) ([]*sgrpc.AgentI
 	}
 
 	selected := make([]*sgrpc.AgentInfo, 0, len(latestByAgent))
+	activeAgentCount := 0
 	for agentKey, item := range latestByAgent {
 		if item.CommandType != "block_ip" {
 			continue
@@ -1014,9 +1093,13 @@ func (s *Server) resolveUnblockAgents(ip, targetAgentID string) ([]*sgrpc.AgentI
 		if item.Result != 1 && !(item.Result == 0 && item.ExecutionTimeMs == 0) {
 			continue
 		}
+		activeAgentCount++
 		if agent, ok := connectedByKey[agentKey]; ok {
 			selected = append(selected, agent)
 		}
+	}
+	if activeAgentCount > 0 && len(selected) != activeAgentCount {
+		return nil, fmt.Errorf("blocked state for %s includes an offline or unmatched agent; reconnect and synchronize the originating agent before unblocking", strings.TrimSpace(ip))
 	}
 	if len(selected) > 0 {
 		return selected, nil

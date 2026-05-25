@@ -719,6 +719,16 @@
                         <div id="blockSyncStatus" class="hint-block">进入此页面后会加载当前在线节点；同步完成后封禁列表会按节点真实规则更新。</div>
                     </section>
                     <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">已下线节点状态校准</div><div class="panel-subtitle">仅用于确认已经删除或无法恢复的 Agent，追加可审计的解封校准记录</div></div></div>
+                        <div class="inline-form">
+                            <input type="text" id="retiredBlockIp" placeholder="被封禁 IP，例如 192.168.41.130">
+                            <input type="text" id="retiredAgentIp" placeholder="已下线节点 IP，例如 192.168.41.136">
+                            <input type="text" id="retiredAgentReason" placeholder="校准原因，例如虚拟机已删除">
+                            <button class="btn btn-outline" onclick="reconcileRetiredAgentBlock()">清理历史封禁状态</button>
+                        </div>
+                        <div class="hint-block">在线节点不会被此操作清理；在线节点请优先使用上方 iptables 同步功能。</div>
+                    </section>
+                    <section class="glass-panel">
                         <div class="panel-header"><div><div class="panel-title">当前封禁列表</div><div class="panel-subtitle">来源于告警动作视图的已封禁地址集合</div></div><button class="btn btn-outline" onclick="batchUnblock()">批量解封</button></div>
                         <div class="table-shell">
                             <table id="blockedIpsTable">
@@ -2046,6 +2056,30 @@ ${item.operator_advice || '-'}`);
             notify(result?.message || 'iptables 同步命令已下发。', 'success', 'iptables 同步已提交');
             scheduleBlockStateRefresh();
             setTimeout(refreshBlockSyncAgents, 5000);
+        }
+        async function reconcileRetiredAgentBlock() {
+            const ip = document.getElementById('retiredBlockIp').value.trim();
+            const agentIp = document.getElementById('retiredAgentIp').value.trim();
+            const reason = document.getElementById('retiredAgentReason').value.trim();
+            if (!ip || !agentIp || !reason) {
+                notify('请填写被封禁 IP、已下线节点 IP 和校准原因。', 'info', '信息不完整');
+                return;
+            }
+            if (!confirm(`确认节点 ${agentIp} 已经下线，并清理其对 ${ip} 的历史封禁状态吗？`)) return;
+            const result = await postAPI('/api/blocked-ips/reconcile-retired-agent', {
+                ip,
+                agent_ip: agentIp,
+                reason
+            });
+            if (!isSuccess(result)) {
+                notify(result?.message || '校准失败', 'error', '历史状态清理失败');
+                return;
+            }
+            document.getElementById('retiredBlockIp').value = '';
+            document.getElementById('retiredAgentIp').value = '';
+            document.getElementById('retiredAgentReason').value = '';
+            notify(result?.message || '已清理离线节点封禁状态。', 'success', '历史状态已校准');
+            scheduleBlockStateRefresh();
         }
         async function refreshBlockedIps() {
             const res = await fetchAPI('/api/blocked-ips');

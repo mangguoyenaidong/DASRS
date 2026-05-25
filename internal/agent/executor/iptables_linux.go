@@ -50,21 +50,24 @@ func (b *IPBlocker) BlockIP(ip string) error {
 func (b *IPBlocker) UnblockIP(ip string) error {
 	log.Printf("[Linux] Unblocking IP: %s", ip)
 
-	// 1. 检查规则是否存在，存在才删除
-	checkCmd := exec.Command("iptables", "-C", "INPUT", "-s", ip, "-j", "DROP")
-	if err := checkCmd.Run(); err != nil {
-		log.Printf("[Linux] IP %s is not in block list, nothing to unblock", ip)
-		return nil // 规则本身就不存在，无需删除
-	}
+	removed := false
+	for {
+		// Delete every matching rule so duplicate entries cannot leave an IP blocked.
+		checkCmd := exec.Command("iptables", "-C", "INPUT", "-s", ip, "-j", "DROP")
+		if err := checkCmd.Run(); err != nil {
+			if !removed {
+				log.Printf("[Linux] IP %s is not in block list, nothing to unblock", ip)
+			}
+			return nil
+		}
 
-	// 2. 执行删除操作
-	cmd := exec.Command("iptables", "-D", "INPUT", "-s", ip, "-j", "DROP")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to unblock IP %s via iptables: %v, output: %s", ip, err, string(output))
+		cmd := exec.Command("iptables", "-D", "INPUT", "-s", ip, "-j", "DROP")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to unblock IP %s via iptables: %v, output: %s", ip, err, string(output))
+		}
+		removed = true
 	}
-
-	return nil
 }
 
 // ListBlockedIPs returns host-level INPUT DROP rules managed through iptables.

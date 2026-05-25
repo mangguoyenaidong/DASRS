@@ -56,6 +56,31 @@ type CommandRequest struct {
 	CreatedAt time.Time
 }
 
+type commandStreamRegistration struct {
+	Hostname string `json:"hostname"`
+	IP       string `json:"ip"`
+}
+
+func parseCommandStreamRegistration(message, peerIP string) (string, string) {
+	hostname := strings.TrimSpace(message)
+	agentIP := strings.TrimSpace(peerIP)
+
+	var registration commandStreamRegistration
+	if err := json.Unmarshal([]byte(message), &registration); err == nil {
+		if value := strings.TrimSpace(registration.Hostname); value != "" {
+			hostname = value
+		}
+		if ip := net.ParseIP(strings.TrimSpace(registration.IP)); ip != nil {
+			agentIP = ip.String()
+		}
+	}
+
+	if hostname == "" {
+		hostname = "unknown"
+	}
+	return hostname, agentIP
+}
+
 // NewServer 创建服务器
 func NewServer(cfg *model.Config, engine *core.IntelligenceEngine, db interface{}, redis interface{}) *Server {
 	return &Server{
@@ -175,19 +200,16 @@ func (s *Server) CommandStream(stream proto.SecurityService_CommandStreamServer)
 
 		// 解析消息（如果 command_id == "register"，这是一个注册消息，附加信息在 message 里）
 		if msg.GetCommandId() == "register" {
-			hostname := msg.GetMessage()
-			if hostname == "" {
-				hostname = "unknown"
-			}
+			hostname, agentIP := parseCommandStreamRegistration(msg.GetMessage(), peerIP)
 			s.agentClients.Store(agentID, &AgentInfo{
 				AgentID:     agentID,
 				Hostname:    hostname,
-				IP:          peerIP,
+				IP:          agentIP,
 				ConnectedAt: time.Now(),
 				LastSeen:    time.Now(),
 			})
-			s.RegisterAgentInDB(agentID, hostname, peerIP, "")
-			s.logger.Info("Agent %s registered with hostname %s IP %s", agentID, hostname, peerIP)
+			s.RegisterAgentInDB(agentID, hostname, agentIP, "")
+			s.logger.Info("Agent %s registered with hostname %s IP %s", agentID, hostname, agentIP)
 			continue
 		}
 
@@ -598,6 +620,7 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 			if err := db.Create(&model.OperationLog{
 				CommandID:   commandID,
 				AgentID:     agent.AgentID,
+				AgentIP:     strings.TrimSpace(agent.IP),
 				CommandType: "block_ip",
 				Target:      alert.SourceIP,
 				Result:      0,

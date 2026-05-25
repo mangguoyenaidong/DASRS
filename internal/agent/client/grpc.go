@@ -98,12 +98,27 @@ ReconnectLoop:
 			continue ReconnectLoop
 		}
 
-		// Send registration message
+		registration, err := json.Marshal(struct {
+			Hostname string `json:"hostname"`
+			IP       string `json:"ip"`
+		}{
+			Hostname: c.hostname,
+			IP:       c.localIP,
+		})
+		if err != nil {
+			log.Printf("Failed to encode registration message: %v", err)
+			cancel()
+			c.conn.Close()
+			time.Sleep(time.Duration(c.reconnectInterval) * time.Second)
+			continue ReconnectLoop
+		}
+
+		// Send registration message with the address the Agent manages locally.
 		regMsg := &proto.CommandResult{
 			AgentId:   c.agentID,
 			CommandId: "register",
 			Success:   true,
-			Message:   c.hostname,
+			Message:   string(registration),
 		}
 		if err := c.stream.Send(regMsg); err != nil {
 			log.Printf("Failed to send registration message: %v", err)
