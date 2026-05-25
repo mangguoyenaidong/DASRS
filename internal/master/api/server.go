@@ -226,18 +226,15 @@ func (s *Server) getLogs(c *gin.Context) {
 
 // listAgents 获取已注册的 Agent 节点列表
 func (s *Server) listAgents(c *gin.Context) {
-	var agents []model.AgentNode
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	offset := (page - 1) * pageSize
-	query := s.db.Model(&model.AgentNode{})
-
-	// 状态过滤
-	if statusStr := c.Query("status"); statusStr != "" {
-		status, _ := strconv.Atoi(statusStr)
-		query = query.Where("status = ?", status)
+	if page < 1 {
+		page = 1
 	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	query := s.db.Model(&model.AgentNode{})
 
 	// 搜索过滤
 	if search := c.Query("search"); search != "" {
@@ -245,20 +242,67 @@ func (s *Server) listAgents(c *gin.Context) {
 			"%"+search+"%", "%"+search+"%", "%"+search+"%")
 	}
 
-	var total int64
-	query.Count(&total)
-
-	if err := query.Offset(offset).Limit(pageSize).Order("created_at DESC").Find(&agents).Error; err != nil {
+	var agents []model.AgentNode
+	if err := query.Order("created_at DESC").Find(&agents).Error; err != nil {
 		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	statusFilter := -1
+	if statusStr := c.Query("status"); statusStr != "" {
+		var err error
+		statusFilter, err = strconv.Atoi(statusStr)
+		if err != nil {
+			c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid status"})
+			return
+		}
+	}
+
+	connectedIDs := s.connectedAgentIDSet()
+	filtered := make([]model.AgentNode, 0, len(agents))
+	for _, agent := range agents {
+		agent.Status = connectedAgentStatus(agent.AgentID, connectedIDs)
+		if statusFilter < 0 || agent.Status == statusFilter {
+			filtered = append(filtered, agent)
+		}
+	}
+
+	total := int64(len(filtered))
+	offset := (page - 1) * pageSize
+	if offset > len(filtered) {
+		offset = len(filtered)
+	}
+	end := offset + pageSize
+	if end > len(filtered) {
+		end = len(filtered)
+	}
+
 	c.PureJSON(http.StatusOK, gin.H{
-		"data":  agents,
+		"data":  filtered[offset:end],
 		"total": total,
 		"page":  page,
 		"size":  pageSize,
 	})
+}
+
+func (s *Server) connectedAgentIDSet() map[string]struct{} {
+	connectedIDs := make(map[string]struct{})
+	if s.grpcServer == nil {
+		return connectedIDs
+	}
+	for _, agent := range s.grpcServer.GetConnectedAgents() {
+		if agent != nil {
+			connectedIDs[strings.TrimSpace(agent.AgentID)] = struct{}{}
+		}
+	}
+	return connectedIDs
+}
+
+func connectedAgentStatus(agentID string, connectedIDs map[string]struct{}) int {
+	if _, ok := connectedIDs[strings.TrimSpace(agentID)]; ok {
+		return 1
+	}
+	return 0
 }
 
 // listConnectedAgents returns nodes with an active command stream.
@@ -302,6 +346,7 @@ func (s *Server) getAgent(c *gin.Context) {
 		return
 	}
 
+	agent.Status = connectedAgentStatus(agent.AgentID, s.connectedAgentIDSet())
 	detail := buildAgentDetail(agent)
 	if len(detail.Services) == 0 && strings.TrimSpace(agent.IP) != "" {
 		var asset model.Asset
@@ -651,7 +696,7 @@ func (s *Server) getStats(c *gin.Context) {
 	}
 
 	s.db.Model(&model.AgentNode{}).Count(&stats.TotalAssets)
-	s.db.Model(&model.AgentNode{}).Where("status = ?", 1).Count(&stats.OnlineAssets)
+	stats.OnlineAssets = int64(len(s.connectedAgentIDSet()))
 	s.db.Model(&model.AlertLog{}).Count(&stats.TotalAlerts)
 	s.db.Model(&model.AlertLog{}).Where("status = ?", 0).Count(&stats.PendingAlerts)
 	s.db.Model(&model.Strategy{}).Count(&stats.TotalStrategies)
@@ -918,7 +963,7 @@ func (s *Server) resolveCommandAgents(targetAgentID string) ([]*sgrpc.AgentInfo,
 	}
 	agents := s.grpcServer.GetConnectedAgents()
 	if len(agents) == 0 {
-		return nil, errors.New("no connected agents available")
+		return nil, errors.New("no command-connected agents available; the Agent must have an active gRPC command stream")
 	}
 	return agents, nil
 }
@@ -1542,6 +1587,7 @@ func (s *Server) registerAgent(c *gin.Context) {
 	}
 
 	now := time.Now()
+	status := connectedAgentStatus(req.AgentID, s.connectedAgentIDSet())
 	// 严格以 IP 为唯一标识进行维护
 	var existingAgent model.AgentNode
 	serviceInventoryJSON := encodeServiceInventory(req.ServiceInventory)
@@ -1555,7 +1601,7 @@ func (s *Server) registerAgent(c *gin.Context) {
 			Hostname:         req.Hostname,
 			IP:               req.IP,
 			ServiceInventory: serviceInventoryJSON,
-			Status:           1,
+			Status:           status,
 			LastSeenAt:       now,
 			RegisteredAt:     now,
 			CreatedAt:        now,
@@ -1569,7 +1615,7 @@ func (s *Server) registerAgent(c *gin.Context) {
 		// 找到资产，更新现有记录 (保持 IP 不变)
 		s.db.Model(&existingAgent).Updates(map[string]interface{}{
 			"agent_id":          req.AgentID,
-			"status":            1,
+			"status":            status,
 			"last_seen_at":      now,
 			"hostname":          req.Hostname,
 			"name":              req.Name,

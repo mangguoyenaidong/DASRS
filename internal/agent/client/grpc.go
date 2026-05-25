@@ -84,7 +84,7 @@ ReconnectLoop:
 			continue ReconnectLoop
 		}
 
-		log.Println("Connected to master, starting bidirectional stream...")
+		log.Printf("Connecting to master at %s, starting bidirectional stream...", c.address)
 
 		c.serviceClient = proto.NewSecurityServiceClient(c.conn)
 
@@ -112,6 +112,7 @@ ReconnectLoop:
 			time.Sleep(time.Duration(c.reconnectInterval) * time.Second)
 			continue ReconnectLoop
 		}
+		log.Printf("Connected to master at %s; command stream registered as %s", c.address, c.agentID)
 
 		go c.sendHeartbeats(ctx)
 
