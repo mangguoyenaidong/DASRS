@@ -59,3 +59,8 @@ func (b *IPBlocker) UnblockIP(ip string) error {
 
 	return nil
 }
+
+// ListBlockedIPs is unavailable because this synchronization targets iptables agents.
+func (b *IPBlocker) ListBlockedIPs() ([]string, error) {
+	return nil, fmt.Errorf("iptables block synchronization is only supported on Linux agents")
+}

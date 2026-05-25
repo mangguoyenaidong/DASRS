@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -60,15 +61,16 @@ func (a *Agent) Stop() {
 	a.collector.Stop()
 }
 
-func (a *Agent) handleAlert(alert *proto.AlertReportRequest) {
+func (a *Agent) handleAlert(alert *proto.AlertReportRequest) error {
 	resp, err := a.grpcClient.ReportAlert(alert)
 	if err != nil {
-		log.Printf("Failed to report alert: %v", err)
-		return
+		return err
 	}
-	if resp != nil {
-		log.Printf("Alert reported successfully, Master ID: %s", resp.AlertId)
+	if resp == nil || !resp.GetSuccess() {
+		return fmt.Errorf("master rejected alert report: %s", resp.GetMessage())
 	}
+	log.Printf("Alert reported successfully, Master ID: %s", resp.AlertId)
+	return nil
 }
 
 func (a *Agent) handleCommand(cmd *proto.CommandMessage) {
@@ -90,6 +92,23 @@ func (a *Agent) handleCommand(cmd *proto.CommandMessage) {
 			a.grpcClient.SendCommandResult(cmd.GetCommandId(), true, "IP unblocked successfully")
 		}
 	case proto.CommandType_PATCH_CONFIG:
+		if cmd.GetMatchRegex() == "__DASRS_IPTABLES_BLOCK_SYNC__" {
+			ips, err := a.blocker.ListBlockedIPs()
+			if err != nil {
+				a.grpcClient.SendCommandResult(cmd.GetCommandId(), false, err.Error())
+				return
+			}
+			payload, err := json.Marshal(struct {
+				BlockedIPs []string `json:"blocked_ips"`
+			}{BlockedIPs: ips})
+			if err != nil {
+				a.grpcClient.SendCommandResult(cmd.GetCommandId(), false, "failed to encode iptables snapshot: "+err.Error())
+				return
+			}
+			a.grpcClient.SendCommandResult(cmd.GetCommandId(), true, string(payload))
+			return
+		}
+
 		if cmd.GetMatchRegex() == "__DASRS_AI_RULE_TEST__" {
 			var req struct {
 				RuleContent     string `json:"rule_content"`

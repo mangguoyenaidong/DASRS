@@ -1,0 +1,3 @@
+services:
+  master:
+    command: ["./master", "--config", "configs/config.docker.yaml"]

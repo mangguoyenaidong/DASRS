@@ -37,6 +37,7 @@ func main() {
 	log.Printf("  - Master Address: %s", cfg.MasterAddress)
 	log.Printf("  - Master HTTP Address: %s", cfg.MasterHTTPAddress)
 	log.Printf("  - Suricata Log Path: %s", cfg.SuricataLogPath)
+	log.Printf("  - Read Existing Suricata Logs: %v", cfg.SuricataReadExisting)
 	log.Printf("  - Suricata Rule Path: %s", cfg.SuricataRulePath)
 	log.Printf("  - Suricata Test Command: %s", cfg.SuricataTestCmd)
 	log.Printf("  - Agent Name: %s", cfg.AgentName)
@@ -73,7 +74,7 @@ func main() {
 	log.Printf("Agent identified with IP: %s", localIP)
 
 	log.Println("Initializing Suricata collector...")
-	logCollector := collector.NewSuricataCollector(cfg.SuricataLogPath, localIP, cfg.MonitorIP)
+	logCollector := collector.NewSuricataCollector(cfg.SuricataLogPath, localIP, cfg.MonitorIP, cfg.SuricataReadExisting)
 	trafficContext := collector.NewTrafficContextCollector(localIP, cfg.MonitorIP)
 	if err := trafficContext.Start(); err != nil {
 		log.Printf("Warning: traffic context collector unavailable: %v", err)

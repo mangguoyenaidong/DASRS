@@ -1,7 +1,9 @@
 package collector
 
 import (
+	"bufio"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,29 +19,43 @@ import (
 
 // SuricataCollector tails eve.json and forwards alert events to master.
 type SuricataCollector struct {
-	filePath   string
-	localIP    string
-	monitorIP  string
-	offsetFile string
-	tail       *tail.Tail
-	trafficCtx TrafficContextProvider
-	ctx        context.Context
-	cancel     context.CancelFunc
-	alertCount int64
+	filePath       string
+	localIP        string
+	monitorIP      string
+	readExisting   bool
+	offsetFile     string
+	tail           *tail.Tail
+	trafficCtx     TrafficContextProvider
+	ctx            context.Context
+	cancel         context.CancelFunc
+	retryInterval  time.Duration
+	committedBytes int64
+	fileIdentity   string
+	nextIdentityAt time.Time
+	alertCount     int64
 }
 
-func NewSuricataCollector(filePath, localIP, monitorIP string) *SuricataCollector {
+type offsetCheckpoint struct {
+	Offset       int64  `json:"offset"`
+	FileIdentity string `json:"file_identity,omitempty"`
+}
+
+func NewSuricataCollector(filePath, localIP, monitorIP string, readExisting ...bool) *SuricataCollector {
 	ctx, cancel := context.WithCancel(context.Background())
 	cleanPath := strings.NewReplacer("/", "_", "\\", "_", ":", "_").Replace(filePath)
 	offsetFile := fmt.Sprintf(".suricata_%s.offset", cleanPath)
+	replayHistory := len(readExisting) > 0 && readExisting[0]
 
 	return &SuricataCollector{
-		filePath:   filePath,
-		localIP:    localIP,
-		monitorIP:  monitorIP,
-		offsetFile: offsetFile,
-		ctx:        ctx,
-		cancel:     cancel,
+		filePath:       filePath,
+		localIP:        localIP,
+		monitorIP:      monitorIP,
+		readExisting:   replayHistory,
+		offsetFile:     offsetFile,
+		ctx:            ctx,
+		cancel:         cancel,
+		retryInterval:  2 * time.Second,
+		nextIdentityAt: time.Now(),
 	}
 }
 
@@ -51,7 +67,7 @@ func (c *SuricataCollector) SetTrafficContextProvider(provider TrafficContextPro
 	c.trafficCtx = provider
 }
 
-func (c *SuricataCollector) Start(reportFunc func(*pb.AlertReportRequest)) error {
+func (c *SuricataCollector) Start(reportFunc func(*pb.AlertReportRequest) error) error {
 	seekInfo := c.calculateStartOffset()
 
 	var err error
@@ -66,7 +82,7 @@ func (c *SuricataCollector) Start(reportFunc func(*pb.AlertReportRequest)) error
 		return fmt.Errorf("failed to tail file %s: %w", c.filePath, err)
 	}
 
-	log.Printf("Started Suricata collector on %s (Offset: %v)", c.filePath, seekInfo.Offset)
+	log.Printf("Started Suricata collector on %s (offset=%d whence=%d read_existing=%v)", c.filePath, seekInfo.Offset, seekInfo.Whence, c.readExisting)
 
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
@@ -88,7 +104,11 @@ func (c *SuricataCollector) Start(reportFunc func(*pb.AlertReportRequest)) error
 					log.Printf("Tail error: %v", line.Err)
 					continue
 				}
-				c.processLine(line.Text, reportFunc)
+				if !c.processLine(line.Text, reportFunc) {
+					c.cleanup()
+					return
+				}
+				c.commitLine(line.Text)
 			}
 		}
 	}()
@@ -98,39 +118,92 @@ func (c *SuricataCollector) Start(reportFunc func(*pb.AlertReportRequest)) error
 
 func (c *SuricataCollector) calculateStartOffset() *tail.SeekInfo {
 	defaultSeek := &tail.SeekInfo{Offset: 0, Whence: os.SEEK_SET}
+	currentIdentity := identifyLogFile(c.filePath)
+	c.fileIdentity = currentIdentity
+	c.nextIdentityAt = time.Now().Add(time.Second)
 
 	data, err := os.ReadFile(c.offsetFile)
 	if err != nil {
+		if !c.readExisting {
+			if info, statErr := os.Stat(c.filePath); statErr == nil {
+				atomic.StoreInt64(&c.committedBytes, info.Size())
+				return &tail.SeekInfo{Offset: 0, Whence: os.SEEK_END}
+			}
+		}
+		atomic.StoreInt64(&c.committedBytes, 0)
 		return defaultSeek
 	}
 
-	var savedOffset int64
-	if _, err := fmt.Sscanf(string(data), "%d", &savedOffset); err != nil {
-		return defaultSeek
+	var checkpoint offsetCheckpoint
+	if err := json.Unmarshal(data, &checkpoint); err != nil {
+		if _, scanErr := fmt.Sscanf(string(data), "%d", &checkpoint.Offset); scanErr != nil {
+			atomic.StoreInt64(&c.committedBytes, 0)
+			return defaultSeek
+		}
 	}
 
 	info, err := os.Stat(c.filePath)
 	if err != nil {
+		atomic.StoreInt64(&c.committedBytes, 0)
 		return defaultSeek
 	}
 
-	if savedOffset > info.Size() {
-		log.Printf("Warning: Saved offset %d is greater than file size %d. Resetting to 0.", savedOffset, info.Size())
+	if checkpoint.FileIdentity != "" && currentIdentity != "" && checkpoint.FileIdentity != currentIdentity {
+		log.Printf("Detected rotated Suricata log file. Resetting saved offset to read the new file safely.")
+		atomic.StoreInt64(&c.committedBytes, 0)
 		return defaultSeek
 	}
 
-	return &tail.SeekInfo{Offset: savedOffset, Whence: os.SEEK_SET}
+	if checkpoint.Offset > info.Size() {
+		log.Printf("Warning: Saved offset %d is greater than file size %d. Resetting to 0.", checkpoint.Offset, info.Size())
+		atomic.StoreInt64(&c.committedBytes, 0)
+		return defaultSeek
+	}
+
+	atomic.StoreInt64(&c.committedBytes, checkpoint.Offset)
+	return &tail.SeekInfo{Offset: checkpoint.Offset, Whence: os.SEEK_SET}
 }
 
 func (c *SuricataCollector) saveOffset() {
-	if c.tail == nil {
-		return
+	checkpoint := offsetCheckpoint{
+		Offset:       atomic.LoadInt64(&c.committedBytes),
+		FileIdentity: c.fileIdentity,
 	}
-	offset, err := c.tail.Tell()
+	data, err := json.Marshal(checkpoint)
 	if err != nil {
 		return
 	}
-	_ = os.WriteFile(c.offsetFile, []byte(fmt.Sprintf("%d", offset)), 0644)
+	_ = os.WriteFile(c.offsetFile, data, 0644)
+}
+
+func (c *SuricataCollector) commitLine(line string) {
+	if now := time.Now(); !now.Before(c.nextIdentityAt) || c.fileIdentity == "" {
+		currentIdentity := identifyLogFile(c.filePath)
+		if currentIdentity != "" && c.fileIdentity != "" && currentIdentity != c.fileIdentity {
+			log.Printf("Detected rotated Suricata log while collecting. Resetting committed offset for the new file.")
+			atomic.StoreInt64(&c.committedBytes, 0)
+		}
+		if currentIdentity != "" {
+			c.fileIdentity = currentIdentity
+		}
+		c.nextIdentityAt = now.Add(time.Second)
+	}
+	atomic.AddInt64(&c.committedBytes, int64(len([]byte(line))+1))
+}
+
+func identifyLogFile(filePath string) string {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	firstLine, err := bufio.NewReader(file).ReadString('\n')
+	if err != nil || firstLine == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(firstLine))
+	return fmt.Sprintf("%x", sum[:])
 }
 
 func (c *SuricataCollector) Stop() {
@@ -149,7 +222,7 @@ func (c *SuricataCollector) cleanup() {
 	}
 }
 
-func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertReportRequest)) {
+func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertReportRequest) error) bool {
 	var eve struct {
 		Timestamp string `json:"timestamp"`
 		EventType string `json:"event_type"`
@@ -166,24 +239,25 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 	}
 
 	if err := json.Unmarshal([]byte(line), &eve); err != nil {
-		return
+		log.Printf("Skipping invalid eve.json line: %v", err)
+		return true
 	}
 	if eve.EventType != "alert" {
-		return
+		return true
 	}
 
 	if !c.inMonitoredScope(eve.SrcIP, eve.DestIP) {
 		log.Printf("Skipping alert outside monitored scope: src=%s dest=%s local=%s monitor_ip=%s sid=%d", eve.SrcIP, eve.DestIP, c.localIP, c.monitorIP, eve.Alert.SignatureID)
-		return
+		return true
 	}
 
 	t, err := time.Parse(time.RFC3339Nano, eve.Timestamp)
-	var ts int64
 	if err != nil {
-		t, _ = time.Parse("2006-01-02T15:04:05.999999-0700", eve.Timestamp)
-		ts = t.UnixMilli()
-	} else {
-		ts = t.UnixMilli()
+		t, err = time.Parse("2006-01-02T15:04:05.999999-0700", eve.Timestamp)
+		if err != nil {
+			log.Printf("Skipping alert with invalid eve.json timestamp %q: %v", eve.Timestamp, err)
+			return true
+		}
 	}
 
 	severity := "low"
@@ -200,8 +274,9 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 		Sid:           fmt.Sprintf("%d", eve.Alert.SignatureID),
 		Payload:       selectAlertPayload(eve.Payload, eve.PayloadPrintable, eve.Packet),
 		SourceIp:      eve.SrcIP,
+		DestIp:        eve.DestIP,
 		AssetInfo:     fmt.Sprintf("Agent: %s | Monitor: %s | DestIP: %s", c.localIP, c.monitorIP, eve.DestIP),
-		Timestamp:     ts,
+		Timestamp:     t.UnixMilli(),
 		Severity:      severity,
 		SignatureName: eve.Alert.Signature,
 	}
@@ -215,8 +290,22 @@ func (c *SuricataCollector) processLine(line string, reportFunc func(*pb.AlertRe
 		}
 	}
 
-	atomic.AddInt64(&c.alertCount, 1)
-	reportFunc(req)
+	for {
+		if err := reportFunc(req); err == nil {
+			atomic.AddInt64(&c.alertCount, 1)
+			return true
+		} else {
+			log.Printf("Failed to report Suricata alert sid=%s src=%s dest=%s; retrying in %s: %v", req.Sid, req.SourceIp, req.DestIp, c.retryInterval, err)
+		}
+
+		timer := time.NewTimer(c.retryInterval)
+		select {
+		case <-c.ctx.Done():
+			timer.Stop()
+			return false
+		case <-timer.C:
+		}
+	}
 }
 
 func (c *SuricataCollector) inMonitoredScope(srcIP, destIP string) bool {

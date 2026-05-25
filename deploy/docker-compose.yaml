@@ -66,6 +66,7 @@ services:
     environment:
       - MASTER_ADDRESS=master:50051
       - SURICATA_LOG_PATH=/var/log/suricata/eve.json
+      - SURICATA_READ_EXISTING=false
     volumes:
       - ../suricata_logs:/var/log/suricata:ro
       - ../nginx_configs:/etc/nginx/sites-available:rw

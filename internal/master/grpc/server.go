@@ -2,10 +2,12 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -249,6 +251,15 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 		}
 	}
 
+	if opLog.CommandType == "sync_blocked_ips" && result.GetSuccess() {
+		if agentIP == "" {
+			agentIP = strings.TrimSpace(opLog.AgentIP)
+		}
+		if err := s.reconcileBlockedIPSnapshot(agentID, agentIP, result.GetMessage()); err != nil {
+			s.logger.Error("Failed to reconcile iptables block snapshot from %s: %v", agentID, err)
+		}
+	}
+
 	s.updateAIRuleTaskDeployStatus(agentID, result)
 	s.updateAIRuleTaskTestStatus(agentID, result)
 
@@ -257,6 +268,101 @@ func (s *Server) handleCommandResult(agentID string, result *proto.CommandResult
 		db.Model(&model.AgentNode{}).Where("agent_id = ?", agentID).
 			Update("last_seen_at", time.Now())
 	}
+}
+
+type blockedIPSnapshot struct {
+	BlockedIPs []string `json:"blocked_ips"`
+}
+
+func (s *Server) reconcileBlockedIPSnapshot(agentID, agentIP, message string) error {
+	var snapshot blockedIPSnapshot
+	if err := json.Unmarshal([]byte(strings.TrimSpace(message)), &snapshot); err != nil {
+		return fmt.Errorf("invalid iptables snapshot payload: %w", err)
+	}
+
+	actual := make(map[string]struct{}, len(snapshot.BlockedIPs))
+	for _, value := range snapshot.BlockedIPs {
+		ip := net.ParseIP(strings.TrimSpace(value))
+		if ip == nil {
+			continue
+		}
+		actual[ip.String()] = struct{}{}
+	}
+
+	db := s.db.(*gorm.DB)
+	var logs []model.OperationLog
+	query := db.Where("command_type IN ?", []string{"block_ip", "unblock_ip"})
+	if strings.TrimSpace(agentIP) != "" {
+		query = query.Where("agent_id = ? OR agent_ip = ?", agentID, agentIP)
+	} else {
+		query = query.Where("agent_id = ?", agentID)
+	}
+	if err := query.Order("created_at DESC, id DESC").Find(&logs).Error; err != nil {
+		return err
+	}
+
+	latestByIP := make(map[string]model.OperationLog)
+	for _, item := range logs {
+		ip := strings.TrimSpace(item.Target)
+		if ip == "" {
+			continue
+		}
+		if _, exists := latestByIP[ip]; !exists {
+			latestByIP[ip] = item
+		}
+	}
+
+	now := time.Now()
+	sequence := 0
+	createReconciledLog := func(commandType, ip, message string) error {
+		sequence++
+		return db.Create(&model.OperationLog{
+			CommandID:       fmt.Sprintf("sync-reconcile-%s-%d-%d", strings.TrimSuffix(commandType, "_ip"), now.UnixNano(), sequence),
+			AgentID:         agentID,
+			AgentIP:         agentIP,
+			CommandType:     commandType,
+			Target:          ip,
+			Result:          1,
+			Message:         message,
+			ExecutionTimeMs: now.UnixMilli(),
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		}).Error
+	}
+
+	actualIPs := make([]string, 0, len(actual))
+	for ip := range actual {
+		actualIPs = append(actualIPs, ip)
+	}
+	sort.Strings(actualIPs)
+	for _, ip := range actualIPs {
+		latest, exists := latestByIP[ip]
+		if exists && latest.CommandType == "block_ip" && latest.Result == 1 {
+			continue
+		}
+		if err := createReconciledLog("block_ip", ip, "Synchronized from agent iptables INPUT DROP rule"); err != nil {
+			return err
+		}
+	}
+
+	recordedIPs := make([]string, 0, len(latestByIP))
+	for ip := range latestByIP {
+		recordedIPs = append(recordedIPs, ip)
+	}
+	sort.Strings(recordedIPs)
+	for _, ip := range recordedIPs {
+		if _, exists := actual[ip]; exists {
+			continue
+		}
+		latest := latestByIP[ip]
+		if latest.CommandType != "block_ip" || (latest.Result != 1 && !(latest.Result == 0 && latest.ExecutionTimeMs == 0)) {
+			continue
+		}
+		if err := createReconciledLog("unblock_ip", ip, "Synchronized absence from agent iptables INPUT DROP rules"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Server) updateAIRuleTaskDeployStatus(agentID string, result *proto.CommandResult) {
@@ -392,7 +498,10 @@ func (s *Server) SendHeartbeat(ctx context.Context, req *proto.HeartbeatRequest)
 func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest) (*proto.AlertReportResponse, error) {
 	s.logger.Info("ReportAlert received: SID=%s, SourceIP=%s, Severity=%s", req.GetSid(), req.GetSourceIp(), req.GetSeverity())
 
-	destIP := extractDestIP(req.GetAssetInfo())
+	destIP := strings.TrimSpace(req.GetDestIp())
+	if destIP == "" {
+		destIP = extractDestIP(req.GetAssetInfo())
+	}
 
 	alert := &core.Alert{
 		SID:           req.GetSid(),
@@ -417,10 +526,17 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 	// 尝试获取关联的 AgentID
 	var agentID string
 	if p, ok := peer.FromContext(ctx); ok {
-		// 通过对端 IP 查找 Agent 记录
-		var agent model.AgentNode
-		if err := s.db.(*gorm.DB).Where("ip = ?", p.Addr.String()).First(&agent).Error; err == nil {
-			agentID = agent.AgentID
+		peerIP := ""
+		if addr, ok := p.Addr.(*net.TCPAddr); ok {
+			peerIP = addr.IP.String()
+		} else if host, _, err := net.SplitHostPort(p.Addr.String()); err == nil {
+			peerIP = host
+		}
+		if peerIP != "" {
+			var agent model.AgentNode
+			if err := s.db.(*gorm.DB).Where("ip = ?", peerIP).First(&agent).Error; err == nil {
+				agentID = agent.AgentID
+			}
 		}
 	}
 
@@ -499,29 +615,15 @@ func (s *Server) ReportAlert(ctx context.Context, req *proto.AlertReportRequest)
 		}
 	}
 
-	// 如果分析结果是需要修复漏洞 (Patch)
+	// 如果分析结果是需要修复漏洞，则进入人工审核队列，由 Web 端确认后再执行
 	if decision.Action == "repair" {
-		s.logger.Info("Auto repairing for alert %s (SID: %s)", decision.AlertID, alert.SID)
+		s.logger.Info("Repair suggested for alert %s (SID: %s), awaiting manual approval", decision.AlertID, alert.SID)
 
 		var strategy model.Strategy
 		if err := db.Where("sid = ? AND enabled = 1", alert.SID).First(&strategy).Error; err == nil {
-			s.logger.Info("Found matching strategy for SID %s: %s", alert.SID, strategy.Description)
-
-			cmd := &proto.CommandMessage{
-				CommandId:      fmt.Sprintf("cmd-patch-%d", time.Now().Unix()),
-				Type:           proto.CommandType_PATCH_CONFIG,
-				ConfigPath:     strategy.TargetFile,
-				MatchRegex:     strategy.MatchRegex,
-				ReplaceContent: strategy.ReplaceContent,
-			}
-
-			// 下发给所有在线 Agent (实际生产中应根据 AssetInfo 过滤)
-			agents := s.GetConnectedAgents()
-			for _, agent := range agents {
-				s.QueueCommand(agent.AgentID, cmd)
-			}
+			s.logger.Info("Repair strategy available for SID %s: %s", alert.SID, strategy.Description)
 		} else {
-			s.logger.Warn("No enabled strategy found for SID %s", alert.SID)
+			s.logger.Warn("No enabled repair strategy found for SID %s", alert.SID)
 		}
 	}
 

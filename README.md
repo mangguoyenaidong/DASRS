@@ -160,6 +160,7 @@ Important fields:
 
 - `agent.master_address`
 - `agent.suricata_log_path`
+- `agent.suricata_read_existing`: defaults to `false`; set to `true` only to replay existing `eve.json` alerts on first startup
 - `agent.suricata_rule_path`
 - `agent.suricata_reload_command`
 - `agent.suricata_test_command`
@@ -257,4 +258,3 @@ For detailed Suricata troubleshooting, see [docs/SURICATA_RULES.md](/D:/file/DAS
 
 - [Usage Guide](/D:/file/DASRS/docs/USAGE.md)
 - [Suricata Rule Guide](/D:/file/DASRS/docs/SURICATA_RULES.md)
-

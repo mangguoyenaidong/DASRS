@@ -100,6 +100,7 @@ func (s *Server) setupRoutes() {
 	agents := s.router.Group("/api/agents")
 	{
 		agents.GET("", s.listAgents)
+		agents.GET("/connected", s.listConnectedAgents)
 		agents.GET("/:id", s.getAgent)
 		agents.DELETE("/:id", s.deleteAgent)
 		agents.POST("/:id/unblock", s.unblockAgentIP)
@@ -114,6 +115,7 @@ func (s *Server) setupRoutes() {
 		alerts.GET("", s.listAlerts)
 		alerts.GET("/:id", s.getAlert)
 		alerts.GET("/:id/correlation", s.getAlertCorrelation)
+		alerts.POST("/:id/repair", s.executeAlertRepair)
 	}
 
 	// 策略管理
@@ -142,6 +144,7 @@ func (s *Server) setupRoutes() {
 
 	// 手动封禁
 	s.router.GET("/api/blocked-ips", s.listBlockedIPs)
+	s.router.POST("/api/blocked-ips/sync", s.syncBlockedIPs)
 	s.router.POST("/api/block", s.blockIP)
 	s.router.POST("/api/unblock", s.unblockIP)
 	s.router.POST("/api/batch-block", s.batchBlockIP)
@@ -256,6 +259,29 @@ func (s *Server) listAgents(c *gin.Context) {
 		"page":  page,
 		"size":  pageSize,
 	})
+}
+
+// listConnectedAgents returns nodes with an active command stream.
+func (s *Server) listConnectedAgents(c *gin.Context) {
+	if s.grpcServer == nil {
+		c.PureJSON(http.StatusOK, gin.H{"success": true, "data": []interface{}{}})
+		return
+	}
+
+	agents := s.grpcServer.GetConnectedAgents()
+	data := make([]gin.H, 0, len(agents))
+	for _, agent := range agents {
+		if agent == nil {
+			continue
+		}
+		data = append(data, gin.H{
+			"agent_id":  agent.AgentID,
+			"hostname":  agent.Hostname,
+			"ip":        agent.IP,
+			"last_seen": agent.LastSeen,
+		})
+	}
+	c.PureJSON(http.StatusOK, gin.H{"success": true, "data": data})
 }
 
 // getAgent 获取单个 Agent 节点
@@ -654,6 +680,34 @@ func (s *Server) listBlockedIPs(c *gin.Context) {
 	})
 }
 
+// syncBlockedIPs asks online agents for their current iptables INPUT DROP rules.
+func (s *Server) syncBlockedIPs(c *gin.Context) {
+	var req struct {
+		AgentID string `json:"agent_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	agents, err := s.resolveCommandAgents(req.AgentID)
+	if err != nil {
+		c.PureJSON(http.StatusConflict, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+
+	dispatched, err := s.queueBlockedIPSyncForAgents(agents)
+	if err != nil {
+		c.PureJSON(http.StatusConflict, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("iptables block synchronization queued for %d online agent(s)", dispatched),
+	})
+}
+
 type blockOperationSnapshot struct {
 	ID              uint
 	AgentID         string
@@ -968,6 +1022,202 @@ func (s *Server) queueCommandForAgents(commandType string, targetIP, reason stri
 		return 0, errors.New("no eligible connected agents available")
 	}
 	return dispatched, nil
+}
+
+func (s *Server) queueBlockedIPSyncForAgents(agents []*sgrpc.AgentInfo) (int, error) {
+	if len(agents) == 0 {
+		return 0, errors.New("no eligible connected agents available")
+	}
+
+	dispatched := 0
+	now := time.Now()
+	for idx, agent := range agents {
+		if agent == nil {
+			continue
+		}
+		commandID := fmt.Sprintf("sync-blocked-ips-%d-%d", now.UnixNano(), idx)
+		if err := s.db.Create(&model.OperationLog{
+			CommandID:   commandID,
+			AgentID:     agent.AgentID,
+			AgentIP:     strings.TrimSpace(agent.IP),
+			CommandType: "sync_blocked_ips",
+			Target:      "iptables INPUT DROP",
+			Result:      0,
+			Message:     "Queued iptables block synchronization",
+			CreatedAt:   time.Now(),
+		}).Error; err != nil {
+			s.logger.Error("Failed to create iptables synchronization log for agent %s: %v", agent.AgentID, err)
+			continue
+		}
+
+		s.grpcServer.QueueCommand(agent.AgentID, &proto.CommandMessage{
+			CommandId:  commandID,
+			Type:       proto.CommandType_PATCH_CONFIG,
+			MatchRegex: "__DASRS_IPTABLES_BLOCK_SYNC__",
+		})
+		dispatched++
+	}
+
+	if dispatched == 0 {
+		return 0, errors.New("no eligible connected agents available")
+	}
+	return dispatched, nil
+}
+
+func (s *Server) resolveRepairAgents(alert model.AlertLog) ([]*sgrpc.AgentInfo, error) {
+	if s.grpcServer == nil {
+		return nil, errors.New("grpc server unavailable")
+	}
+
+	destIP := strings.TrimSpace(alert.DestIP)
+	if destIP != "" {
+		selected := make([]*sgrpc.AgentInfo, 0, 1)
+		for _, agent := range s.grpcServer.GetConnectedAgents() {
+			if agent != nil && strings.TrimSpace(agent.IP) == destIP {
+				selected = append(selected, agent)
+			}
+		}
+		if len(selected) > 0 {
+			return selected, nil
+		}
+	}
+
+	if alertAgentID := strings.TrimSpace(alert.AgentID); alertAgentID != "" {
+		return s.resolveCommandAgents(alertAgentID)
+	}
+
+	if destIP != "" {
+		return nil, fmt.Errorf("no connected agent matches alert target asset %s", destIP)
+	}
+	return nil, errors.New("alert has no target asset information for repair")
+}
+
+func (s *Server) queueRepairCommandForAgents(alert model.AlertLog, strategy model.Strategy, agents []*sgrpc.AgentInfo) (int, error) {
+	if len(agents) == 0 {
+		return 0, errors.New("no eligible connected agents available")
+	}
+
+	configPath := strings.TrimSpace(strategy.TargetFile)
+	if configPath == "" {
+		return 0, errors.New("repair strategy target_file is empty")
+	}
+	matchRegex := strings.TrimSpace(strategy.MatchRegex)
+	replaceContent := strategy.ReplaceContent
+	if matchRegex == "" || strings.TrimSpace(replaceContent) == "" {
+		return 0, errors.New("repair strategy content is incomplete")
+	}
+
+	reason := strings.TrimSpace(strategy.Description)
+	if reason == "" {
+		reason = "manual repair approved"
+	}
+
+	dispatched := 0
+	now := time.Now()
+	for idx, agent := range agents {
+		if agent == nil {
+			continue
+		}
+		commandID := fmt.Sprintf("repair-alert-%d-%d", now.UnixNano(), idx)
+		if err := s.db.Create(&model.OperationLog{
+			CommandID:   commandID,
+			AgentID:     agent.AgentID,
+			AgentIP:     strings.TrimSpace(agent.IP),
+			AlertID:     alert.ID,
+			CommandType: "patch_config",
+			Target:      configPath,
+			Result:      0,
+			Message:     fmt.Sprintf("人工审核确认修复: %s", reason),
+			CreatedAt:   time.Now(),
+		}).Error; err != nil {
+			s.logger.Error("Failed to create repair operation log for alert %d on agent %s: %v", alert.ID, agent.AgentID, err)
+			continue
+		}
+
+		s.grpcServer.QueueCommand(agent.AgentID, &proto.CommandMessage{
+			CommandId:      commandID,
+			Type:           proto.CommandType_PATCH_CONFIG,
+			ConfigPath:     configPath,
+			MatchRegex:     matchRegex,
+			ReplaceContent: replaceContent,
+		})
+		dispatched++
+	}
+
+	if dispatched == 0 {
+		return 0, errors.New("no eligible connected agents available")
+	}
+	return dispatched, nil
+}
+
+func (s *Server) executeAlertRepair(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": "invalid alert id"})
+		return
+	}
+
+	var alert model.AlertLog
+	if err := s.db.First(&alert, uint(id)).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.PureJSON(http.StatusNotFound, gin.H{"error": "alert not found"})
+			return
+		}
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if strings.ToLower(strings.TrimSpace(alert.Action)) != "repair" {
+		c.PureJSON(http.StatusConflict, gin.H{"error": "alert is not waiting for manual repair review"})
+		return
+	}
+	if alert.Status == 1 {
+		c.PureJSON(http.StatusConflict, gin.H{"error": "alert repair has already been reviewed"})
+		return
+	}
+
+	var strategy model.Strategy
+	if err := s.db.Where("sid = ? AND enabled = 1", strings.TrimSpace(alert.SID)).First(&strategy).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.PureJSON(http.StatusConflict, gin.H{"error": fmt.Sprintf("no enabled repair strategy found for SID %s", alert.SID)})
+			return
+		}
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	agents, err := s.resolveRepairAgents(alert)
+	if err != nil {
+		c.PureJSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	}
+
+	dispatched, err := s.queueRepairCommandForAgents(alert, strategy, agents)
+	if err != nil {
+		c.PureJSON(http.StatusConflict, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := s.db.Model(&alert).Updates(map[string]interface{}{
+		"status":     1,
+		"updated_at": time.Now(),
+	}).Error; err != nil {
+		c.PureJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	s.logger.Info("Manual repair approved for alert %d (SID: %s), dispatched to %d agent(s)", alert.ID, alert.SID, dispatched)
+	c.PureJSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": fmt.Sprintf("Repair command queued for alert %d to %d agent(s)", alert.ID, dispatched),
+		"data": gin.H{
+			"alert_id":     alert.ID,
+			"strategy_id":  strategy.ID,
+			"target_file":  strategy.TargetFile,
+			"agent_count":  dispatched,
+			"target_asset": alert.DestIP,
+		},
+	})
 }
 
 func (s *Server) syncAlertActionForIP(ip, action string) {

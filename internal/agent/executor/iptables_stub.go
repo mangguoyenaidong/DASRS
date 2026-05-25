@@ -32,3 +32,8 @@ func (b *IPBlocker) BlockIP(ip string) error {
 func (b *IPBlocker) UnblockIP(ip string) error {
 	return fmt.Errorf("ip unblocking is not supported on this platform: %s", ip)
 }
+
+// ListBlockedIPs is unavailable on platforms without iptables support.
+func (b *IPBlocker) ListBlockedIPs() ([]string, error) {
+	return nil, fmt.Errorf("iptables block synchronization is not supported on this platform")
+}

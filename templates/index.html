@@ -681,7 +681,7 @@
                             <input type="text" id="filterDestIP" placeholder="目标 IP 地址">
                             <input type="text" id="filterSigName" placeholder="告警签名">
                             <select id="filterSeverity"><option value="">全部严重等级</option><option value="critical">CRITICAL</option><option value="high">HIGH</option><option value="medium">MEDIUM</option><option value="low">LOW</option></select>
-                            <select id="filterAction"><option value="">全部动作</option><option value="block">封禁</option><option value="patch">修复</option><option value="ignore">忽略</option><option value="unblock">解封</option></select>
+                            <select id="filterAction"><option value="">全部动作</option><option value="block">封禁</option><option value="repair">修复</option><option value="ignore">忽略</option><option value="unblock">解封</option></select>
                             <label class="toggle" style="padding-left: 4px;"><input type="checkbox" id="filterWhitelistOnly"><span>仅显示白名单来源</span></label>
                         </div>
                         <div class="filter-actions">
@@ -709,6 +709,14 @@
                             <input type="text" id="blockReason" placeholder="封禁原因备注">
                             <button class="btn btn-danger" onclick="blockIP()">立即封禁</button>
                         </div>
+                    </section>
+                    <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">节点防火墙同步</div><div class="panel-subtitle">从当前在线 Agent 读取 iptables INPUT DROP 规则并校准封禁列表</div></div></div>
+                        <div class="inline-form">
+                            <select id="blockSyncAgent"><option value="">全部在线节点</option></select>
+                            <button class="btn btn-primary" onclick="syncBlockedIps()">同步 iptables 封禁记录</button>
+                        </div>
+                        <div id="blockSyncStatus" class="hint-block">进入此页面后会加载当前在线节点；同步完成后封禁列表会按节点真实规则更新。</div>
                     </section>
                     <section class="glass-panel">
                         <div class="panel-header"><div><div class="panel-title">当前封禁列表</div><div class="panel-subtitle">来源于告警动作视图的已封禁地址集合</div></div><button class="btn btn-outline" onclick="batchUnblock()">批量解封</button></div>
@@ -909,7 +917,7 @@
                 case 'agents': await refreshAgents(); break;
                 case 'strategies': await refreshStrategies(); break;
                 case 'alerts': await refreshAlerts(); break;
-                case 'block': await refreshBlockedIps(); break;
+                case 'block': await Promise.all([refreshBlockedIps(), refreshBlockSyncAgents()]); break;
                 case 'whitelist': await refreshWhitelist(); break;
                 case 'ai': await loadAIWorkbench(); break;
                 case 'ai-settings':
@@ -1024,7 +1032,7 @@
             const value = String(action || '').toLowerCase();
             if (value === 'block') return '封禁';
             if (value === 'unblock') return '解封';
-            if (value === 'patch') return '修复';
+            if (value === 'patch' || value === 'repair') return '修复';
             if (value === 'ignore') return '忽略';
             if (value === 'observe' || value === '') return '观察';
             return '未知';
@@ -1033,7 +1041,7 @@
             const value = String(action || '').toLowerCase();
             if (value === 'block') return 'danger';
             if (value === 'unblock') return 'success';
-            if (value === 'patch') return 'info';
+            if (value === 'patch' || value === 'repair') return 'info';
             if (value === 'ignore') return 'warning';
             return 'info';
         }
@@ -1422,7 +1430,7 @@
                     <td class="mono">${safeText(alert.dest_ip)}</td>
                     <td><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></td>
                     <td class="truncate">${safeText(alert.signature_name)}</td>
-                    <td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAlertDetails('${alert.id}')">审计</button><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="openAIAlertAnalysis('${alert.id}')">AI 分析</button><button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="blockIPFromAlert('${escapeHtml(alert.source_ip || '')}')">封禁</button></div></td>
+                    <td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAlertDetails('${alert.id}')">Audit</button><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="openAIAlertAnalysis('${alert.id}')">AI Analysis</button>${String(alert.action || '').toLowerCase() === 'repair' && Number(alert.status) === 0 ? `<button class="btn btn-primary" style="min-height:34px;padding:0 12px;" onclick="executeRepair('${alert.id}')">Review Repair</button>` : ''}<button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="blockIPFromAlert('${escapeHtml(alert.source_ip || '')}')">Block</button></div></td>
                 </tr>
             `).join('');
         }
@@ -1945,6 +1953,28 @@ ${item.operator_advice || '-'}`);
             loadStats();
         }
 
+        async function executeRepair(alertId) {
+            const id = String(alertId || '').trim();
+            if (!id) {
+                notify('Missing alert ID for manual repair review.', 'error', 'Repair Failed');
+                return;
+            }
+            const confirmed = window.confirm('This will back up the target config file on the agent and then apply the repair patch. Continue?');
+            if (!confirmed) return;
+
+            const result = await postAPI(`/api/alerts/${encodeURIComponent(id)}/repair`, {});
+            if (!isSuccess(result)) {
+                notify(result?.message || result?.error || 'Unknown error', 'error', 'Repair Failed');
+                return;
+            }
+
+            notify(result?.message || 'Repair command queued to target agent.', 'success', 'Repair Submitted');
+            closeModal();
+            refreshAlerts();
+            refreshLogs();
+            loadStats();
+        }
+
         function closeModal() {
             document.getElementById('alertModal').style.display = 'none';
         }
@@ -1975,9 +2005,47 @@ ${item.operator_advice || '-'}`);
                 setTimeout(() => {
                     refreshBlockedIps();
                     refreshAlerts();
+                    refreshLogs();
                     loadStats();
                 }, delay);
             });
+        }
+        let blockSyncNoticeUntil = 0;
+        async function refreshBlockSyncAgents() {
+            const select = document.getElementById('blockSyncAgent');
+            const status = document.getElementById('blockSyncStatus');
+            if (!select || !status) return;
+            const selected = select.value;
+            const res = await fetchAPI('/api/agents/connected');
+            const agents = res && Array.isArray(res.data) ? res.data : [];
+            select.innerHTML = '<option value="">全部在线节点</option>';
+            agents.forEach(agent => {
+                const option = document.createElement('option');
+                option.value = agent.agent_id || '';
+                option.textContent = `${agent.hostname || agent.agent_id || 'Agent'} (${agent.ip || '-'})`;
+                select.appendChild(option);
+            });
+            if (agents.some(agent => agent.agent_id === selected)) select.value = selected;
+            if (Date.now() >= blockSyncNoticeUntil) {
+                status.textContent = agents.length > 0
+                    ? `当前检测到 ${agents.length} 个在线节点，可选择单节点或同步全部节点。`
+                    : '当前没有在线 Agent，暂时无法读取 iptables 规则。';
+            }
+        }
+        async function syncBlockedIps() {
+            const select = document.getElementById('blockSyncAgent');
+            const status = document.getElementById('blockSyncStatus');
+            const agentId = select ? select.value : '';
+            const result = await postAPI('/api/blocked-ips/sync', { agent_id: agentId });
+            if (!isSuccess(result)) {
+                notify(result?.message || result?.error || '同步失败', 'error', 'iptables 同步失败');
+                return;
+            }
+            blockSyncNoticeUntil = Date.now() + 5000;
+            if (status) status.textContent = '同步命令已发送，正在等待 Agent 返回 iptables 规则并校准封禁记录。';
+            notify(result?.message || 'iptables 同步命令已下发。', 'success', 'iptables 同步已提交');
+            scheduleBlockStateRefresh();
+            setTimeout(refreshBlockSyncAgents, 5000);
         }
         async function refreshBlockedIps() {
             const res = await fetchAPI('/api/blocked-ips');

@@ -23,7 +23,22 @@ go.work
 
 # Logs
 *.log
+*.err
+*.pid
 suricata_logs/
 .gocache/
 ._*
 nul
+
+# Local thesis and word-processing artifacts
+/DASRS_Thesis_*
+/task.zip
+/template_content.txt
+/rendered_yangrui_format/
+/*论文*
+/*本科任务书*
+/*大纲*
+/*.doc
+/*.docx
+/*.pdf
+~$*.docx

@@ -1,4 +1,4 @@
-# DASRS configuration
+# DASRS Docker runtime configuration used for local screenshot/demo runs.
 
 master:
   host: "0.0.0.0"
@@ -6,8 +6,8 @@ master:
   http_port: 8080
 
   database:
-    host: "127.0.0.1"
-    port: 3307
+    host: "mysql"
+    port: 3306
     username: "root"
     password: "rootpassword"
     name: "security"
@@ -15,7 +15,7 @@ master:
     max_idle_conns: 5
 
   redis:
-    host: "127.0.0.1"
+    host: "redis"
     port: 6379
     password: ""
     db: 0
@@ -26,8 +26,8 @@ master:
     block_threshold: 50
     time_window: 60
     max_alerts_per_window: 10
-    action_mode: "block" # "alert" (Detection only) or "block" (Auto prevention)
-    demo_mode: false
+    action_mode: "block"
+    demo_mode: true
     demo_block_threshold: 40
     demo_repair_threshold: 65
     demo_exploit_bonus: 15
@@ -56,14 +56,6 @@ master:
   agent_management:
     allowed_agents: []
     auto_register: true
-
-agent:
-  master_address: "master:50051"
-  suricata_log_path: "/var/log/suricata/eve.json"
-  suricata_read_existing: false
-  agent_name: ""
-  reconnect_interval: 5
-  heartbeat_interval: 30
 
 logging:
   level: "info"

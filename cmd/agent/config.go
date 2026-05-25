@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -10,17 +11,18 @@ import (
 
 // Config describes Agent runtime configuration.
 type Config struct {
-	MasterAddress       string `yaml:"master_address"`
-	MasterHTTPAddress   string `yaml:"master_http_address"`
-	SuricataLogPath     string `yaml:"suricata_log_path"`
-	SuricataRulePath    string `yaml:"suricata_rule_path"`
-	SuricataReloadCmd   string `yaml:"suricata_reload_command"`
-	SuricataTestCmd     string `yaml:"suricata_test_command"`
-	MonitorIP           string `yaml:"monitor_ip"`
-	AgentName           string `yaml:"agent_name"`
-	ReconnectInterval   int    `yaml:"reconnect_interval"`
-	HeartbeatInterval   int    `yaml:"heartbeat_interval"`
-	ServiceScanInterval int    `yaml:"service_scan_interval"`
+	MasterAddress        string `yaml:"master_address"`
+	MasterHTTPAddress    string `yaml:"master_http_address"`
+	SuricataLogPath      string `yaml:"suricata_log_path"`
+	SuricataReadExisting bool   `yaml:"suricata_read_existing"`
+	SuricataRulePath     string `yaml:"suricata_rule_path"`
+	SuricataReloadCmd    string `yaml:"suricata_reload_command"`
+	SuricataTestCmd      string `yaml:"suricata_test_command"`
+	MonitorIP            string `yaml:"monitor_ip"`
+	AgentName            string `yaml:"agent_name"`
+	ReconnectInterval    int    `yaml:"reconnect_interval"`
+	HeartbeatInterval    int    `yaml:"heartbeat_interval"`
+	ServiceScanInterval  int    `yaml:"service_scan_interval"`
 }
 
 type yamlConfig struct {
@@ -52,6 +54,7 @@ func LoadConfig(path string) (*Config, error) {
 		if yCfg.Agent.SuricataLogPath != "" {
 			cfg.SuricataLogPath = yCfg.Agent.SuricataLogPath
 		}
+		cfg.SuricataReadExisting = yCfg.Agent.SuricataReadExisting
 		if yCfg.Agent.SuricataRulePath != "" {
 			cfg.SuricataRulePath = yCfg.Agent.SuricataRulePath
 		}
@@ -86,6 +89,11 @@ func LoadConfig(path string) (*Config, error) {
 	}
 	if v := os.Getenv("SURICATA_LOG_PATH"); v != "" {
 		cfg.SuricataLogPath = v
+	}
+	if v := os.Getenv("SURICATA_READ_EXISTING"); v != "" {
+		if enabled, err := strconv.ParseBool(v); err == nil {
+			cfg.SuricataReadExisting = enabled
+		}
 	}
 	if v := os.Getenv("SURICATA_RULE_PATH"); v != "" {
 		cfg.SuricataRulePath = v

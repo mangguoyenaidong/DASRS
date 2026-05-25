@@ -66,3 +66,13 @@ func (b *IPBlocker) UnblockIP(ip string) error {
 
 	return nil
 }
+
+// ListBlockedIPs returns host-level INPUT DROP rules managed through iptables.
+func (b *IPBlocker) ListBlockedIPs() ([]string, error) {
+	cmd := exec.Command("iptables", "-S", "INPUT")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list iptables INPUT rules: %v, output: %s", err, string(output))
+	}
+	return parseBlockedSources(string(output)), nil
+}

@@ -3,6 +3,8 @@
 agent:
   master_address: "127.0.0.1:50051"
   suricata_log_path: "./suricata_logs/eve.json"
+  # Set true only when historical eve.json alerts should be replayed on first startup.
+  suricata_read_existing: false
   suricata_rule_path: "./suricata_logs/dasrs_ai.rules"
   suricata_reload_command: ""
   # Optional test command. Supported placeholders: {{RULE_FILE}} {{TMP_DIR}}
