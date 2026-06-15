@@ -208,6 +208,14 @@ func (p *DeepSeekProvider) AnalyzeAlert(ctx context.Context, input AlertAnalysis
 	return &result, nil
 }
 
+func (p *DeepSeekProvider) Chat(ctx context.Context, systemPrompt, userPrompt string) (string, error) {
+	systemPrompt = strings.TrimSpace(systemPrompt)
+	if systemPrompt == "" {
+		systemPrompt = "You are a concise security operations assistant. Answer in Chinese."
+	}
+	return p.chat(ctx, systemPrompt, userPrompt)
+}
+
 func (p *DeepSeekProvider) chat(ctx context.Context, systemPrompt, userPrompt string) (string, error) {
 	reqBody := chatCompletionRequest{
 		Model: p.model,

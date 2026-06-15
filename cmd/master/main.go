@@ -61,7 +61,7 @@ func main() {
 		}
 	}()
 
-	apiServer := api.NewServerWithAI(cfg, db, redisClient, engine, grpcServer, aiRuleService, aiAlertService)
+	apiServer := api.NewServerWithAI(cfg, db, redisClient, engine, grpcServer, aiProvider, aiRuleService, aiAlertService)
 	go func() {
 		if err := apiServer.Start(); err != nil {
 			log.Fatalf("HTTP API server failed: %v", err)

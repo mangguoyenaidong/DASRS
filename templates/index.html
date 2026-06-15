@@ -337,6 +337,60 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
+        .ops-chat-panel { display: grid; gap: 14px; }
+        .ops-chat-messages {
+            height: min(460px, 52vh);
+            min-height: 280px;
+            overflow-y: auto;
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid rgba(16,35,63,0.08);
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.78), rgba(239,246,255,0.78));
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .ops-chat-message {
+            width: min(78%, 720px);
+            padding: 14px 16px;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.86);
+            box-shadow: 0 12px 28px rgba(16,35,63,0.08);
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.7;
+            font-size: 14px;
+        }
+        .ops-chat-message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, rgba(15,111,255,0.92), rgba(44,140,255,0.92));
+            color: #ffffff;
+            border-color: rgba(15,111,255,0.24);
+        }
+        .ops-chat-message.assistant { align-self: flex-start; }
+        .ops-chat-message.loading { color: var(--ink-faint); }
+        .ops-chat-meta {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(16,35,63,0.08);
+            color: var(--ink-faint);
+            font-size: 12px;
+        }
+        .ops-chat-message.user .ops-chat-meta {
+            color: rgba(255,255,255,0.74);
+            border-top-color: rgba(255,255,255,0.22);
+        }
+        .ops-chat-controls {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 188px;
+            gap: 12px;
+            align-items: stretch;
+        }
+        .ops-chat-controls textarea { min-height: 104px; resize: vertical; }
+        .ops-chat-side { display: grid; gap: 10px; align-content: start; }
+        .quick-prompts { display: flex; gap: 10px; flex-wrap: wrap; }
         .sub-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px; }
 
         .modal {
@@ -445,7 +499,7 @@
             .hero-card { flex-direction: column; align-items: flex-start; }
             .status-stack { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .grid-2, .inline-form, .filter-grid { grid-template-columns: 1fr; }
+            .grid-2, .inline-form, .filter-grid, .ops-chat-controls { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 860px) {
@@ -462,6 +516,8 @@
             .stats-grid { grid-template-columns: 1fr; }
             .page-header { flex-direction: column; align-items: stretch; }
             .toolbar { justify-content: flex-start; }
+            .ops-chat-message { width: 100%; }
+            .ops-chat-messages { height: 420px; }
             .modal { padding: 14px; }
             .modal-header, .modal-body, .modal-footer { padding-left: 18px; padding-right: 18px; }
         }
@@ -778,6 +834,28 @@
                     </section>
 
                     <section class="glass-panel">
+                        <div class="panel-header"><div><div class="panel-title">运维 AI 对话</div><div class="panel-subtitle">面向近期攻击态势、攻击类型、受害主机和处置优先级的自然语言问答</div></div></div>
+                        <div class="ops-chat-panel">
+                            <div id="opsChatMessages" class="ops-chat-messages">
+                                <div class="ops-chat-message assistant">我是 DASRS 运维 AI 助手。可以问我最近攻击类型分布、哪台机器被攻击最多、哪些来源 IP 需要优先复核，回答会结合当前数据库里的近期告警统计。</div>
+                            </div>
+                            <div class="quick-prompts">
+                                <button class="btn btn-outline" onclick="fillOpsChatQuestion('最近 7 天什么攻击类型最多？')">攻击类型最多</button>
+                                <button class="btn btn-outline" onclick="fillOpsChatQuestion('哪台机器被攻击次数最高？')">高频受害主机</button>
+                                <button class="btn btn-outline" onclick="fillOpsChatQuestion('有哪些来源 IP 需要优先封禁或复核？')">优先复核来源</button>
+                                <button class="btn btn-outline" onclick="fillOpsChatQuestion('请总结当前攻击态势，并给出值守建议。')">态势总结</button>
+                            </div>
+                            <div class="ops-chat-controls">
+                                <textarea id="opsChatInput" placeholder="输入问题，例如：近期什么攻击类型最多？哪台机器被攻击最多？" onkeydown="handleOpsChatKey(event)"></textarea>
+                                <div class="ops-chat-side">
+                                    <div><label for="opsChatDays">统计窗口</label><select id="opsChatDays"><option value="1">最近 1 天</option><option value="7" selected>最近 7 天</option><option value="14">最近 14 天</option><option value="30">最近 30 天</option></select></div>
+                                    <button id="opsChatSendBtn" class="btn btn-primary" onclick="sendOpsChat()">发送问题</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="glass-panel">
                         <div class="panel-header"><div><div class="panel-title">AI 告警研判</div><div class="panel-subtitle">输入告警数据库 ID，查看 AI 对该条告警的解释、风险原因和处置建议</div></div></div>
                         <div class="ai-stack">
                             <div class="form-grid">
@@ -873,6 +951,7 @@
         let lastGeneratedRuleTask = null;
         let aiSettingsDirty = false;
         let aiSettingsApplying = false;
+        let opsChatBusy = false;
         let activeAlertModalRequest = 0;
 
         function updateClock() {
@@ -1445,6 +1524,104 @@
             `).join('');
         }
 
+        function fillOpsChatQuestion(question) {
+            const input = document.getElementById('opsChatInput');
+            if (!input) return;
+            input.value = question || '';
+            input.focus();
+        }
+
+        function appendOpsChatMessage(role, text, meta = '') {
+            const container = document.getElementById('opsChatMessages');
+            if (!container) return null;
+
+            const message = document.createElement('div');
+            message.className = `ops-chat-message ${role}`;
+            const body = document.createElement('div');
+            body.textContent = text || '';
+            message.appendChild(body);
+
+            if (meta) {
+                const metaEl = document.createElement('div');
+                metaEl.className = 'ops-chat-meta';
+                metaEl.textContent = meta;
+                message.appendChild(metaEl);
+            }
+
+            container.appendChild(message);
+            container.scrollTop = container.scrollHeight;
+            return message;
+        }
+
+        function updateOpsChatMessage(message, text, meta = '') {
+            if (!message) return;
+            message.classList.remove('loading');
+            const body = message.querySelector('div');
+            if (body) body.textContent = text || '';
+            let metaEl = message.querySelector('.ops-chat-meta');
+            if (meta) {
+                if (!metaEl) {
+                    metaEl = document.createElement('div');
+                    metaEl.className = 'ops-chat-meta';
+                    message.appendChild(metaEl);
+                }
+                metaEl.textContent = meta;
+            } else if (metaEl) {
+                metaEl.remove();
+            }
+            const container = document.getElementById('opsChatMessages');
+            if (container) container.scrollTop = container.scrollHeight;
+        }
+
+        function handleOpsChatKey(event) {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                sendOpsChat();
+            }
+        }
+
+        async function sendOpsChat() {
+            if (opsChatBusy) return;
+            const input = document.getElementById('opsChatInput');
+            const daysEl = document.getElementById('opsChatDays');
+            const sendBtn = document.getElementById('opsChatSendBtn');
+            const question = input ? input.value.trim() : '';
+            const days = Number(daysEl ? daysEl.value : 7) || 7;
+            if (!question) {
+                notify('请输入要询问的攻击态势问题。', 'info', '问题为空');
+                return;
+            }
+
+            appendOpsChatMessage('user', question, `统计窗口：最近 ${days} 天`);
+            if (input) input.value = '';
+            const pending = appendOpsChatMessage('assistant loading', '正在汇总近期告警并调用 AI 分析...');
+
+            opsChatBusy = true;
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.textContent = '分析中...';
+            }
+            try {
+                const result = await postAPI('/api/ai/chat', { question, days });
+                if (!isSuccess(result) || !result.data) {
+                    updateOpsChatMessage(pending, `AI 对话暂不可用：${result?.message || '未知错误'}`);
+                    return;
+                }
+                const data = result.data;
+                updateOpsChatMessage(
+                    pending,
+                    data.answer || 'AI 没有返回有效回答。',
+                    `统计窗口：最近 ${data.days || days} 天 | 告警总数：${data.total_alerts ?? '-'} | 生成时间：${formatDateTime(data.generated_at)}`
+                );
+            } finally {
+                opsChatBusy = false;
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.textContent = '发送问题';
+                }
+            }
+        }
+
         async function loadAIWorkbench() {
             const statusRes = await fetchAPI('/api/ai/status');
             if (!statusRes || !statusRes.data) {
@@ -1452,7 +1629,7 @@
                 setText('aiAssistStatus', '暂时无法确认 AI 辅助封禁状态。');
             } else {
                 const status = statusRes.data;
-                const summary = `AI 配置：${status.configuration_status || '-'} | Provider：${status.provider || '-'} | 告警分析：${status.alert_analysis ? '可用' : '不可用'} | Demo Mode：${status.demo_mode ? '开启' : '关闭'}`;
+                const summary = `AI 配置：${status.configuration_status || '-'} | Provider：${status.provider || '-'} | 告警分析：${status.alert_analysis ? '可用' : '不可用'} | 运维对话：${status.ops_chat ? '可用' : '不可用'} | Demo Mode：${status.demo_mode ? '开启' : '关闭'}`;
                 setText('aiWorkbenchStatus', summary);
                 if (!status.enabled) {
                     setText('aiAssistStatus', 'AI 尚未启用，当前不会提供研判结果，也不会触发 AI 辅助封禁。');

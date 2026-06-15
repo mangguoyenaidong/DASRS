@@ -23,6 +23,7 @@ import (
 type aiDependencies struct {
 	rule                *service.AIRuleService
 	alert               *service.AIAlertService
+	chat                *service.AIOpsChatService
 	provider            string
 	enabled             bool
 	initError           string
@@ -42,6 +43,7 @@ func NewServerWithAI(
 	redis interface{},
 	engine *core.IntelligenceEngine,
 	grpcServer *sgrpc.Server,
+	aiProvider ai.Provider,
 	aiRule *service.AIRuleService,
 	aiAlert *service.AIAlertService,
 ) *Server {
@@ -49,6 +51,7 @@ func NewServerWithAI(
 	serverAI.Store(server, aiDependencies{
 		rule:                aiRule,
 		alert:               aiAlert,
+		chat:                service.NewAIOpsChatService(db, aiProvider),
 		provider:            strings.TrimSpace(cfg.Master.AI.Provider),
 		enabled:             cfg.Master.AI.Enabled,
 		demoMode:            cfg.Master.Intelligence.DemoMode,
@@ -69,6 +72,7 @@ func NewServerWithAI(
 		aiGroup.GET("/status", server.getAIStatus)
 		aiGroup.GET("/settings", server.getAISettings)
 		aiGroup.PUT("/settings", server.updateAISettings)
+		aiGroup.POST("/chat", server.chatAI)
 		aiGroup.POST("/rules/generate", server.generateAIRule)
 		aiGroup.GET("/rules/:id", server.getAIRuleTask)
 		aiGroup.PUT("/rules/:id", server.updateAIRule)
@@ -106,6 +110,7 @@ func (s *Server) refreshAIDependencies() error {
 			deps.initError = err.Error()
 			deps.rule = service.NewAIRuleService(s.db, nil, s.appCfg)
 			deps.alert = service.NewAIAlertService(s.db, nil)
+			deps.chat = service.NewAIOpsChatService(s.db, nil)
 			serverAI.Store(s, deps)
 			return err
 		}
@@ -113,6 +118,7 @@ func (s *Server) refreshAIDependencies() error {
 
 	deps.rule = service.NewAIRuleService(s.db, aiProvider, s.appCfg)
 	deps.alert = service.NewAIAlertService(s.db, aiProvider)
+	deps.chat = service.NewAIOpsChatService(s.db, aiProvider)
 	serverAI.Store(s, deps)
 	return nil
 }
@@ -152,6 +158,7 @@ func (s *Server) getAIStatus(c *gin.Context) {
 			"provider":              emptyAIProvider(deps.provider),
 			"rule_generation":       deps.rule != nil && deps.rule.Enabled(),
 			"alert_analysis":        deps.alert != nil && deps.alert.Enabled(),
+			"ops_chat":              deps.chat != nil && deps.chat.Enabled(),
 			"configuration_status":  aiConfigStatus(deps),
 			"init_error":            deps.initError,
 			"testing_required":      true,
@@ -163,6 +170,35 @@ func (s *Server) getAIStatus(c *gin.Context) {
 			"demo_repair_threshold": deps.demoRepairThreshold,
 		},
 	})
+}
+
+func (s *Server) chatAI(c *gin.Context) {
+	deps := s.getAIDependencies()
+	if deps.chat == nil || !deps.chat.Enabled() {
+		c.PureJSON(http.StatusServiceUnavailable, gin.H{"error": "ai operations chat is disabled"})
+		return
+	}
+
+	var req struct {
+		Question string `json:"question" binding:"required"`
+		Days     int    `json:"days"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.PureJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	answer, err := deps.chat.Ask(c.Request.Context(), req.Question, req.Days)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if strings.Contains(err.Error(), "question is required") {
+			status = http.StatusBadRequest
+		}
+		c.PureJSON(status, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.PureJSON(http.StatusOK, gin.H{"data": answer})
 }
 
 func (s *Server) getAISettings(c *gin.Context) {
