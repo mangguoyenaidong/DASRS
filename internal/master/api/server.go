@@ -1337,7 +1337,7 @@ func (s *Server) executeAlertRepair(c *gin.Context) {
 	s.logger.Info("Manual repair approved for alert %d (SID: %s), dispatched to %d agent(s)", alert.ID, alert.SID, dispatched)
 	c.PureJSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("Repair command queued for alert %d to %d agent(s)", alert.ID, dispatched),
+		"message": fmt.Sprintf("告警 %d 的修复命令已下发到 %d 个 Agent", alert.ID, dispatched),
 		"data": gin.H{
 			"alert_id":     alert.ID,
 			"strategy_id":  strategy.ID,

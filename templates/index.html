@@ -1523,7 +1523,7 @@
                     <td class="mono">${safeText(alert.dest_ip)}</td>
                     <td><span class="badge ${getSeverityBadge(alert.severity)}">${formatSeverityText(alert.severity)}</span></td>
                     <td class="truncate">${safeText(alert.signature_name)}</td>
-                    <td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAlertDetails('${alert.id}')">Audit</button><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="openAIAlertAnalysis('${alert.id}')">AI Analysis</button>${String(alert.action || '').toLowerCase() === 'repair' && Number(alert.status) === 0 ? `<button class="btn btn-primary" style="min-height:34px;padding:0 12px;" onclick="executeRepair('${alert.id}')">Review Repair</button>` : ''}<button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="blockIPFromAlert('${escapeHtml(alert.source_ip || '')}')">Block</button></div></td>
+                    <td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="showAlertDetails('${alert.id}')">审计</button><button class="btn btn-outline" style="min-height:34px;padding:0 12px;" onclick="openAIAlertAnalysis('${alert.id}')">AI 分析</button>${String(alert.action || '').toLowerCase() === 'repair' && Number(alert.status) === 0 ? `<button class="btn btn-primary" style="min-height:34px;padding:0 12px;" onclick="executeRepair('${alert.id}')">审核修复</button>` : ''}<button class="btn btn-danger" style="min-height:34px;padding:0 12px;" onclick="blockIPFromAlert('${escapeHtml(alert.source_ip || '')}')">封禁</button></div></td>
                 </tr>
             `).join('');
         }
@@ -2147,19 +2147,19 @@ ${item.operator_advice || '-'}`);
         async function executeRepair(alertId) {
             const id = String(alertId || '').trim();
             if (!id) {
-                notify('Missing alert ID for manual repair review.', 'error', 'Repair Failed');
+                notify('缺少告警 ID，无法执行人工修复审核。', 'error', '修复失败');
                 return;
             }
-            const confirmed = window.confirm('This will back up the target config file on the agent and then apply the repair patch. Continue?');
+            const confirmed = window.confirm('将先在 Agent 上备份目标配置文件，然后应用修复补丁。是否继续？');
             if (!confirmed) return;
 
             const result = await postAPI(`/api/alerts/${encodeURIComponent(id)}/repair`, {});
             if (!isSuccess(result)) {
-                notify(result?.message || result?.error || 'Unknown error', 'error', 'Repair Failed');
+                notify(result?.message || result?.error || '未知错误', 'error', '修复失败');
                 return;
             }
 
-            notify(result?.message || 'Repair command queued to target agent.', 'success', 'Repair Submitted');
+            notify(result?.message || '修复命令已下发到目标 Agent。', 'success', '修复已提交');
             closeModal();
             refreshAlerts();
             refreshLogs();
